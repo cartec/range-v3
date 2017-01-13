@@ -162,8 +162,12 @@ namespace ranges
                         equal_(that, meta::size_t<N + 1>{});
                 }
                 struct dist_info {
-                    std::ptrdiff_t distance = 0;
-                    std::ptrdiff_t size_product = 1;
+                    std::ptrdiff_t distance;
+                    std::ptrdiff_t size_product;
+
+                    dist_info(std::ptrdiff_t d = 0, std::ptrdiff_t s = 1)
+                      : distance{d}, size_product{s}
+                    {}
                 };
                 std::ptrdiff_t distance_(
                     cursor const &, meta::size_t<0>, dist_info) const
@@ -172,23 +176,23 @@ namespace ranges
                     return 0;
                 }
                 std::ptrdiff_t distance_(
-                    cursor const &that, meta::size_t<1>, dist_info inf) const
+                    cursor const &that, meta::size_t<1>, dist_info const inf) const
                 {
                     auto const my_distance = std::get<0>(that.its_) - std::get<0>(its_);
                     return my_distance * inf.size_product + inf.distance;
                 }
                 template<std::size_t N>
                 std::ptrdiff_t distance_(
-                    cursor const &that, meta::size_t<N>, dist_info inf) const
+                    cursor const &that, meta::size_t<N>, dist_info const inf) const
                 {
                     auto const my_size = ranges::size(std::get<N - 1>(view_->views_));
                     auto const my_distance = std::get<N - 1>(that.its_) - std::get<N - 1>(its_);
-                    return distance_(that, meta::size_t<N - 1>{}, {
+                    return distance_(that, meta::size_t<N - 1>{}, dist_info{
                         static_cast<std::ptrdiff_t>(my_distance * inf.size_product + inf.distance),
-                        static_cast<std::ptrdiff_t>(my_size * inf.size_product)
+                        static_cast<std::ptrdiff_t>(my_size) * inf.size_product
                     });
                 }
-                void advance_(meta::size_t<0>, dist_info inf)
+                void advance_(meta::size_t<0>, dist_info const inf)
                 {
                     RANGES_EXPECT(inf.distance == 0);
                 }
@@ -200,15 +204,15 @@ namespace ranges
                     auto const first = ranges::begin(std::get<N - 1>(view_->views_));
                     auto const idx = i - first;
                     auto d = inf.distance;
-                    if (static_cast<std::ptrdiff_t>(my_size - idx) < d || d < -idx)
+                    if (static_cast<std::ptrdiff_t>(my_size) - idx < d || d < -idx)
                     {
                         auto const new_size = inf.size_product * static_cast<std::ptrdiff_t>(my_size);
                         auto div = d / new_size;
                         d %= new_size;
-                        if (static_cast<std::ptrdiff_t>(my_size - idx) < d)
+                        if (static_cast<std::ptrdiff_t>(my_size) - idx < d)
                         {
                             i = first;
-                            d -= static_cast<std::ptrdiff_t>(my_size - idx);
+                            d -= static_cast<std::ptrdiff_t>(my_size) - idx;
                             ++div;
                             RANGES_EXPECT(0 <= d && static_cast<size_t>(d) < my_size);
                         }

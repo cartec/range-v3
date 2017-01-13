@@ -7,17 +7,26 @@
 
 using namespace ranges;
 
+struct printer {
+    std::ostream& os_;
+    bool &first_;
+
+    template<typename T>
+    void operator()(const T& t) const
+    {
+        if (first_) first_ = false;
+        else os_ << ',';
+        os_ << t;
+    }
+};
+
 namespace ranges {
     template<typename... Ts>
     std::ostream &operator<<(std::ostream &os, common_tuple<Ts...> const& t)
     {
         os << '(';
         auto first = true;
-        tuple_for_each(t, [&](auto const& e) {
-            if (first) first = false;
-            else os << ',';
-            os << e;
-        });
+        tuple_for_each(t, printer{os, first});
         os << ')';
         return os;
     }
