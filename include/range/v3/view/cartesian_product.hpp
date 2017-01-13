@@ -57,6 +57,7 @@ namespace ranges
             }
         } // namespace detail
 
+        // TODO: find this a new home. functional?
         struct dereference_fn
         {
             template<typename I>
@@ -66,7 +67,6 @@ namespace ranges
                 *i
             )
         };
-
         RANGES_INLINE_VARIABLE(dereference_fn, dereference)
 
         template<typename...Views>
@@ -74,7 +74,7 @@ namespace ranges
           : public view_facade<cartesian_product_view<Views...>,
                 meta::fold<
                     meta::list<range_cardinality<Views>...>,
-                    std::integral_constant<cardinality, static_cast<cardinality>(0)>,
+                    std::integral_constant<cardinality, static_cast<cardinality>(1)>,
                     meta::quote<detail::product_cardinality>>::value>
         {
             friend range_access;
