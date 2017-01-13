@@ -41,6 +41,20 @@ namespace ranges
                     s * ranges::size(rng)
                 )
             };
+
+            template<typename View,
+                CONCEPT_REQUIRES_(BoundedRange<View>())>
+            static range_iterator_t<View> last_iter(View& v)
+            {
+                return ranges::end(v);
+            }
+            template<typename View,
+                CONCEPT_REQUIRES_(!BoundedRange<View>() &&
+                    RandomAccessRange<View>() && SizedRange<View>())>
+            static range_iterator_t<View> last_iter(View& v)
+            {
+                return ranges::begin(v) + ranges::size(v);
+            }
         } // namespace detail
 
         struct dereference_fn
@@ -71,11 +85,6 @@ namespace ranges
             using CanSize = meta::strict_and<
                 SizedRange<meta::if_c<IsConst, Views const, Views>>...>;
             template<bool IsConst>
-            using CanBidi = meta::strict_and<
-                BoundedRange<meta::if_c<IsConst, Views const, Views>>...,
-                BidirectionalIterator<range_iterator_t<
-                    meta::if_c<IsConst, Views const, Views>>>...>;
-            template<bool IsConst>
             using CanDistance = meta::strict_and<
                 CanSize<IsConst>,
                 SizedSentinel<
@@ -86,13 +95,19 @@ namespace ranges
                 CanDistance<IsConst>,
                 RandomAccessIterator<range_iterator_t<
                     meta::if_c<IsConst, Views const, Views>>>...>;
+            template<bool IsConst>
+            using CanBidi = meta::strict_or<
+                CanRandom<IsConst>,
+                meta::strict_and<
+                    BoundedRange<meta::if_c<IsConst, Views const, Views>>...,
+                    BidirectionalIterator<range_iterator_t<
+                        meta::if_c<IsConst, Views const, Views>>>...>>;
 
             std::tuple<Views...> views_;
 
             template<bool IsConst>
             class cursor
             {
-                // TODO: fix random-access non-bounded ranges.
                 template<typename T>
                 using constify_if = meta::invoke<meta::add_const_if_c<IsConst>, T>;
                 using pos_t = std::tuple<range_iterator_t<constify_if<Views>>...>;
@@ -131,7 +146,7 @@ namespace ranges
                     auto& i = std::get<N - 1>(its_);
                     if (i == ranges::begin(v))
                     {
-                        i = ranges::end(v);
+                        i = detail::last_iter(v);
                         prev_(meta::size_t<N - 1>{});
                     }
                     --i;
