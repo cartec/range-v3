@@ -92,6 +92,7 @@ namespace ranges
             template<bool IsConst>
             class cursor
             {
+                // TODO: fix random-access non-bounded ranges.
                 template<typename T>
                 using constify_if = meta::invoke<meta::add_const_if_c<IsConst>, T>;
                 using pos_t = std::tuple<range_iterator_t<constify_if<Views>>...>;
@@ -147,7 +148,7 @@ namespace ranges
                 }
                 struct dist_info {
                     std::ptrdiff_t distance = 0;
-                    std::size_t size_product = 1;
+                    std::ptrdiff_t size_product = 1;
                 };
                 std::ptrdiff_t distance_(
                     cursor const &, meta::size_t<0>, dist_info) const
@@ -169,7 +170,7 @@ namespace ranges
                     auto const my_distance = std::get<N - 1>(that.its_) - std::get<N - 1>(its_);
                     return distance_(that, meta::size_t<N - 1>{}, {
                         static_cast<std::ptrdiff_t>(my_distance * inf.size_product + inf.distance),
-                        static_cast<std::size_t>(my_size * inf.size_product)
+                        static_cast<std::ptrdiff_t>(my_size * inf.size_product)
                     });
                 }
                 void advance_(meta::size_t<0>, dist_info inf)
@@ -177,37 +178,35 @@ namespace ranges
                     RANGES_EXPECT(inf.distance == 0);
                 }
                 template<std::size_t N>
-                void advance_(meta::size_t<N>, dist_info inf)
+                void advance_(meta::size_t<N>, dist_info const inf)
                 {
                     auto &i = std::get<N - 1>(its_);
                     auto const my_size = ranges::size(std::get<N - 1>(view_->views_));
                     auto const first = ranges::begin(std::get<N - 1>(view_->views_));
                     auto const idx = i - first;
-                    auto dist = inf.distance;
-                    if (dist >= 0 && static_cast<std::ptrdiff_t>(my_size - idx) < dist)
+                    auto d = inf.distance;
+                    if (static_cast<std::ptrdiff_t>(my_size - idx) < d || d < -idx)
                     {
-                        dist -= (my_size - idx);
-                        auto const new_size = static_cast<std::size_t>(inf.size_product * my_size);
-                        advance_(meta::size_t<N - 1>{}, {
-                            static_cast<std::ptrdiff_t>(dist / new_size + 1),
-                            new_size
-                        });
-                        dist %= new_size;
-                        i = first;
+                        auto const new_size = inf.size_product * static_cast<std::ptrdiff_t>(my_size);
+                        auto div = d / new_size;
+                        d %= new_size;
+                        if (static_cast<std::ptrdiff_t>(my_size - idx) < d)
+                        {
+                            i = first;
+                            d -= static_cast<std::ptrdiff_t>(my_size - idx);
+                            ++div;
+                            RANGES_EXPECT(0 <= d && static_cast<size_t>(d) < my_size);
+                        }
+                        else if (d < -idx)
+                        {
+                            i = first + my_size;
+                            d += idx;
+                            --div;
+                            RANGES_EXPECT(0 > d && static_cast<size_t>(-d) <= my_size);
+                        }
+                        advance_(meta::size_t<N - 1>{}, { div, new_size });
                     }
-                    else if (dist < 0 && dist < -idx)
-                    {
-                        dist += idx;
-                        std::terminate(); // FIXME: NYI
-                        auto const new_size = static_cast<std::size_t>(inf.size_product * my_size);
-                        advance_(meta::size_t<N - 1>{}, {
-                            static_cast<std::ptrdiff_t>(dist / new_size),
-                            new_size
-                        });
-                        dist %= inf.size_product;
-                        i = first + my_size;
-                    }
-                    i += dist;
+                    i += d;
                 }
             public:
                 cursor() = default;
