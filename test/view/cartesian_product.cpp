@@ -55,11 +55,12 @@ int main() {
     ::models<concepts::BoundedRange>(rng);
 
     using CT = common_tuple<int, std::string>;
-    auto control = std::initializer_list<CT>{
+    std::initializer_list<CT> control = {
         CT{0, "John"}, CT{0, "Paul"}, CT{0, "George"}, CT{0, "Ringo"},
         CT{1, "John"}, CT{1, "Paul"}, CT{1, "George"}, CT{1, "Ringo"},
         CT{2, "John"}, CT{2, "Paul"}, CT{2, "George"}, CT{2, "Ringo"},
-        CT{3, "John"}, CT{3, "Paul"}, CT{3, "George"}, CT{3, "Ringo"}};
+        CT{3, "John"}, CT{3, "Paul"}, CT{3, "George"}, CT{3, "Ringo"}
+    };
 
     ::check_equal(rng, control);
     ::check_equal(view::reverse(rng), view::reverse(control));
