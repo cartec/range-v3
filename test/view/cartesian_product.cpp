@@ -88,10 +88,10 @@ void test_empty_set()
 
 void test_empty_range()
 {
-    int const some_ints[] = {0,1,2,3};
+    int some_ints[] = {0,1,2,3};
     auto e = view::empty<char>();
     auto rng = view::cartesian_product(
-        span<int const, size(some_ints)>{some_ints},
+        span<int, size(some_ints)>{some_ints},
         e
     );
     CONCEPT_ASSERT(range_cardinality<decltype(rng)>::value ==
@@ -107,7 +107,7 @@ void test_empty_range()
         std::tuple<int, char>>());
     CONCEPT_ASSERT(std::is_same<
         range_reference_t<decltype(rng)>,
-        common_tuple<int const &, char const &>>());
+        common_tuple<int &, char const &>>());
 
     using CT = common_tuple<int, char>;
     std::initializer_list<CT> control = {};
@@ -129,11 +129,11 @@ void test_empty_range()
 
 int main()
 {
-    int const some_ints[] = {0,1,2,3};
-    char const * const some_strings[] = {"John", "Paul", "George", "Ringo"};
+    int some_ints[] = {0,1,2,3};
+    char const * some_strings[] = {"John", "Paul", "George", "Ringo"};
     auto rng = view::cartesian_product(
-        span<int const, size(some_ints)>{some_ints},
-        span<char const* const, size(some_strings)>{some_strings}
+        span<int, size(some_ints)>{some_ints},
+        span<char const*, size(some_strings)>{some_strings}
     );
     CONCEPT_ASSERT(range_cardinality<decltype(rng)>::value ==
         range_cardinality<decltype(some_ints)>::value *
@@ -149,7 +149,7 @@ int main()
         std::tuple<int, char const *>>());
     CONCEPT_ASSERT(std::is_same<
         range_reference_t<decltype(rng)>,
-        common_tuple<int const &, char const * const &>>());
+        common_tuple<int &, char const * &>>());
 
     using CT = common_tuple<int, char const *>;
     std::initializer_list<CT> control = {
