@@ -46,7 +46,7 @@ namespace ranges
         using difference_type_t = concepts::WeaklyIncrementable::difference_t<I>;
 
         template<typename I>
-        using size_type_t = meta::_t<std::make_unsigned<difference_type_t<I>>>;
+        using size_type_t = difference_type_t<I>;
         /// @}
 
         /// \cond

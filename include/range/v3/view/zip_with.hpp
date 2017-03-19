@@ -136,7 +136,7 @@ namespace ranges
             semiregular_t<Fun> fun_;
             std::tuple<Rngs...> rngs_;
             using difference_type_ = common_type_t<range_difference_type_t<Rngs>...>;
-            using size_type_ = meta::_t<std::make_unsigned<difference_type_>>;
+            using size_type_ = difference_type_;
 
             struct cursor;
 

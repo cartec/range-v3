@@ -81,15 +81,15 @@ int main()
         std::numeric_limits<std::uint32_t>::max());
     models<concepts::BoundedView>(aux::copy(uints));
     static_assert(Same<std::int64_t, range_difference_type_t<decltype(uints)>>(), "");
-    static_assert(Same<std::uint64_t, range_size_type_t<decltype(uints)>>(), "");
-    CHECK(uints.size() == (static_cast<uint64_t>(std::numeric_limits<std::uint32_t>::max()) + 1));
+    static_assert(Same<std::int64_t, range_size_type_t<decltype(uints)>>(), "");
+    CHECK(uints.size() == (static_cast<int64_t>(std::numeric_limits<std::uint32_t>::max()) + 1));
 
     auto ints = view::closed_ints(
         std::numeric_limits<std::int32_t>::min(),
         std::numeric_limits<std::int32_t>::max());
     static_assert(Same<std::int64_t, range_difference_type_t<decltype(ints)>>(), "");
-    static_assert(Same<std::uint64_t, range_size_type_t<decltype(ints)>>(), "");
-    CHECK(ints.size() == (static_cast<uint64_t>(std::numeric_limits<std::uint32_t>::max()) + 1));
+    static_assert(Same<std::int64_t, range_size_type_t<decltype(ints)>>(), "");
+    CHECK(ints.size() == (static_cast<int64_t>(std::numeric_limits<std::uint32_t>::max()) + 1));
 
     {
         auto ints = view::closed_iota(Int{0}, Int{10});

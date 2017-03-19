@@ -74,11 +74,12 @@ namespace ranges
         {};
 
         ////////////////////////////////////////////////////////////////////////////////////////
+#if 0 // FIXME
         template<typename T>
         struct size_type
           : meta::lazy::let<std::make_unsigned<meta::lazy::_t<difference_type<T>>>>
         {};
-
+#endif
         /// \cond
         namespace detail
         {

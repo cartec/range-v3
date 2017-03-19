@@ -41,7 +41,7 @@ namespace ranges
         using range_difference_type_t = concepts::Range::difference_t<Rng>;
 
         template<typename Rng>
-        using range_size_type_t = meta::_t<std::make_unsigned<range_difference_type_t<Rng>>>;
+        using range_size_type_t = range_difference_type_t<Rng>;
 
         template<typename Rng>
         using range_value_type_t = concepts::InputRange::value_t<Rng>;
@@ -73,27 +73,27 @@ namespace ranges
         template<typename Rng>
         using range_iterator_t
             RANGES_DEPRECATED("Please use ranges::iterator_t instead") =
-                concepts::Range::iterator_t<Rng>;
+                iterator_t<Rng>;
 
         template<typename Rng>
         using range_sentinel_t
             RANGES_DEPRECATED("Please use ranges::sentinel_t instead") =
-                concepts::Range::sentinel_t<Rng>;
+                sentinel_t<Rng>;
 
         template<typename Rng>
         using range_difference_t
             RANGES_DEPRECATED("Please use ranges::range_difference_type_t instead") =
-                concepts::Range::difference_t<Rng>;
+                difference_type_t<Rng>;
 
         template<typename Rng>
         using range_size_t
             RANGES_DEPRECATED("Please use ranges::range_size_type_t instead") =
-                meta::_t<std::make_unsigned<range_difference_t<Rng>>>;
+                range_size_type_t<Rng>;
 
         template<typename Rng>
         using range_value_t
             RANGES_DEPRECATED("Please use ranges::range_value_type_t instead") =
-                concepts::InputRange::value_t<Rng>;
+                range_value_type_t<Rng>;
 
         template<typename Rng>
         using range_safe_iterator_t

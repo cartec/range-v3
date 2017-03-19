@@ -55,7 +55,7 @@ int main()
     ::check_equal(rng2, {1,2,3,4,5,6,7,8,9,10});
     ::check_equal(rng2 | view::reverse, {10,9,8,7,6,5,4,3,2,1});
     CHECK(&*begin(rng2) == &rgp[0].first);
-    CHECK(rng2.size() == 10u);
+    CHECK(rng2.size() == 10);
 
     auto && rng3 = view::counted(rgp, 10) | view::transform(&std::pair<int,int>::first);
     has_type<int &>(*begin(rng3));
@@ -64,7 +64,7 @@ int main()
     models<concepts::RandomAccessView>(aux::copy(rng3));
     ::check_equal(rng3, {1,2,3,4,5,6,7,8,9,10});
     CHECK(&*begin(rng3) == &rgp[0].first);
-    CHECK(rng3.size() == 10u);
+    CHECK(rng3.size() == 10);
 
     auto && rng4 = view::counted(forward_iterator<std::pair<int, int>*>{rgp}, 10)
                       | view::transform(&std::pair<int,int>::first);
@@ -75,7 +75,7 @@ int main()
     models_not<concepts::BidirectionalView>(aux::copy(rng4));
     ::check_equal(rng4, {1,2,3,4,5,6,7,8,9,10});
     CHECK(&*begin(rng4) == &rgp[0].first);
-    CHECK(rng4.size() == 10u);
+    CHECK(rng4.size() == 10);
 
     counted_iterator<forward_iterator<std::pair<int, int>*>> i = begin(rng4).base();
     (void)i;

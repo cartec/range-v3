@@ -32,7 +32,7 @@ int main()
     CHECK(r0.begin() == vi.begin());
     CHECK(r0.end() == vi.end());
     ++r0.begin();
-    CHECK(r0.size() == 3u);
+    CHECK(r0.size() == 3);
 
     std::pair<std::vector<int>::iterator, std::vector<int>::iterator> p0 = r0;
     CHECK(p0.first == vi.begin()+1);
@@ -46,10 +46,10 @@ int main()
 
     ++r0.begin();
     CHECK(r0.begin() == vi.begin()+2);
-    CHECK(r0.size() == 2u);
+    CHECK(r0.size() == 2);
     --r0.end();
     CHECK(r0.end() == vi.end()-1);
-    CHECK(r0.size() == 1u);
+    CHECK(r0.size() == 1);
     CHECK(r0.front() == 3);
     CHECK(r0.back() == 3);
 
@@ -60,11 +60,11 @@ int main()
     CHECK(r1.begin() == vi.begin()+1);
 
     std::list<int> li{1,2,3,4};
-    sized_iterator_range<std::list<int>::iterator> l0 {li.begin(), li.end(), li.size()};
+    sized_iterator_range<std::list<int>::iterator> l0 {li.begin(), li.end(), size(li)};
     ::models<concepts::SizedView>(aux::copy(l0));
     CHECK(l0.begin() == li.begin());
     CHECK(l0.end() == li.end());
-    CHECK(l0.size() == li.size());
+    CHECK(size(l0) == size(li));
 
     l0 = view::all(li);
 

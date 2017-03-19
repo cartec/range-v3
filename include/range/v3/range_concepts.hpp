@@ -21,9 +21,10 @@
 #include <range/v3/range_fwd.hpp>
 #include <range/v3/begin_end.hpp>
 #include <range/v3/data.hpp>
-#include <range/v3/size.hpp>
+#include <range/v3/utility/iterator.hpp>
 #include <range/v3/utility/iterator_concepts.hpp>
 #include <range/v3/utility/iterator_traits.hpp>
+#include <range/v3/utility/static_const.hpp>
 
 #ifndef RANGES_NO_STD_FORWARD_DECLARATIONS
 // Non-portable forward declarations of standard containers
@@ -184,7 +185,111 @@ namespace ranges
                         concepts::same_type(begin(t), end(t))
                     ));
             };
+	}
 
+        /// \addtogroup group-concepts
+        // Specialize this if the default is wrong.
+        template<typename T>
+        struct disable_sized_range : std::false_type {};
+
+        /// \cond
+        namespace _size_
+        {
+            template<typename T>
+            void size(T const &) = delete;
+
+            struct fn : iter_size_fn
+            {
+            private:
+                template<typename R, typename N>
+                using size_type =
+                    meta::_t<meta::if_<
+                        concepts::models<concepts::Range, R>,
+                        meta::defer<concepts::Range::difference_t, R>,
+                        std::make_signed<decltype(+std::declval<N>())>>>;
+
+                template<class To, class From,
+                    CONCEPT_REQUIRES_(ranges::Integral<To>() && ranges::Integral<From>())>
+                static RANGES_CXX14_CONSTEXPR To narrow_cast(From from) noexcept
+                {
+                    CONCEPT_ASSERT(std::is_signed<To>());
+                    RANGES_EXPECT(!std::is_signed<From>() || from >= From{});
+                    auto const to = static_cast<To>(from);
+                    RANGES_EXPECT(to >= To{});
+                    using C = common_type_t<To, From>;
+                    RANGES_EXPECT(static_cast<C>(to) == static_cast<C>(from));
+                    return to;
+                }
+
+                template<typename R, std::ptrdiff_t N>
+                static constexpr std::ptrdiff_t impl_(R const (&)[N], int) noexcept
+                {
+                    return N;
+                }
+
+                // Prefer member if it returns Integral.
+                template<typename R,
+                    typename = meta::if_c<!disable_sized_range<R>()>,
+                    typename N = decltype(aux::copy(std::declval<R const &>().size())),
+                    CONCEPT_REQUIRES_(Integral<N>())>
+                static constexpr auto impl_(R const &r, int)
+                RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT
+                (
+                    fn::narrow_cast<size_type<R, N>>(r.size())
+                )
+
+                // Use ADL if it returns Integral.
+                template<typename R,
+                    typename = meta::if_c<!disable_sized_range<R>()>,
+                    typename N = decltype(aux::copy(size(std::declval<R const &>()))),
+                    CONCEPT_REQUIRES_(Integral<N>())>
+                static constexpr auto impl_(R const &r, long)
+                RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT
+                (
+                    fn::narrow_cast<size_type<R, N>>(size(r))
+                )
+
+                template<typename R,
+                    CONCEPT_REQUIRES_(concepts::models<concepts::ForwardRange, R>())>
+                static constexpr auto impl_(R const &r, ...)
+                RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT
+                (
+                    ranges::iter_size(ranges::cbegin(r), ranges::cend(r))
+                )
+
+            public:
+                using iter_size_fn::operator();
+
+                template<typename R>
+                constexpr auto operator()(R const &r) const
+                RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT
+                (
+                    fn::impl_(r, 42)
+                )
+
+                template<typename T, typename Fn = fn>
+                constexpr auto operator()(std::reference_wrapper<T> ref) const
+                RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT
+                (
+                    Fn()(ref.get())
+                )
+
+                template<typename T, bool RValue, typename Fn = fn>
+                constexpr auto operator()(ranges::reference_wrapper<T, RValue> ref) const
+                RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT
+                (
+                    Fn()(ref.get())
+                )
+            };
+        }
+        /// \endcond
+
+        /// \ingroup group-core
+        /// \return The result of an unqualified call to `size`
+        RANGES_INLINE_VARIABLE(_size_::fn, size)
+
+        namespace concepts
+        {
             struct SizedRange
               : refines<Range>
             {
@@ -195,7 +300,7 @@ namespace ranges
                 auto requires_(T &t) -> decltype(
                     concepts::valid_expr(
                         concepts::is_false(disable_sized_range<uncvref_t<T>>()),
-                        concepts::model_of<Integral>(size(t))
+                        concepts::has_type<Range::difference_t<T>>(size(t))
                     ));
             };
 

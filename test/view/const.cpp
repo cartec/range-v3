@@ -36,7 +36,7 @@ int main()
     models<concepts::RandomAccessView>(aux::copy(rng));
     ::check_equal(rng, {1, 2, 3, 4});
     CHECK(&*begin(rng) == &rgi[0]);
-    CHECK(rng.size() == 4u);
+    CHECK(rng.size() == 4);
 
     auto && rng2 = view::counted(forward_iterator<int*>(rgi), 4) | view::const_;
     has_type<int const &>(*begin(rng2));
@@ -47,7 +47,7 @@ int main()
     models<concepts::SizedView>(aux::copy(rng2));
     ::check_equal(rng2, {1, 2, 3, 4});
     CHECK(&*begin(rng2) == &rgi[0]);
-    CHECK(rng2.size() == 4u);
+    CHECK(rng2.size() == 4);
 
     auto zip = view::zip(rgi, rgi);
     auto rng3 = zip | view::const_;
@@ -61,7 +61,7 @@ int main()
     using P = std::pair<int,int>;
     ::check_equal(rng3, {P{1,1}, P{2,2}, P{3,3}, P{4,4}});
     CHECK(&(*begin(rng3)).first == &rgi[0]);
-    CHECK(rng3.size() == 4u);
+    CHECK(rng3.size() == 4);
 
     auto zip2 = view::zip(rgi, rgi) | view::move;
     auto rng4 = zip2 | view::const_;
@@ -75,7 +75,7 @@ int main()
     using P = std::pair<int,int>;
     ::check_equal(rng4, {P{1,1}, P{2,2}, P{3,3}, P{4,4}});
     CHECK(&(*begin(rng4)).first == &rgi[0]);
-    CHECK(rng4.size() == 4u);
+    CHECK(rng4.size() == 4);
 
     return test_result();
 }
