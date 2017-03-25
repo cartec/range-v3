@@ -29,7 +29,7 @@ namespace ranges
         namespace detail
         {
             template<class = void>
-            [[noreturn]] void assert_failure(char const *file, int line, char const *msg)
+            [[noreturn]] void assert_failure(char const *file, int line, char const *msg) noexcept
             {
                 std::fprintf(stderr, "%s(%d): %s\n", file, line, msg);
                 std::abort();
@@ -51,13 +51,15 @@ namespace ranges
 #endif
 
 #ifndef RANGES_ASSUME
-#if defined(__clang__) || defined(__GNUC__)
-#define RANGES_ASSUME(COND) static_cast<void>((COND) ? void(0) : __builtin_unreachable())
-#elif defined(_MSC_VER)
-#define RANGES_ASSUME(COND) static_cast<void>(__assume(COND))
-#else
-#define RANGES_ASSUME(COND) static_cast<void>(COND)
-#endif
+ #if defined(__clang__)
+  #define RANGES_ASSUME(COND) static_cast<void>(((COND), __builtin_assume(COND)))
+ #elif defined(__GNUC__)
+  #define RANGES_ASSUME(COND) static_cast<void>((COND) ? void() : __builtin_unreachable())
+ #elif defined(_MSC_VER)
+  #define RANGES_ASSUME(COND) static_cast<void>(((COND), __assume(COND)))
+ #else
+  #define RANGES_ASSUME(COND) static_cast<void>(COND)
+ #endif
 #endif // RANGES_ASSUME
 
 #ifndef RANGES_EXPECT
