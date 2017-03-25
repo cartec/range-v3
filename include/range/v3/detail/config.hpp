@@ -52,11 +52,11 @@ namespace ranges
 
 #ifndef RANGES_ASSUME
  #if defined(__clang__)
-  #define RANGES_ASSUME(COND) static_cast<void>(((COND), __builtin_assume(COND)))
+  #define RANGES_ASSUME(COND) (static_cast<void>(COND), __builtin_assume(COND))
  #elif defined(__GNUC__)
-  #define RANGES_ASSUME(COND) static_cast<void>((COND) ? void() : __builtin_unreachable())
+  #define RANGES_ASSUME(COND) ((COND) ? void() : __builtin_unreachable())
  #elif defined(_MSC_VER)
-  #define RANGES_ASSUME(COND) static_cast<void>(((COND), __assume(COND)))
+  #define RANGES_ASSUME(COND) (static_cast<void>(COND), __assume(COND))
  #else
   #define RANGES_ASSUME(COND) static_cast<void>(COND)
  #endif
@@ -377,19 +377,17 @@ namespace ranges
 #endif // RANGES_CXX_INLINE_VARIABLES
 
 #ifdef RANGES_FEWER_WARNINGS
-#define RANGES_DISABLE_WARNINGS                 \
-    RANGES_DIAGNOSTIC_PUSH                      \
-    RANGES_DIAGNOSTIC_IGNORE_PRAGMAS            \
-    RANGES_DIAGNOSTIC_IGNORE_SHADOWING          \
-    RANGES_DIAGNOSTIC_IGNORE_UNDEFINED_INTERNAL \
-    RANGES_DIAGNOSTIC_IGNORE_INDENTATION        \
-    RANGES_DIAGNOSTIC_IGNORE_CXX17_COMPAT
-
-#define RANGES_RE_ENABLE_WARNINGS RANGES_DIAGNOSTIC_POP
+ #define RANGES_DISABLE_WARNINGS                 \
+     RANGES_DIAGNOSTIC_PUSH                      \
+     RANGES_DIAGNOSTIC_IGNORE_PRAGMAS            \
+     RANGES_DIAGNOSTIC_IGNORE_SHADOWING          \
+     RANGES_DIAGNOSTIC_IGNORE_UNDEFINED_INTERNAL \
+     RANGES_DIAGNOSTIC_IGNORE_INDENTATION        \
+     RANGES_DIAGNOSTIC_IGNORE_CXX17_COMPAT
 #else
-#define RANGES_DISABLE_WARNINGS
-#define RANGES_RE_ENABLE_WARNINGS
+ #define RANGES_DISABLE_WARNINGS RANGES_DIAGNOSTIC_PUSH
 #endif
+#define RANGES_RE_ENABLE_WARNINGS RANGES_DIAGNOSTIC_POP
 
 namespace ranges {
     inline namespace v3 {
