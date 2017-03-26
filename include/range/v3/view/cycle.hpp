@@ -76,7 +76,10 @@ namespace ranges
                 iterator get_end_(std::false_type, meta::bool_<CanBeEmpty> = {}) const
                 {
                     auto &end_ = static_cast<cache_t&>(*rng_);
+                    RANGES_DIAGNOSTIC_PUSH
+                    RANGES_DIAGNOSTIC_IGNORE_ASSUME
                     RANGES_EXPECT(CanBeEmpty || end_);
+                    RANGES_DIAGNOSTIC_POP
                     if(CanBeEmpty && !end_)
                         end_ = ranges::next(it_, ranges::end(rng_->rng_));
                     return *end_;

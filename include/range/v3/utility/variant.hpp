@@ -45,7 +45,10 @@ namespace ranges
                 }
                 void fill_default_(T *p, std::false_type)
                 {
+                    RANGES_DIAGNOSTIC_PUSH
+                    RANGES_DIAGNOSTIC_IGNORE_ASSUME
                     RANGES_EXPECT(p == ranges::end(data_));
+                    RANGES_DIAGNOSTIC_POP
                 }
             public:
                 CONCEPT_REQUIRES(DefaultConstructible<T>())

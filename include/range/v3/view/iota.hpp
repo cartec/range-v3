@@ -171,7 +171,7 @@ namespace ranges
                 static_assert(sizeof(iota_difference_t<Val>) >= sizeof(Val),
                     "iota_difference_type must be at least as wide as the signed integer type; "
                     "otherwise the expression below might overflow when to - from would not.");
-                return static_cast<D>(to) - static_cast<D>(from);  
+                return static_cast<D>(to) - static_cast<D>(from);
             }
 
             template<typename Val, CONCEPT_REQUIRES_(UnsignedIntegral<Val>())>
@@ -197,7 +197,10 @@ namespace ranges
                 //
                 static_assert(sizeof(D) >= sizeof(Val),
                     "the difference type of view::iota must be at least as wide as the UnsignedIntegral type");
+                RANGES_DIAGNOSTIC_PUSH
+                RANGES_DIAGNOSTIC_IGNORE_ASSUME
                 RANGES_EXPECT(Val(to - from) <= static_cast<UD>(std::numeric_limits<D>::max()));
+                RANGES_DIAGNOSTIC_POP
                 return static_cast<D>(Val(to - from));
             }
 
@@ -208,7 +211,10 @@ namespace ranges
                 auto dist = ints_open_distance_(from, to);
                 // Check whether dist + 1 would overflow the signed integer type,
                 // introducing undefined behavior:
+                RANGES_DIAGNOSTIC_PUSH
+                RANGES_DIAGNOSTIC_IGNORE_ASSUME
                 RANGES_EXPECT(dist < std::numeric_limits<D>::max());
+                RANGES_DIAGNOSTIC_POP
                 return dist + D(1);
             }
 
@@ -543,7 +549,7 @@ namespace ranges
                 {
                     return iota_view<Val>{value};
                 }
-                
+
                 template<typename Val, CONCEPT_REQUIRES_(Integral<Val>())>
                 auto operator()(Val from, Val to) const
                 RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT

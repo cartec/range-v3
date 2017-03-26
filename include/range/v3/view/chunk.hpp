@@ -90,14 +90,20 @@ namespace ranges
             auto read(iterator_t<Rng> it) const ->
                 decltype(view::take(make_iterator_range(std::move(it), end_), n_))
             {
+                RANGES_DIAGNOSTIC_PUSH
+                RANGES_DIAGNOSTIC_IGNORE_ASSUME
                 RANGES_EXPECT(it != end_);
                 RANGES_EXPECT(0 == offset());
+                RANGES_DIAGNOSTIC_POP
                 return view::take(make_iterator_range(std::move(it), end_), n_);
             }
             void next(iterator_t<Rng> &it)
             {
+                RANGES_DIAGNOSTIC_PUSH
+                RANGES_DIAGNOSTIC_IGNORE_ASSUME
                 RANGES_EXPECT(it != end_);
                 RANGES_EXPECT(0 == offset());
+                RANGES_DIAGNOSTIC_POP
                 offset() = ranges::advance(it, n_, end_);
             }
             CONCEPT_REQUIRES(BidirectionalRange<Rng>())

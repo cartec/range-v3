@@ -270,7 +270,10 @@ namespace ranges
                 }
                 bool equal(any_cursor const &that) const
                 {
+                    RANGES_DIAGNOSTIC_PUSH
+                    RANGES_DIAGNOSTIC_IGNORE_ASSUME
                     RANGES_EXPECT(!ptr_ == !that.ptr_);
+                    RANGES_DIAGNOSTIC_POP
                     return (!ptr_ && !that.ptr_) || ptr_->equal(*that.ptr_);
                 }
                 bool equal(any_sentinel const &that) const
@@ -292,19 +295,28 @@ namespace ranges
                 CONCEPT_REQUIRES(Cat >= category::bidirectional)
                 void prev()
                 {
+                    RANGES_DIAGNOSTIC_PUSH
+                    RANGES_DIAGNOSTIC_IGNORE_ASSUME
                     RANGES_EXPECT(ptr_);
+                    RANGES_DIAGNOSTIC_POP
                     ptr_->prev();
                 }
                 CONCEPT_REQUIRES(Cat >= category::random_access)
                 void advance(std::ptrdiff_t n)
                 {
+                    RANGES_DIAGNOSTIC_PUSH
+                    RANGES_DIAGNOSTIC_IGNORE_ASSUME
                     RANGES_EXPECT(ptr_);
+                    RANGES_DIAGNOSTIC_POP
                     ptr_->advance(n);
                 }
                 CONCEPT_REQUIRES(Cat >= category::random_access)
                 std::ptrdiff_t distance_to(any_cursor const &that) const
                 {
+                    RANGES_DIAGNOSTIC_PUSH
+                    RANGES_DIAGNOSTIC_IGNORE_ASSUME
                     RANGES_EXPECT(!ptr_ == !that.ptr_);
+                    RANGES_DIAGNOSTIC_POP
                     return !ptr_ ? 0 : ptr_->distance_to(*that.ptr_);
                 }
             };

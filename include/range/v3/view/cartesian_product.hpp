@@ -121,7 +121,10 @@ namespace ranges
                     auto &v = std::get<N - 1>(view_->views_);
                     auto &i = std::get<N - 1>(its_);
                     auto const last = ranges::end(v);
+                    RANGES_DIAGNOSTIC_PUSH
+                    RANGES_DIAGNOSTIC_IGNORE_ASSUME
                     RANGES_EXPECT(i != last);
+                    RANGES_DIAGNOSTIC_POP
                     if (++i == last)
                     {
                         i = ranges::begin(v);

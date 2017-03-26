@@ -154,8 +154,11 @@ namespace ranges
             {
                 static_assert(0 <= Count,
                     "Count of characters to extract cannot be negative.");
+                RANGES_DIAGNOSTIC_PUSH
+                RANGES_DIAGNOSTIC_IGNORE_ASSUME
                 return RANGES_EXPECT(Count <= size()),
                     span<T, Count>{data(), Count};
+                RANGES_DIAGNOSTIC_POP
             }
             template<std::ptrdiff_t Count,
                 CONCEPT_REQUIRES_(N == dynamic_extent || Count <= N)>
@@ -163,8 +166,11 @@ namespace ranges
             {
                 static_assert(0 <= Count,
                     "Count of characters to extract cannot be negative.");
+                RANGES_DIAGNOSTIC_PUSH
+                RANGES_DIAGNOSTIC_IGNORE_ASSUME
                 return RANGES_EXPECT(Count <= size()),
                     span<T, Count>{data() + size() - Count, Count};
+                RANGES_DIAGNOSTIC_POP
             }
             template<std::ptrdiff_t Offset, std::ptrdiff_t Count = dynamic_extent,
                 CONCEPT_REQUIRES_(Count == dynamic_extent ||
@@ -173,29 +179,41 @@ namespace ranges
             {
                 static_assert(0 <= Offset,
                     "Offset for subspan cannot be negative.");
+                RANGES_DIAGNOSTIC_PUSH
+                RANGES_DIAGNOSTIC_IGNORE_ASSUME
                 return RANGES_EXPECT(Offset <= size()),
                     RANGES_EXPECT(Count == dynamic_extent || Offset + Count <= size()),
                     span<T, Count>{data() + Offset,
                         Count == dynamic_extent ? size() - Offset : Count};
+                RANGES_DIAGNOSTIC_POP
             }
             constexpr span<T> first(index_type count) const noexcept
             {
+                RANGES_DIAGNOSTIC_PUSH
+                RANGES_DIAGNOSTIC_IGNORE_ASSUME
                 return RANGES_EXPECT(0 <= count && count <= size()),
                     span<T>{data(), count};
+                RANGES_DIAGNOSTIC_POP
             }
             constexpr span<T> last(index_type count) const noexcept
             {
+                RANGES_DIAGNOSTIC_PUSH
+                RANGES_DIAGNOSTIC_IGNORE_ASSUME
                 return RANGES_EXPECT(0 <= count && count <= size()),
                     span<T>{data() + size() - count, count};
+                RANGES_DIAGNOSTIC_POP
             }
             constexpr span<T> subspan(
                 index_type offset, index_type count = dynamic_extent) const noexcept
             {
+                RANGES_DIAGNOSTIC_PUSH
+                RANGES_DIAGNOSTIC_IGNORE_ASSUME
                 return RANGES_EXPECT(0 <= offset && offset <= size()),
                     RANGES_EXPECT(count == dynamic_extent ||
                         (0 <= count && offset + count <= size())),
                     span<T>{data() + offset,
                         count == dynamic_extent ? size() - offset : count};
+                RANGES_DIAGNOSTIC_POP
             }
 
             // [span.obs], span observers
@@ -212,9 +230,12 @@ namespace ranges
             // [span.elem], span element access
             constexpr reference operator[](index_type idx) const noexcept
             {
+                RANGES_DIAGNOSTIC_PUSH
+                RANGES_DIAGNOSTIC_IGNORE_ASSUME
                 return RANGES_EXPECT(0 <= idx && idx < size()),
                     RANGES_EXPECT(data()),
                     *(data() + idx);
+                RANGES_DIAGNOSTIC_POP
             }
             constexpr reference operator()(index_type idx) const noexcept
             {
