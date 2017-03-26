@@ -52,9 +52,10 @@ namespace ranges
 
 #ifndef RANGES_ASSUME
  #if defined(__clang__)
-  #define RANGES_ASSUME(...)                              \
-    (((__VA_ARGS__) ? void(0) : __builtin_unreachable()), \
-     __builtin_assume(static_cast<bool>(__VA_ARGS__)))
+  #define RANGES_ASSUME(...)                                 \
+    static_cast<void>((                                      \
+        ((__VA_ARGS__) ? void(0) : __builtin_unreachable()), \
+        __builtin_assume(static_cast<bool>(__VA_ARGS__))))
  #elif defined(__GNUC__)
   #define RANGES_ASSUME(...) ((__VA_ARGS__) ? void(0) : __builtin_unreachable())
  #elif defined(_MSC_VER)
