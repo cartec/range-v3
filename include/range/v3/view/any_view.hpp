@@ -262,7 +262,10 @@ namespace ranges
                 }
                 Ref read() const
                 {
+                    RANGES_DIAGNOSTIC_PUSH
+                    RANGES_DIAGNOSTIC_IGNORE_ASSUME
                     RANGES_EXPECT(ptr_);
+                    RANGES_DIAGNOSTIC_POP
                     return ptr_->read();
                 }
                 bool equal(any_cursor const &that) const
@@ -272,12 +275,18 @@ namespace ranges
                 }
                 bool equal(any_sentinel const &that) const
                 {
+                    RANGES_DIAGNOSTIC_PUSH
+                    RANGES_DIAGNOSTIC_IGNORE_ASSUME
                     RANGES_EXPECT(!ptr_ == !that.ptr_);
+                    RANGES_DIAGNOSTIC_POP
                     return (!ptr_ && !that.ptr_) || that.ptr_->equal(ptr_->iter());
                 }
                 void next()
                 {
+                    RANGES_DIAGNOSTIC_PUSH
+                    RANGES_DIAGNOSTIC_IGNORE_ASSUME
                     RANGES_EXPECT(ptr_);
+                    RANGES_DIAGNOSTIC_POP
                     ptr_->next();
                 }
                 CONCEPT_REQUIRES(Cat >= category::bidirectional)

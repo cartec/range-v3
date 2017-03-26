@@ -58,7 +58,10 @@ namespace ranges
                 {
                     auto const end = ranges::end(rng_->mutable_base());
                     auto &pred = rng_->pred_;
+                    RANGES_DIAGNOSTIC_PUSH
+                    RANGES_DIAGNOSTIC_IGNORE_ASSUME
                     RANGES_EXPECT(it != end);
+                    RANGES_DIAGNOSTIC_POP
                     for(auto prev = it; ++it != end; prev = it)
                         if(invoke(pred, *prev, *it))
                             break;

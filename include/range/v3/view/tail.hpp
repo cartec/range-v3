@@ -54,7 +54,11 @@ namespace ranges
               : rng_(std::forward<Rng>(rng))
             {
                 CONCEPT_ASSERT(InputRange<Rng>());
+#ifdef __clang__ // Workaround https://bugs.llvm.org//show_bug.cgi?id=32424
+                RANGES_EXPECT(!ForwardRange<Rng>::value || !empty(rng_));
+#else
                 RANGES_EXPECT(!ForwardRange<Rng>() || !empty(rng_));
+#endif
             }
             iterator begin()
             {

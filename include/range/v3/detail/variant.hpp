@@ -759,7 +759,10 @@ namespace ranges
             using To = variant_unique_t<From>;
             auto res = detail::variant_core_access::make_empty(meta::id<To>{});
             var.visit_i(detail::unique_visitor<To, From>{&res});
+            RANGES_DIAGNOSTIC_PUSH
+            RANGES_DIAGNOSTIC_IGNORE_ASSUME
             RANGES_EXPECT(res.valid());
+            RANGES_DIAGNOSTIC_POP
             return res;
         }
         /// @}

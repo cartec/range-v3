@@ -44,7 +44,10 @@ namespace ranges
             {
                 auto begin = ranges::begin(rng);
                 auto end = ranges::end(rng);
+                RANGES_DIAGNOSTIC_PUSH
+                RANGES_DIAGNOSTIC_IGNORE_ASSUME
                 RANGES_EXPECT(begin != end);
+                RANGES_DIAGNOSTIC_POP
                 auto result = R{*begin, *begin};
                 if(++begin != end)
                 {

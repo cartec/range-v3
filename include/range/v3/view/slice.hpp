@@ -65,7 +65,11 @@ namespace ranges
             iterator_t<Rng> pos_at_(Rng && rng, Int i, concepts::InputRange *,
                 std::false_type)
             {
+#ifdef __clang__ // Workaround https://bugs.llvm.org//show_bug.cgi?id=32424
+                RANGES_EXPECT(i >= 0 || SizedRange<Rng>::value || ForwardRange<Rng>::value);
+#else
                 RANGES_EXPECT(i >= 0 || SizedRange<Rng>() || ForwardRange<Rng>());
+#endif
                 if(0 > i)
                     return next(ranges::begin(rng), distance(rng) + i);
                 return next(ranges::begin(rng), i);

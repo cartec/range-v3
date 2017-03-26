@@ -187,7 +187,11 @@ namespace ranges
             D advance_fn::bounded_(I &it, D n, S bound, concepts::SizedSentinel*,
                 Concept)
             {
+#ifdef __clang__ // Workaround https://bugs.llvm.org//show_bug.cgi?id=32424
+                RANGES_EXPECT((Same<I, S>::value || 0 <= n));
+#else
                 RANGES_EXPECT((Same<I, S>() || 0 <= n));
+#endif
                 D d = bound - it;
                 RANGES_EXPECT(0 <= n ? 0 <= d : 0 >= d);
                 if(0 <= n ? n >= d : n <= d)
@@ -282,7 +286,11 @@ namespace ranges
             {
                 I end = ranges::next(begin, end_);
                 auto n = static_cast<D>(end - begin);
+#ifdef __clang__ // Workaround https://bugs.llvm.org//show_bug.cgi?id=32424
+                RANGES_EXPECT((Same<I, S>::value || 0 <= n));
+#else
                 RANGES_EXPECT((Same<I, S>() || 0 <= n));
+#endif
                 return {n + d, end};
             }
             template<typename I, typename S, typename D>
@@ -290,7 +298,11 @@ namespace ranges
             std::pair<D, I> impl_i(I begin, S end, D d, concepts::SizedSentinel*) const
             {
                 auto n = static_cast<D>(end - begin);
+#ifdef __clang__ // Workaround https://bugs.llvm.org//show_bug.cgi?id=32424
+                RANGES_EXPECT((Same<I, S>::value || 0 <= n));
+#else
                 RANGES_EXPECT((Same<I, S>() || 0 <= n));
+#endif
                 return {n + d, ranges::next(begin, end)};
             }
         public:
@@ -322,7 +334,11 @@ namespace ranges
             D impl_i(I begin, S end, D d, concepts::SizedSentinel*) const
             {
                 auto n = static_cast<D>(end - begin);
+#ifdef __clang__ // Workaround https://bugs.llvm.org//show_bug.cgi?id=32424
+                RANGES_EXPECT((Same<I, S>::value || 0 <= n));
+#else
                 RANGES_EXPECT((Same<I, S>() || 0 <= n));
+#endif
                 return n + d;
             }
         public:

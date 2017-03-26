@@ -40,33 +40,37 @@ namespace ranges
 #endif
 
 #ifndef RANGES_ASSERT
-#if !defined(NDEBUG) && defined(__GNUC__) && !defined(__clang__) && __GNUC__ < 5
-#define RANGES_ASSERT(...) \
+ #if !defined(NDEBUG) && defined(__GNUC__) && !defined(__clang__) && __GNUC__ < 5
+  #define RANGES_ASSERT(...) \
     static_cast<void>((__VA_ARGS__) ? void(0) : \
         ::ranges::detail::assert_failure(__FILE__, __LINE__, "assertion failed: " #__VA_ARGS__))
-#else
-#include <cassert>
-#define RANGES_ASSERT assert
-#endif
+ #else
+  #include <cassert>
+  #define RANGES_ASSERT assert
+ #endif
 #endif
 
 #ifndef RANGES_ASSUME
  #if defined(__clang__)
-  #define RANGES_ASSUME(COND) (static_cast<void>(COND), __builtin_assume(COND))
+  #define RANGES_ASSUME(...)                              \
+    (((__VA_ARGS__) ? void(0) : __builtin_unreachable()), \
+     __builtin_assume(static_cast<bool>(__VA_ARGS__)))
  #elif defined(__GNUC__)
-  #define RANGES_ASSUME(COND) ((COND) ? void() : __builtin_unreachable())
+  #define RANGES_ASSUME(...) ((__VA_ARGS__) ? void(0) : __builtin_unreachable())
  #elif defined(_MSC_VER)
-  #define RANGES_ASSUME(COND) (static_cast<void>(COND), __assume(COND))
+  #define RANGES_ASSUME(...)                  \
+    (((__VA_ARGS__) ? void(0) : __assume(0)), \
+     __assume(static_cast<bool>(__VA_ARGS__)))
  #else
-  #define RANGES_ASSUME(COND) static_cast<void>(COND)
+  #define RANGES_ASSUME(...) static_cast<void>(static_cast<bool>(__VA_ARGS__))
  #endif
 #endif // RANGES_ASSUME
 
 #ifndef RANGES_EXPECT
 #ifdef NDEBUG
-#define RANGES_EXPECT(COND) RANGES_ASSUME(COND)
+#define RANGES_EXPECT(...) RANGES_ASSUME(__VA_ARGS__)
 #else // NDEBUG
-#define RANGES_EXPECT(COND) RANGES_ASSERT(COND)
+#define RANGES_EXPECT(...) RANGES_ASSERT(__VA_ARGS__)
 #endif // NDEBUG
 #endif // RANGES_EXPECT
 
@@ -180,6 +184,7 @@ namespace ranges
 #define RANGES_DIAGNOSTIC_IGNORE_UNNEEDED_INTERNAL
 #define RANGES_DIAGNOSTIC_IGNORE_ZERO_LENGTH_ARRAY
 #define RANGES_DIAGNOSTIC_IGNORE_CXX17_COMPAT
+#define RANGES_DIAGNOSTIC_IGNORE_ASSUME
 
 #else // ^^^ defined(_MSC_VER) ^^^ / vvv !defined(_MSC_VER) vvv
 // Generic configuration using SD-6 feature test macros with fallback to __cplusplus
@@ -199,13 +204,15 @@ namespace ranges
 #define RANGES_DIAGNOSTIC_IGNORE_UNNEEDED_INTERNAL RANGES_DIAGNOSTIC_IGNORE("-Wunneeded-internal-declaration")
 #define RANGES_DIAGNOSTIC_IGNORE_UNNEEDED_MEMBER RANGES_DIAGNOSTIC_IGNORE("-Wunneeded-member-function")
 #define RANGES_DIAGNOSTIC_IGNORE_ZERO_LENGTH_ARRAY RANGES_DIAGNOSTIC_IGNORE("-Wzero-length-array")
-#define RANGES_DIAGNOSTIC_IGNORE_CXX17_COMPAT
+#define RANGES_DIAGNOSTIC_IGNORE_CXX17_COMPAT RANGES_DIAGNOSTIC_IGNORE("-Wc++1z-compat")
+#define RANGES_DIAGNOSTIC_IGNORE_ASSUME RANGES_DIAGNOSTIC_IGNORE("-Wassume")
 #else
 #define RANGES_DIAGNOSTIC_IGNORE_GLOBAL_CONSTRUCTORS
 #define RANGES_DIAGNOSTIC_IGNORE_UNNEEDED_INTERNAL
 #define RANGES_DIAGNOSTIC_IGNORE_UNNEEDED_MEMBER
 #define RANGES_DIAGNOSTIC_IGNORE_ZERO_LENGTH_ARRAY
-#define RANGES_DIAGNOSTIC_IGNORE_CXX17_COMPAT RANGES_DIAGNOSTIC_IGNORE("-Wc++1z-compat")
+#define RANGES_DIAGNOSTIC_IGNORE_CXX17_COMPAT
+#define RANGES_DIAGNOSTIC_IGNORE_ASSUME
 #endif
 #else
 #define RANGES_DIAGNOSTIC_PUSH
@@ -221,6 +228,7 @@ namespace ranges
 #define RANGES_DIAGNOSTIC_IGNORE_UNNEEDED_MEMBER
 #define RANGES_DIAGNOSTIC_IGNORE_ZERO_LENGTH_ARRAY
 #define RANGES_DIAGNOSTIC_IGNORE_CXX17_COMPAT
+#define RANGES_DIAGNOSTIC_IGNORE_ASSUME
 #endif
 #endif // MSVC/Generic configuration switch
 

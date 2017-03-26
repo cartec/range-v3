@@ -113,7 +113,10 @@ namespace ranges
                 void next()
                 {
                     auto const end = ranges::end(rng_->rng_);
+                    RANGES_DIAGNOSTIC_PUSH
+                    RANGES_DIAGNOSTIC_IGNORE_ASSUME
                     RANGES_EXPECT(it_ != end);
+                    RANGES_DIAGNOSTIC_POP
                     if(++it_ == end)
                     {
                         this->set_end_(BoundedRange<Rng>());
@@ -160,7 +163,10 @@ namespace ranges
             explicit cycled_view(Rng rng)
               : rng_(std::move(rng))
             {
+                RANGES_DIAGNOSTIC_PUSH
+                RANGES_DIAGNOSTIC_IGNORE_ASSUME
                 RANGES_EXPECT(!ranges::empty(rng_));
+                RANGES_DIAGNOSTIC_POP
             }
         };
 

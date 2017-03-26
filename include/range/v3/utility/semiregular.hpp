@@ -42,12 +42,18 @@ namespace ranges
             {}
             T & get()
             {
+                RANGES_DIAGNOSTIC_PUSH
+                RANGES_DIAGNOSTIC_IGNORE_ASSUME
                 RANGES_EXPECT(t_);
+                RANGES_DIAGNOSTIC_POP
                 return *t_;
             }
             T const & get() const
             {
+                RANGES_DIAGNOSTIC_PUSH
+                RANGES_DIAGNOSTIC_IGNORE_ASSUME
                 RANGES_EXPECT(t_);
+                RANGES_DIAGNOSTIC_POP
                 return *t_;
             }
             semiregular &operator=(T const &t)
