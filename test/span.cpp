@@ -37,6 +37,8 @@
 #include <string>
 #include <vector>
 
+RANGES_DISABLE_WARNINGS
+
 using namespace ranges;
 
 namespace

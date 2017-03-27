@@ -11,9 +11,9 @@
 
 #include <range/v3/detail/config.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 RANGES_DEPRECATED("compile test for \"RANGES_DEPRECATED\"") void foo() {}
 
 int main()
-{
-    return 0;
-}
+{}

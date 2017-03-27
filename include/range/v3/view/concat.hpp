@@ -32,6 +32,8 @@
 #include <range/v3/utility/static_const.hpp>
 #include <range/v3/view/all.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -102,10 +104,7 @@ namespace ranges
                 template<std::size_t N>
                 void satisfy(meta::size_t<N>)
                 {
-                    RANGES_DIAGNOSTIC_PUSH
-                    RANGES_DIAGNOSTIC_IGNORE_ASSUME
                     RANGES_EXPECT(its_.index() == N);
-                    RANGES_DIAGNOSTIC_POP
                     if(ranges::get<N>(its_) == end(std::get<N>(rng_->rngs_)))
                     {
                         ranges::emplace<N + 1>(its_, begin(std::get<N + 1>(rng_->rngs_)));
@@ -114,10 +113,7 @@ namespace ranges
                 }
                 void satisfy(meta::size_t<cranges - 1>)
                 {
-                    RANGES_DIAGNOSTIC_PUSH
-                    RANGES_DIAGNOSTIC_IGNORE_ASSUME
                     RANGES_EXPECT(its_.index() == cranges - 1);
-                    RANGES_DIAGNOSTIC_POP
                 }
                 struct next_fun
                 {
@@ -230,10 +226,7 @@ namespace ranges
                     if(from.its_.index() < N && to.its_.index() > N)
                         return distance(std::get<N>(from.rng_->rngs_)) +
                             cursor::distance_to_(meta::size_t<N + 1>{}, from, to);
-                    RANGES_DIAGNOSTIC_PUSH
-                    RANGES_DIAGNOSTIC_IGNORE_ASSUME
                     RANGES_EXPECT(to.its_.index() == N);
-                    RANGES_DIAGNOSTIC_POP
                     return distance(begin(std::get<N>(from.rng_->rngs_)), ranges::get<N>(to.its_));
                 }
             public:
@@ -347,5 +340,7 @@ namespace ranges
 }
 
 RANGES_SATISFY_BOOST_RANGE(::ranges::v3::concat_view)
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

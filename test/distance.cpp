@@ -20,6 +20,8 @@
 #include "./simple_test.hpp"
 #include "./test_utils.hpp"
 
+RANGES_DISABLE_WARNINGS
+
 template<typename I, typename S>
 void test_iterators(I begin, S end, ranges::difference_type_t<I> n)
 {

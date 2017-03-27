@@ -29,6 +29,9 @@
 #include "../test_utils.hpp"
 #include "../test_iterators.hpp"
 
+RANGES_DISABLE_WARNINGS
+RANGES_DIAGNOSTIC_IGNORE_MISSING_DECLARATIONS
+
 int comparison_count = 0;
 
 template<typename T>

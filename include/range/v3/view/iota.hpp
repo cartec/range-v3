@@ -28,6 +28,8 @@
 #include <range/v3/view/take_exactly.hpp>
 #include <range/v3/view/delimit.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -197,10 +199,7 @@ namespace ranges
                 //
                 static_assert(sizeof(D) >= sizeof(Val),
                     "the difference type of view::iota must be at least as wide as the UnsignedIntegral type");
-                RANGES_DIAGNOSTIC_PUSH
-                RANGES_DIAGNOSTIC_IGNORE_ASSUME
                 RANGES_EXPECT(Val(to - from) <= static_cast<UD>(std::numeric_limits<D>::max()));
-                RANGES_DIAGNOSTIC_POP
                 return static_cast<D>(Val(to - from));
             }
 
@@ -211,10 +210,7 @@ namespace ranges
                 auto dist = ints_open_distance_(from, to);
                 // Check whether dist + 1 would overflow the signed integer type,
                 // introducing undefined behavior:
-                RANGES_DIAGNOSTIC_PUSH
-                RANGES_DIAGNOSTIC_IGNORE_ASSUME
                 RANGES_EXPECT(dist < std::numeric_limits<D>::max());
-                RANGES_DIAGNOSTIC_POP
                 return dist + D(1);
             }
 
@@ -608,5 +604,7 @@ namespace ranges
 
 RANGES_SATISFY_BOOST_RANGE(::ranges::v3::closed_iota_view)
 RANGES_SATISFY_BOOST_RANGE(::ranges::v3::iota_view)
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

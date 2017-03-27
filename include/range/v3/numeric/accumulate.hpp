@@ -22,6 +22,8 @@
 #include <range/v3/utility/iterator_concepts.hpp>
 #include <range/v3/utility/static_const.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -56,5 +58,7 @@ namespace ranges
         RANGES_INLINE_VARIABLE(with_braced_init_args<accumulate_fn>, accumulate)
     }
 }
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

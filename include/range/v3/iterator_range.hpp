@@ -27,6 +27,8 @@
 #include <range/v3/utility/static_const.hpp>
 #include <range/v3/algorithm/tagspec.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -213,11 +215,6 @@ namespace ranges
     }
 }
 
-// The standard is inconsistent about whether these are classes or structs
-RANGES_DIAGNOSTIC_PUSH
-RANGES_DIAGNOSTIC_IGNORE_PRAGMAS
-RANGES_DIAGNOSTIC_IGNORE_MISMATCHED_TAGS
-
 /// \cond
 namespace std
 {
@@ -263,6 +260,6 @@ namespace std
 }
 /// \endcond
 
-RANGES_DIAGNOSTIC_POP
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

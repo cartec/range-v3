@@ -23,6 +23,8 @@
 #include <range/v3/view/take_exactly.hpp>
 #include <range/v3/view/iota.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -115,5 +117,7 @@ namespace ranges
         }  // namespace view
     }
 }
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif  // RANGES_V3_VIEW_INDICES_HPP

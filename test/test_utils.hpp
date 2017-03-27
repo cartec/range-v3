@@ -26,6 +26,8 @@
 #include "./simple_test.hpp"
 #include "./test_iterators.hpp"
 
+RANGES_DISABLE_WARNINGS
+
 template<typename Rng, typename Rng2>
 void check_equal(Rng && actual, Rng2 && expected)
 {
@@ -278,5 +280,7 @@ struct MoveOnlyString
         return sout << '"' << str.sz_ << '"';
     }
 };
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

@@ -31,6 +31,8 @@
 #include "../test_utils.hpp"
 #include "../test_iterators.hpp"
 
+RANGES_DISABLE_WARNINGS
+
 int main()
 {
     constexpr unsigned N = 100;

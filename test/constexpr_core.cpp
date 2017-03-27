@@ -22,6 +22,8 @@
 #include "array.hpp"
 #include "test_iterators.hpp"
 
+RANGES_DISABLE_WARNINGS
+
 // This is necessary since advance is a customization point, std::advance is imported for
 // non-range-v3 iterators, and it is not constexpr:
 template<typename T, typename I = random_access_iterator<T>>

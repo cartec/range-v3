@@ -24,6 +24,9 @@
 #include "../test_utils.hpp"
 #include "../test_iterators.hpp"
 
+RANGES_DISABLE_WARNINGS
+RANGES_DIAGNOSTIC_IGNORE_MISSING_DECLARATIONS
+
 template<class Iter1, class Iter2, class Sent1 = Iter1, class Sent2 = Iter2>
 void
 test_iter1()

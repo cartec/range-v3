@@ -11,6 +11,8 @@
 #include <range/v3/view/any_view.hpp>
 #include <range/v3/algorithm/for_each.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 struct Foo {
     Foo() = default;
     Foo(Foo const&) = default;

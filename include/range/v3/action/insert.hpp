@@ -25,6 +25,8 @@
 #include <range/v3/action/concepts.hpp>
 #include <range/v3/utility/static_const.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -256,5 +258,7 @@ namespace ranges
         using InsertableRange = concepts::models<concepts::InsertableRange, Rng, Rest...>;
     }
 }
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

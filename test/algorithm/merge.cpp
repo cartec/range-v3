@@ -20,6 +20,7 @@
 #include <range/v3/algorithm/merge.hpp>
 #include "../simple_test.hpp"
 
+RANGES_DISABLE_WARNINGS
 RANGES_DIAGNOSTIC_IGNORE_SIGN_CONVERSION
 
 int main()

@@ -81,6 +81,9 @@
 #include <range/v3/algorithm/for_each.hpp>
 #include <range/v3/algorithm/mismatch.hpp>
 
+RANGES_DISABLE_WARNINGS
+RANGES_DIAGNOSTIC_IGNORE_MISSING_DECLARATIONS
+
 namespace po = boost::program_options;
 namespace greg = boost::gregorian;
 using date = greg::date;

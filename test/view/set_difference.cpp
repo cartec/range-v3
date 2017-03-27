@@ -32,7 +32,7 @@
 #include "../simple_test.hpp"
 #include "../test_utils.hpp"
 
-
+RANGES_DISABLE_WARNINGS
 
 int main()
 {
@@ -55,7 +55,7 @@ int main()
         models<concepts::ForwardView>(aux::copy(res));
         models_not<concepts::RandomAccessView>(aux::copy(res));
         models_not<concepts::BoundedView>(aux::copy(res));
-        
+
         using R = decltype(res);
 
         CONCEPT_ASSERT(Same<range_value_type_t<R>, int>());
@@ -65,12 +65,12 @@ int main()
         static_assert(range_cardinality<R>::value == ranges::finite, "Cardinality of difference between two finite ranges should be finite!");
 
         ::check_equal(res, {1, 2, 3, 3, 3, 4, 4});
-        
+
         // check if the final result agrees with the greedy algorithm
         std::vector<int> diff;
         set_difference(i1_finite, i2_finite, back_inserter(diff));
         ::check_equal(res, diff);
-        
+
         CHECK(&*begin(res) == &*(begin(i1_finite)));
     }
 
@@ -82,7 +82,7 @@ int main()
         models<concepts::ForwardView>(aux::copy(res));
         models_not<concepts::RandomAccessView>(aux::copy(res));
         models_not<concepts::BoundedView>(aux::copy(res));
-        
+
         using R = decltype(res);
 
         CONCEPT_ASSERT(Same<range_value_type_t<R>, int>());
@@ -108,7 +108,7 @@ int main()
         models<concepts::ForwardView>(aux::copy(res));
         models_not<concepts::RandomAccessView>(aux::copy(res));
         models_not<concepts::BoundedView>(aux::copy(res));
-        
+
         using R = decltype(res);
 
         CONCEPT_ASSERT(Same<range_value_type_t<R>, int>());
@@ -127,7 +127,7 @@ int main()
         models<concepts::ForwardView>(aux::copy(res));
         models_not<concepts::RandomAccessView>(aux::copy(res));
         models_not<concepts::BoundedView>(aux::copy(res));
-        
+
         using R = decltype(res);
 
         CONCEPT_ASSERT(Same<range_value_type_t<R>, int>());
@@ -150,16 +150,16 @@ int main()
 
         auto res1 = view::set_difference(i2_finite, rng0);
         static_assert(range_cardinality<decltype(res1)>::value == ranges::finite, "Difference between a finite and unknown cardinality set should have finite cardinality!");
-        
+
         auto res2 = view::set_difference(rng0, i2_finite);
         static_assert(range_cardinality<decltype(res2)>::value == ranges::unknown, "Difference between an unknown cardinality and finite set should have unknown cardinality!");
-        
+
         auto res3 = view::set_difference(i1_infinite, rng0);
         static_assert(range_cardinality<decltype(res3)>::value == ranges::unknown, "Difference between an unknown cardinality and finite set should have unknown cardinality!");
-    
+
         auto res4 = view::set_difference(rng0, i1_infinite);
         static_assert(range_cardinality<decltype(res4)>::value == ranges::unknown, "Difference between an unknown and infinite cardinality set should have unknown cardinality!");
-        
+
     }
 
 
@@ -170,7 +170,7 @@ int main()
         CONCEPT_ASSERT(Same<range_value_type_t<R1>, int>());
         CONCEPT_ASSERT(Same<range_reference_t<R1>, const int&>());
         CONCEPT_ASSERT(Same<range_rvalue_reference_t<R1>, const int&&> ());
-        
+
         auto res2 = view::set_difference(view::const_(i1_finite), i2_finite);
         using R2 = decltype(res2);
         CONCEPT_ASSERT(Same<range_value_type_t<R2>, int>());
@@ -200,7 +200,7 @@ int main()
     };
 
     S s_finite[] = {S{-20}, S{-10}, S{1}, S{3}, S{3}, S{6}, S{8}, S{20}};
-    
+
     {
         auto res1 = view::set_difference(s_finite, view::ints(-2, 10),
                                          ordered_less(),
@@ -225,8 +225,8 @@ int main()
         CONCEPT_ASSERT(Same<range_rvalue_reference_t<R2>, int> ());
         ::check_equal(res2, {-2, -1, 0, 2, 4, 5, 7, 9});
     }
-    
-    
+
+
     // move
     {
         auto v0 = to_<std::vector<MoveOnlyString>>({"a","b","b","c","x","x"});
@@ -240,7 +240,7 @@ int main()
         ::check_equal(v1, {"b","x","y","z"});
         ::check_equal(v0, {"","b","","","x",""});
 
-        
+
         auto v0_greedy = to_<std::vector<MoveOnlyString>>({"a","b","b","c","x","x"});
         auto v1_greedy = to_<std::vector<MoveOnlyString>>({"b","x","y","z"});
         std::vector<MoveOnlyString> expected_greedy;
@@ -251,14 +251,14 @@ int main()
         ::check_equal(v0_greedy, v0);
         ::check_equal(v1_greedy, v1);
 
- 
+
         using R = decltype(res);
 
         CONCEPT_ASSERT(Same<range_value_type_t<R>, MoveOnlyString>());
         CONCEPT_ASSERT(Same<range_reference_t<R>, MoveOnlyString &>());
         CONCEPT_ASSERT(Same<range_rvalue_reference_t<R>, MoveOnlyString &&>());
     }
-    
+
     // WARNING: set_difference between two infinite ranges can create infinite loops!
     // {
     //     auto empty_range = view::set_difference(view::ints, view::ints);

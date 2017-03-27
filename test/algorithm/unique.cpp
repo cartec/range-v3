@@ -31,6 +31,8 @@
 #include "../test_utils.hpp"
 #include "../test_iterators.hpp"
 
+RANGES_DISABLE_WARNINGS
+
 /// Calls the iterator interface of the algorithm
 template<class Iter>
 struct iter_call

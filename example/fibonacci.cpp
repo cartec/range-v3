@@ -22,6 +22,8 @@
 #include <range/v3/all.hpp>
 #include "./recursive_range.hpp"
 
+RANGES_DISABLE_WARNINGS
+
 int main()
 {
     using namespace ranges::view;

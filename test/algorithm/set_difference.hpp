@@ -28,6 +28,8 @@
 #include "../test_utils.hpp"
 #include "../test_iterators.hpp"
 
+RANGES_DISABLE_WARNINGS
+
 template<class Iter1, class Iter2, class OutIter>
 void
 test_iter()
@@ -364,3 +366,5 @@ int main()
 
     return ::test_result();
 }
+
+RANGES_RE_ENABLE_WARNINGS

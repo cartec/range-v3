@@ -24,6 +24,8 @@
 #include "../simple_test.hpp"
 #include "../test_iterators.hpp"
 
+RANGES_DISABLE_WARNINGS
+
 struct S
 {
     int i;

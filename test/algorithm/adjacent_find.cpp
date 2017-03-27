@@ -13,6 +13,8 @@
 #include <range/v3/algorithm/adjacent_find.hpp>
 #include "../simple_test.hpp"
 
+RANGES_DISABLE_WARNINGS
+
 int main()
 {
     int v1[] = { 0, 2, 2, 4, 6 };

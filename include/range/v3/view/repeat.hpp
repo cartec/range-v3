@@ -22,6 +22,8 @@
 #include <range/v3/utility/functional.hpp>
 #include <range/v3/utility/static_const.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -118,5 +120,7 @@ namespace ranges
 }
 
 RANGES_SATISFY_BOOST_RANGE(::ranges::v3::repeat_view)
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

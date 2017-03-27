@@ -21,6 +21,8 @@
 #include "../test_utils.hpp"
 #include "../test_iterators.hpp"
 
+RANGES_DISABLE_WARNINGS
+
 struct Int
 {
     using difference_type = int;

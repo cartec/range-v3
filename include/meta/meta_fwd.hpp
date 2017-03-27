@@ -33,6 +33,15 @@
 #define META_DEPRECATED(MSG)
 #endif
 
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wdocumentation-deprecated-sync"
+#pragma GCC diagnostic ignored "-Wdocumentation-unknown-command"
+#pragma GCC diagnostic ignored "-Wc++98-compat"
+#endif
+
 namespace meta
 {
     inline namespace v1

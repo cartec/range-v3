@@ -17,6 +17,7 @@
 #include "../simple_test.hpp"
 #include "../test_iterators.hpp"
 
+RANGES_DISABLE_WARNINGS
 RANGES_DIAGNOSTIC_IGNORE_UNNEEDED_MEMBER
 
 namespace {

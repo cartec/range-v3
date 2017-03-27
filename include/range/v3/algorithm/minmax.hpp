@@ -26,6 +26,8 @@
 #include <range/v3/utility/tagged_pair.hpp>
 #include <range/v3/algorithm/tagspec.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -44,10 +46,7 @@ namespace ranges
             {
                 auto begin = ranges::begin(rng);
                 auto end = ranges::end(rng);
-                RANGES_DIAGNOSTIC_PUSH
-                RANGES_DIAGNOSTIC_IGNORE_ASSUME
                 RANGES_EXPECT(begin != end);
-                RANGES_DIAGNOSTIC_POP
                 auto result = R{*begin, *begin};
                 if(++begin != end)
                 {
@@ -107,5 +106,7 @@ namespace ranges
         /// @}
     } // namespace v3
 } // namespace ranges
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif // include guard

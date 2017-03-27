@@ -15,6 +15,9 @@
 #include <range/v3/algorithm/any_of.hpp>
 #include "../simple_test.hpp"
 
+RANGES_DISABLE_WARNINGS
+RANGES_DIAGNOSTIC_IGNORE_MISSING_DECLARATIONS
+
 bool even(int n) { return n % 2 == 0; }
 
 struct S {

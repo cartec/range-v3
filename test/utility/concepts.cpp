@@ -20,6 +20,8 @@
 #include <range/v3/utility/common_iterator.hpp>
 #include "../simple_test.hpp"
 
+RANGES_DISABLE_WARNINGS
+
 struct moveonly
 {
     moveonly(moveonly&&) = default;

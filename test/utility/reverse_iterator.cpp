@@ -26,6 +26,8 @@
 #include "../simple_test.hpp"
 #include "../test_iterators.hpp"
 
+RANGES_DISABLE_WARNINGS
+
 template<class It> void test() { ranges::reverse_iterator<It>{}; }
 
 template<class It> void test2(It i) {

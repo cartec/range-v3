@@ -23,6 +23,8 @@
 #include <range/v3/begin_end.hpp>
 #include <range/v3/range_concepts.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -179,5 +181,7 @@ namespace ranges
         /// @}
     }
 }
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

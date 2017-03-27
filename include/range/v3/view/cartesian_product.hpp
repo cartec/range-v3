@@ -27,6 +27,8 @@
 #include <range/v3/utility/tuple_algorithm.hpp>
 #include <range/v3/view/all.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -121,10 +123,7 @@ namespace ranges
                     auto &v = std::get<N - 1>(view_->views_);
                     auto &i = std::get<N - 1>(its_);
                     auto const last = ranges::end(v);
-                    RANGES_DIAGNOSTIC_PUSH
-                    RANGES_DIAGNOSTIC_IGNORE_ASSUME
                     RANGES_EXPECT(i != last);
-                    RANGES_DIAGNOSTIC_POP
                     if (++i == last)
                     {
                         i = ranges::begin(v);
@@ -365,5 +364,9 @@ namespace ranges
         }
     } // namespace v3
 } // namespace ranges
+
+RANGES_SATISFY_BOOST_RANGE(::ranges::v3::cartesian_product_view)
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

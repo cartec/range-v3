@@ -22,6 +22,8 @@
 #include "../simple_test.hpp"
 #include "../test_utils.hpp"
 
+RANGES_DISABLE_WARNINGS
+
 int main()
 {
     using namespace ranges;
@@ -48,7 +50,7 @@ int main()
     CHECK(rng1.size() == 10u);
     ::check_equal(rng1, {9,8,7,6,5,4,3,2,1,0});
     ::check_equal(rng1 | view::reverse, {0,1,2,3,4,5,6,7,8,9});
-    
+
     // Reverse a random-access, non-bounded, non-sized range
     auto sz = view::c_str((char const*)"hello");
     auto rng2 = sz | view::reverse;

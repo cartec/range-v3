@@ -31,6 +31,9 @@
 #include "../test_utils.hpp"
 #include "../test_iterators.hpp"
 
+RANGES_DISABLE_WARNINGS
+RANGES_DIAGNOSTIC_IGNORE_MISSING_DECLARATIONS
+
 void test()
 {
 #ifdef IS_HEAP_UNTIL_1
@@ -1062,3 +1065,5 @@ int main()
 
     return ::test_result();
 }
+
+RANGES_RE_ENABLE_WARNINGS

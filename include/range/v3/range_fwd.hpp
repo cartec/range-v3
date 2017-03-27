@@ -39,9 +39,7 @@
 /// \defgroup group-concepts Concepts
 /// Concept-checking classes and utilities
 
-RANGES_DIAGNOSTIC_PUSH
-RANGES_DIAGNOSTIC_IGNORE_PRAGMAS
-RANGES_DIAGNOSTIC_IGNORE_CXX17_COMPAT
+RANGES_DISABLE_WARNINGS
 
 namespace ranges
 {
@@ -755,6 +753,6 @@ namespace ranges
     }
 }
 
-RANGES_DIAGNOSTIC_POP
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

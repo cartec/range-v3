@@ -16,6 +16,8 @@
 
 #include <range/v3/detail/config.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -34,5 +36,7 @@ namespace ranges
     #endif
     }
 }
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

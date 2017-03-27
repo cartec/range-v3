@@ -14,6 +14,8 @@
 #include <range/v3/algorithm/for_each.hpp>
 #include "../simple_test.hpp"
 
+RANGES_DISABLE_WARNINGS
+
 struct S
 {
     void p() const { *p_ += i_; }

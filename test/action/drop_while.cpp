@@ -15,6 +15,8 @@
 #include "../simple_test.hpp"
 #include "../test_utils.hpp"
 
+RANGES_DISABLE_WARNINGS
+
 int main()
 {
     using namespace ranges;

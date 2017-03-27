@@ -17,6 +17,8 @@
 #include <range/v3/view/delimit.hpp>
 #include "../simple_test.hpp"
 
+RANGES_DISABLE_WARNINGS
+
 int main()
 {
     using ranges::begin;

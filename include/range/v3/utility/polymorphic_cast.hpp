@@ -5,7 +5,10 @@
 
 #ifndef RANGES_V3_UTILITY_POLYMORPHIC_CAST_HPP
 #define RANGES_V3_UTILITY_POLYMORPHIC_CAST_HPP
+
 #include <range/v3/detail/config.hpp>
+
+RANGES_DISABLE_WARNINGS
 
 namespace ranges
 {
@@ -19,5 +22,7 @@ namespace ranges
         }
     }
 }
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif  // RANGES_V3_UTILITY_POLYMORPHIC_CAST_HPP

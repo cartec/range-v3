@@ -16,6 +16,8 @@
 #include "../simple_test.hpp"
 #include "../test_utils.hpp"
 
+RANGES_DISABLE_WARNINGS
+
 namespace test_weak_input
 {
     template<typename I>

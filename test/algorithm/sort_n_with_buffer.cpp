@@ -17,6 +17,8 @@
 #include <range/v3/size.hpp>
 #include "../simple_test.hpp"
 
+RANGES_DISABLE_WARNINGS
+
 // BUGBUGBUG
 namespace std {
     template<typename F, typename S>

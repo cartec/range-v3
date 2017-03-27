@@ -34,6 +34,8 @@
 #include <range/v3/view/view.hpp>
 #include <range/v3/view/all.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -180,5 +182,7 @@ namespace ranges
 }
 
 RANGES_SATISFY_BOOST_RANGE(::ranges::v3::partial_sum_view)
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

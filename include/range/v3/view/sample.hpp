@@ -25,6 +25,8 @@
 #include <range/v3/view/all.hpp>
 #include <range/v3/view/view.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -106,18 +108,12 @@ namespace ranges
 
                 D pop_size()
                 {
-                    RANGES_DIAGNOSTIC_PUSH
-                    RANGES_DIAGNOSTIC_IGNORE_ASSUME
                     RANGES_EXPECT(range());
-                    RANGES_DIAGNOSTIC_POP
                     return size().get(range()->range(), current());
                 }
                 void advance()
                 {
-                    RANGES_DIAGNOSTIC_PUSH
-                    RANGES_DIAGNOSTIC_IGNORE_ASSUME
                     RANGES_EXPECT(range());
-                    RANGES_DIAGNOSTIC_POP
                     if (range()->size() > 0)
                     {
                         using Dist = std::uniform_int_distribution<D>;
@@ -155,19 +151,13 @@ namespace ranges
                 }
                 bool equal(default_sentinel) const
                 {
-                    RANGES_DIAGNOSTIC_PUSH
-                    RANGES_DIAGNOSTIC_IGNORE_ASSUME
                     RANGES_EXPECT(range());
-                    RANGES_DIAGNOSTIC_POP
                     return range()->size() <= 0;
                 }
                 void next()
                 {
-                    RANGES_DIAGNOSTIC_PUSH
-                    RANGES_DIAGNOSTIC_IGNORE_ASSUME
                     RANGES_EXPECT(range());
                     RANGES_EXPECT(range()->size() > 0);
-                    RANGES_DIAGNOSTIC_POP
                     --range()->size();
                     RANGES_ASSERT(current() != ranges::end(range()->range()));
                     ++current();
@@ -265,5 +255,7 @@ namespace ranges
 }
 
 RANGES_SATISFY_BOOST_RANGE(::ranges::v3::sample_view)
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

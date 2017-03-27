@@ -23,6 +23,8 @@
 #include "../test_utils.hpp"
 #include "../test_iterators.hpp"
 
+RANGES_DISABLE_WARNINGS
+
 struct is_odd
 {
     bool operator()(int i) const

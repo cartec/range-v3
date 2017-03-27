@@ -31,6 +31,8 @@
 #include <range/v3/view/view.hpp>
 #include <range/v3/view/take_while.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -165,5 +167,7 @@ namespace ranges
 }
 
 RANGES_SATISFY_BOOST_RANGE(::ranges::v3::group_by_view)
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

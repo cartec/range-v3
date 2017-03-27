@@ -28,6 +28,8 @@
 #include <range/v3/utility/iterator_traits.hpp>
 #include <range/v3/utility/functional.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -769,10 +771,6 @@ namespace ranges
     }
 }
 
-RANGES_DIAGNOSTIC_PUSH
-RANGES_DIAGNOSTIC_IGNORE_PRAGMAS
-RANGES_DIAGNOSTIC_IGNORE_MISMATCHED_TAGS
-
 namespace std
 {
     template<typename...Ts>
@@ -786,6 +784,6 @@ namespace std
     {};
 }
 
-RANGES_DIAGNOSTIC_POP
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

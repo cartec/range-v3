@@ -18,6 +18,8 @@
 #include <range/v3/range_fwd.hpp>
 #include <range/v3/view_facade.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -87,5 +89,7 @@ namespace ranges
 }
 
 RANGES_SATISFY_BOOST_RANGE(::ranges::v3::empty_view)
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

@@ -14,6 +14,8 @@
 #include <range/v3/utility/common_type.hpp>
 #include <range/v3/utility/common_tuple.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 struct B {};
 struct D : B {};
 

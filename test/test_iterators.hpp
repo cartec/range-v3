@@ -11,6 +11,9 @@
 #define RANGES_TEST_ITERATORS_HPP
 
 #include <iterator>
+#include <range/v3/detail/config.hpp>
+
+RANGES_DISABLE_WARNINGS
 
 template<class It, bool Sized = false>
 class sentinel;
@@ -412,5 +415,7 @@ struct sentinel_type<I<It>, Sized>
 {
     using type = sentinel<It, Sized>;
 };
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif  // RANGES_TEST_ITERATORS_HPP

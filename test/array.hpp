@@ -33,8 +33,10 @@
 #include <range/v3/algorithm/lexicographical_compare.hpp>
 #include <range/v3/utility/swap.hpp>
 
-namespace test {
+RANGES_DISABLE_WARNINGS
 
+namespace test
+{
     /// \addtogroup group-utility
     /// A std::array with constexpr support
     template<typename T, std::size_t N>
@@ -279,26 +281,21 @@ namespace test {
     }
 }  // namespace test
 
-RANGES_DIAGNOSTIC_PUSH
-RANGES_DIAGNOSTIC_IGNORE_PRAGMAS
-RANGES_DIAGNOSTIC_IGNORE_MISMATCHED_TAGS
-
 namespace std
 {
+    template<class T, size_t N>
+    class tuple_size< ::test::array<T, N>>
+      : public integral_constant<size_t, N>
+    {};
 
-template<class T, size_t N>
-class tuple_size<test::array<T, N>>
-    : public integral_constant<size_t, N> {};
-
-template<size_t I, class T, size_t N>
-class tuple_element<I, test::array<T, N> >
-{
- public:
-    using type = T;
-};
-
+    template<size_t I, class T, size_t N>
+    class tuple_element<I, ::test::array<T, N>>
+    {
+    public:
+        using type = T;
+    };
 }  // namespace std
 
-RANGES_DIAGNOSTIC_POP
+RANGES_RE_ENABLE_WARNINGS
 
 #endif // RANGES_V3_TEST_ARRAY_HPP

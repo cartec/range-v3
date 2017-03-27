@@ -18,12 +18,14 @@
 #define RANGES_V3_UTILITY_CONCEPTS_HPP
 
 #include <initializer_list>
-#include <utility>
 #include <type_traits>
+#include <utility>
 #include <meta/meta.hpp>
-#include <range/v3/utility/swap.hpp>
 #include <range/v3/utility/common_type.hpp>
 #include <range/v3/utility/nullptr_v.hpp>
+#include <range/v3/utility/swap.hpp>
+
+RANGES_DISABLE_WARNINGS
 
 namespace ranges
 {
@@ -687,5 +689,7 @@ namespace ranges
 
 #define CONCEPT_ASSERT_MSG static_assert
 /// @}
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif // RANGES_V3_UTILITY_CONCEPTS_HPP

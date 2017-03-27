@@ -19,6 +19,8 @@
 #include <range/v3/utility/static_const.hpp>
 #include <range/v3/detail/variant.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -47,18 +49,12 @@ namespace ranges
             }
             T & operator*()
             {
-                RANGES_DIAGNOSTIC_PUSH
-                RANGES_DIAGNOSTIC_IGNORE_ASSUME
                 RANGES_EXPECT(*this);
-                RANGES_DIAGNOSTIC_POP
                 return ranges::get<1>(data_);
             }
             T const & operator*() const
             {
-                RANGES_DIAGNOSTIC_PUSH
-                RANGES_DIAGNOSTIC_IGNORE_ASSUME
                 RANGES_EXPECT(*this);
-                RANGES_DIAGNOSTIC_POP
                 return ranges::get<1>(data_);
             }
             optional &operator=(T const &t)
@@ -118,5 +114,7 @@ namespace ranges
         }
     }
 }
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

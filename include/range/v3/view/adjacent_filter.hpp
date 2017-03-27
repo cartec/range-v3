@@ -28,6 +28,8 @@
 #include <range/v3/algorithm/adjacent_find.hpp>
 #include <range/v3/view/view.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -58,10 +60,7 @@ namespace ranges
                 {
                     auto const end = ranges::end(rng_->mutable_base());
                     auto &pred = rng_->pred_;
-                    RANGES_DIAGNOSTIC_PUSH
-                    RANGES_DIAGNOSTIC_IGNORE_ASSUME
                     RANGES_EXPECT(it != end);
-                    RANGES_DIAGNOSTIC_POP
                     for(auto prev = it; ++it != end; prev = it)
                         if(invoke(pred, *prev, *it))
                             break;
@@ -135,5 +134,7 @@ namespace ranges
 }
 
 RANGES_SATISFY_BOOST_RANGE(::ranges::v3::adjacent_filter_view)
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

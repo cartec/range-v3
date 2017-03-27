@@ -19,6 +19,9 @@
 #include <range/v3/algorithm/lower_bound.hpp>
 #include "../simple_test.hpp"
 
+RANGES_DISABLE_WARNINGS
+RANGES_DIAGNOSTIC_IGNORE_MISSING_DECLARATIONS
+
 struct my_int
 {
     int value;

@@ -14,6 +14,9 @@
 #include <iostream>
 #include <range/v3/all.hpp>
 
+RANGES_DISABLE_WARNINGS
+RANGES_DIAGNOSTIC_IGNORE_MISSING_DECLARATIONS
+
 using namespace ranges;
 
 int main()

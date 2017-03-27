@@ -19,6 +19,8 @@
 #include <range/v3/algorithm/upper_bound.hpp>
 #include "../simple_test.hpp"
 
+RANGES_DISABLE_WARNINGS
+
 struct my_int
 {
     int value;

@@ -18,6 +18,8 @@
 #include <range/v3/algorithm/binary_search.hpp>
 #include "../simple_test.hpp"
 
+RANGES_DISABLE_WARNINGS
+
 int main()
 {
     using ranges::begin;

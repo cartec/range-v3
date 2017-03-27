@@ -16,6 +16,8 @@
 #include "../simple_test.hpp"
 #include "../test_utils.hpp"
 
+RANGES_DISABLE_WARNINGS
+
 // GCC 4.8 is extremely confused about && and const&& qualifiers. Luckily they
 // are rare - we'll simply break them.
 #if defined(__GNUC__) && !defined(__clang__) && __GNUC__ < 5 && __GNUC_MINOR__ < 9

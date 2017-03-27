@@ -32,6 +32,9 @@
 #include "../test_utils.hpp"
 #include "../test_iterators.hpp"
 
+RANGES_DISABLE_WARNINGS
+RANGES_DIAGNOSTIC_IGNORE_MISSING_DECLARATIONS
+
 void test()
 {
 
@@ -1064,3 +1067,5 @@ int main()
 
     return ::test_result();
 }
+
+RANGES_RE_ENABLE_WARNINGS

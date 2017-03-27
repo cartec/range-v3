@@ -24,6 +24,8 @@
 #include <range/v3/utility/associated_types.hpp>
 #include <range/v3/utility/nullptr_v.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -672,7 +674,9 @@ namespace ranges
 // HACKHACK: workaround underconstrained operator- for libstdc++ debug iterator wrapper
 // by intentionally creating an ambiguity when the wrapped types don't support the
 // necessary operation.
+RANGES_RE_ENABLE_WARNINGS
 #include <debug/safe_iterator.h>
+RANGES_DISABLE_WARNINGS
 
 namespace __gnu_debug
 {
@@ -704,5 +708,7 @@ namespace ranges
     }
 }
 #endif // defined(__GLIBCXX__) || (defined(_LIBCPP_VERSION) && _LIBCPP_VERSION <= 3900)
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif // RANGES_V3_UTILITY_ITERATOR_CONCEPTS_HPP

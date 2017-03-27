@@ -17,6 +17,8 @@
 #include <range/v3/range_fwd.hpp>
 #include <range/v3/utility/concepts.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -62,5 +64,7 @@ namespace ranges
         /// \endcond
     }
 }
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

@@ -17,6 +17,8 @@
 #include <utility>
 #include <meta/meta.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -44,5 +46,7 @@ namespace ranges
         /// @}
     }
 }
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

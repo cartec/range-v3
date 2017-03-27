@@ -35,6 +35,8 @@
 #include <range/v3/utility/iterator.hpp>
 #include <range/v3/utility/static_const.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -76,10 +78,7 @@ namespace ranges
                 iterator get_end_(std::false_type, meta::bool_<CanBeEmpty> = {}) const
                 {
                     auto &end_ = static_cast<cache_t&>(*rng_);
-                    RANGES_DIAGNOSTIC_PUSH
-                    RANGES_DIAGNOSTIC_IGNORE_ASSUME
                     RANGES_EXPECT(CanBeEmpty || end_);
-                    RANGES_DIAGNOSTIC_POP
                     if(CanBeEmpty && !end_)
                         end_ = ranges::next(it_, ranges::end(rng_->rng_));
                     return *end_;
@@ -116,10 +115,7 @@ namespace ranges
                 void next()
                 {
                     auto const end = ranges::end(rng_->rng_);
-                    RANGES_DIAGNOSTIC_PUSH
-                    RANGES_DIAGNOSTIC_IGNORE_ASSUME
                     RANGES_EXPECT(it_ != end);
-                    RANGES_DIAGNOSTIC_POP
                     if(++it_ == end)
                     {
                         this->set_end_(BoundedRange<Rng>());
@@ -166,10 +162,7 @@ namespace ranges
             explicit cycled_view(Rng rng)
               : rng_(std::move(rng))
             {
-                RANGES_DIAGNOSTIC_PUSH
-                RANGES_DIAGNOSTIC_IGNORE_ASSUME
                 RANGES_EXPECT(!ranges::empty(rng_));
-                RANGES_DIAGNOSTIC_POP
             }
         };
 
@@ -212,5 +205,7 @@ namespace ranges
 } // namespace ranges
 
 RANGES_SATISFY_BOOST_RANGE(::ranges::v3::cycled_view)
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

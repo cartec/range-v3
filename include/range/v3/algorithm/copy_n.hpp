@@ -28,6 +28,8 @@
 #include <range/v3/utility/tagged_pair.hpp>
 #include <range/v3/algorithm/tagspec.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -60,5 +62,7 @@ namespace ranges
         /// @}
     } // namespace v3
 } // namespace ranges
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif // include guard

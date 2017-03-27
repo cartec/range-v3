@@ -20,6 +20,8 @@
 #include "./simple_test.hpp"
 #include "./test_utils.hpp"
 
+RANGES_DISABLE_WARNINGS
+
 template<typename T>
 struct vector_like : std::vector<T> {
     using std::vector<T>::vector;

@@ -31,6 +31,8 @@
 #include <range/v3/utility/box.hpp>
 #include <range/v3/utility/static_const.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -90,20 +92,14 @@ namespace ranges
             auto read(iterator_t<Rng> it) const ->
                 decltype(view::take(make_iterator_range(std::move(it), end_), n_))
             {
-                RANGES_DIAGNOSTIC_PUSH
-                RANGES_DIAGNOSTIC_IGNORE_ASSUME
                 RANGES_EXPECT(it != end_);
                 RANGES_EXPECT(0 == offset());
-                RANGES_DIAGNOSTIC_POP
                 return view::take(make_iterator_range(std::move(it), end_), n_);
             }
             void next(iterator_t<Rng> &it)
             {
-                RANGES_DIAGNOSTIC_PUSH
-                RANGES_DIAGNOSTIC_IGNORE_ASSUME
                 RANGES_EXPECT(it != end_);
                 RANGES_EXPECT(0 == offset());
-                RANGES_DIAGNOSTIC_POP
                 offset() = ranges::advance(it, n_, end_);
             }
             CONCEPT_REQUIRES(BidirectionalRange<Rng>())
@@ -188,5 +184,7 @@ namespace ranges
 }
 
 RANGES_SATISFY_BOOST_RANGE(::ranges::v3::chunk_view)
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

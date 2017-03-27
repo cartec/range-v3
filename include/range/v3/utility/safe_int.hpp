@@ -19,6 +19,8 @@
 #include <range/v3/range_fwd.hpp>
 #include <range/v3/utility/concepts.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -335,5 +337,7 @@ namespace std
     template<typename T>
     constexpr bool numeric_limits<::ranges::v3::safe_int<T>>::has_quiet_NaN;
 }
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

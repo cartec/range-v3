@@ -20,6 +20,8 @@
 #include <range/v3/utility/get.hpp>
 #include <range/v3/detail/optional.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -42,18 +44,12 @@ namespace ranges
             {}
             T & get()
             {
-                RANGES_DIAGNOSTIC_PUSH
-                RANGES_DIAGNOSTIC_IGNORE_ASSUME
                 RANGES_EXPECT(t_);
-                RANGES_DIAGNOSTIC_POP
                 return *t_;
             }
             T const & get() const
             {
-                RANGES_DIAGNOSTIC_PUSH
-                RANGES_DIAGNOSTIC_IGNORE_ASSUME
                 RANGES_EXPECT(t_);
-                RANGES_DIAGNOSTIC_POP
                 return *t_;
             }
             semiregular &operator=(T const &t)
@@ -122,5 +118,7 @@ namespace ranges
         /// @}
     }
 }
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

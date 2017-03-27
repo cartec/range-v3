@@ -17,6 +17,8 @@
 #include <meta/meta.hpp>
 #include "../simple_test.hpp"
 
+RANGES_DISABLE_WARNINGS
+
 using namespace meta;
 
 // An implementation of tuple_cat gives Range v3's meta-programming and list

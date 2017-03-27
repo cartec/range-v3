@@ -15,17 +15,17 @@
 #include <string>
 #include <vector>
 #include <range/v3/core.hpp>
-#include <range/v3/view/unique.hpp>
+#include <range/v3/algorithm/copy.hpp>
+#include <range/v3/utility/copy.hpp>
+#include <range/v3/utility/iterator.hpp>
 #include <range/v3/view/counted.hpp>
 #include <range/v3/view/iota.hpp>
-#include <range/v3/algorithm/copy.hpp>
-#include <range/v3/utility/iterator.hpp>
-#include <range/v3/utility/copy.hpp>
+#include <range/v3/view/transform.hpp>
+#include <range/v3/view/unique.hpp>
 #include "../simple_test.hpp"
 #include "../test_utils.hpp"
 
-
-#include <range/v3/view/transform.hpp>
+RANGES_DISABLE_WARNINGS
 
 using std::toupper;
 

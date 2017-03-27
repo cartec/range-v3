@@ -23,6 +23,8 @@
 #include <range/v3/size.hpp>
 #include <range/v3/distance.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -45,10 +47,7 @@ namespace ranges
                 }
                 void fill_default_(T *p, std::false_type)
                 {
-                    RANGES_DIAGNOSTIC_PUSH
-                    RANGES_DIAGNOSTIC_IGNORE_ASSUME
                     RANGES_EXPECT(p == ranges::end(data_));
-                    RANGES_DIAGNOSTIC_POP
                 }
             public:
                 CONCEPT_REQUIRES(DefaultConstructible<T>())
@@ -123,5 +122,7 @@ namespace ranges
         }
     }
 }
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

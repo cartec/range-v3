@@ -30,6 +30,8 @@ RANGES_END_NAMESPACE_STD
 #include <tuple>
 #endif
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -195,5 +197,7 @@ namespace ranges
         RANGES_INLINE_VARIABLE(sanitize_fn, sanitize)
     }
 }
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

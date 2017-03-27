@@ -25,6 +25,8 @@
 #include "../simple_test.hpp"
 #include "../test_iterators.hpp"
 
+RANGES_DISABLE_WARNINGS
+
 using namespace std::placeholders;
 
 template<class InIter, class OutIter>

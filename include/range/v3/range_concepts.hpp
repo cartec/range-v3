@@ -45,6 +45,8 @@ RANGES_END_NAMESPACE_STD
 #include <unordered_set>
 #endif
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -445,5 +447,7 @@ namespace ranges
         /// @}
     }
 }
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

@@ -19,6 +19,8 @@
 #include <range/v3/utility/static_const.hpp>
 #include <range/v3/view/remove_if.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -53,5 +55,7 @@ namespace ranges
         }
     }
 }
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

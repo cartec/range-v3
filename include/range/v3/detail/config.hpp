@@ -15,134 +15,38 @@
 #ifndef RANGES_V3_DETAIL_CONFIG_HPP
 #define RANGES_V3_DETAIL_CONFIG_HPP
 
-#include <iosfwd>
-#if (defined(NDEBUG) && !defined(RANGES_ENSURE_MSG)) || \
-    (!defined(NDEBUG) && !defined(RANGES_ASSERT) && \
-     defined(__GNUC__) && !defined(__clang__) && __GNUC__ < 5)
-#include <cstdio>
-#include <cstdlib>
-
-namespace ranges
-{
-    inline namespace v3
-    {
-        namespace detail
-        {
-            template<class = void>
-            [[noreturn]] void assert_failure(char const *file, int line, char const *msg) noexcept
-            {
-                std::fprintf(stderr, "%s(%d): %s\n", file, line, msg);
-                std::abort();
-            }
-        }
-    }
-}
-#endif
-
-#ifndef RANGES_ASSERT
- #if !defined(NDEBUG) && defined(__GNUC__) && !defined(__clang__) && __GNUC__ < 5
-  #define RANGES_ASSERT(...) \
-    static_cast<void>((__VA_ARGS__) ? void(0) : \
-        ::ranges::detail::assert_failure(__FILE__, __LINE__, "assertion failed: " #__VA_ARGS__))
- #else
-  #include <cassert>
-  #define RANGES_ASSERT assert
- #endif
-#endif
-
-#ifndef RANGES_ASSUME
- #if defined(__clang__)
-  #define RANGES_ASSUME(...)                                 \
-    static_cast<void>((                                      \
-        ((__VA_ARGS__) ? void(0) : __builtin_unreachable()), \
-        __builtin_assume(static_cast<bool>(__VA_ARGS__))))
- #elif defined(__GNUC__)
-  #define RANGES_ASSUME(...) ((__VA_ARGS__) ? void(0) : __builtin_unreachable())
- #elif defined(_MSC_VER)
-  #define RANGES_ASSUME(...)                  \
-    (((__VA_ARGS__) ? void(0) : __assume(0)), \
-     __assume(static_cast<bool>(__VA_ARGS__)))
- #else
-  #define RANGES_ASSUME(...) static_cast<void>(static_cast<bool>(__VA_ARGS__))
- #endif
-#endif // RANGES_ASSUME
-
-#ifndef RANGES_EXPECT
-#ifdef NDEBUG
-#define RANGES_EXPECT(...) RANGES_ASSUME(__VA_ARGS__)
-#else // NDEBUG
-#define RANGES_EXPECT(...) RANGES_ASSERT(__VA_ARGS__)
-#endif // NDEBUG
-#endif // RANGES_EXPECT
-
-#ifndef RANGES_ENSURE_MSG
-#if defined(NDEBUG)
-#define RANGES_ENSURE_MSG(COND, MSG) \
-    static_cast<void>((COND) ? void(0) \
-        : ::ranges::detail::assert_failure(__FILE__, __LINE__, "ensure failed: " MSG))
-#else
-#define RANGES_ENSURE_MSG(COND, MSG) RANGES_ASSERT((COND) && MSG)
-#endif
-#endif
-
-#ifndef RANGES_ENSURE
-#define RANGES_ENSURE(...) RANGES_ENSURE_MSG((__VA_ARGS__), #__VA_ARGS__)
-#endif
-
-#define RANGES_DECLTYPE_AUTO_RETURN(...)                        \
-    -> decltype(__VA_ARGS__)                                    \
-    { return (__VA_ARGS__); }                                   \
-    /**/
-
-#define RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT(...)               \
-    noexcept(noexcept(decltype(__VA_ARGS__)(__VA_ARGS__))) ->   \
-    decltype(__VA_ARGS__)                                       \
-    { return (__VA_ARGS__); }                                   \
-    /**/
-
-#define RANGES_AUTO_RETURN_NOEXCEPT(...)                        \
-    noexcept(noexcept(decltype(__VA_ARGS__)(__VA_ARGS__)))      \
-    { return (__VA_ARGS__); }                                   \
-    /**/
-
-#define RANGES_DECLTYPE_NOEXCEPT(...)                           \
-    noexcept(noexcept(decltype(__VA_ARGS__)(__VA_ARGS__))) ->   \
-    decltype(__VA_ARGS__)                                       \
-    /**/
-
-// Non-portable forward declarations of standard containers
-#ifdef _LIBCPP_VERSION
-#define RANGES_BEGIN_NAMESPACE_STD _LIBCPP_BEGIN_NAMESPACE_STD
-#define RANGES_END_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
-#else
-#define RANGES_BEGIN_NAMESPACE_STD namespace std {
-#define RANGES_END_NAMESPACE_STD }
-#endif
-
 // Database of feature versions
 #define RANGES_CXX_STATIC_ASSERT_11 200410
 #define RANGES_CXX_STATIC_ASSERT_14 RANGES_CXX_STATIC_ASSERT_11
 #define RANGES_CXX_STATIC_ASSERT_17 201411
 #define RANGES_CXX_VARIABLE_TEMPLATES_11 0
 #define RANGES_CXX_VARIABLE_TEMPLATES_14 201304
+#define RANGES_CXX_VARIABLE_TEMPLATES_17 RANGES_CXX_VARIABLE_TEMPLATES_14
 #define RANGES_CXX_ATTRIBUTE_DEPRECATED_11 0
 #define RANGES_CXX_ATTRIBUTE_DEPRECATED_14 201309
+#define RANGES_CXX_ATTRIBUTE_DEPRECATED_17 RANGES_CXX_ATTRIBUTE_DEPRECATED_14
 #define RANGES_CXX_CONSTEXPR_11 200704
 #define RANGES_CXX_CONSTEXPR_14 201304
+#define RANGES_CXX_CONSTEXPR_17 201603
 #define RANGES_CXX_RANGE_BASED_FOR_11 200907
 #define RANGES_CXX_RANGE_BASED_FOR_14 RANGES_CXX_RANGE_BASED_FOR_11
 #define RANGES_CXX_RANGE_BASED_FOR_17 201603
 #define RANGES_CXX_LIB_IS_FINAL_11 0
 #define RANGES_CXX_LIB_IS_FINAL_14 201402
+#define RANGES_CXX_LIB_IS_FINAL_17 RANGES_CXX_LIB_IS_FINAL_14
 #define RANGES_CXX_RETURN_TYPE_DEDUCTION_11 0
 #define RANGES_CXX_RETURN_TYPE_DEDUCTION_14 201304
+#define RANGES_CXX_RETURN_TYPE_DEDUCTION_17 RANGES_CXX_RETURN_TYPE_DEDUCTION_14
 #define RANGES_CXX_GENERIC_LAMBDAS_11 0
 #define RANGES_CXX_GENERIC_LAMBDAS_14 201304
+#define RANGES_CXX_GENERIC_LAMBDAS_17 RANGES_CXX_GENERIC_LAMBDAS_14
 #define RANGES_CXX_STD_11 201103
 #define RANGES_CXX_STD_14 201402
+#define RANGES_CXX_STD_17 201703
 #define RANGES_CXX_THREAD_LOCAL_PRE_STANDARD 200000 // Arbrarily chosen number between 0 and C++11
 #define RANGES_CXX_THREAD_LOCAL_11 RANGES_CXX_STD_11
 #define RANGES_CXX_THREAD_LOCAL_14 RANGES_CXX_THREAD_LOCAL_11
+#define RANGES_CXX_THREAD_LOCAL_17 RANGES_CXX_THREAD_LOCAL_14
 #define RANGES_CXX_INLINE_VARIABLES_11 0
 #define RANGES_CXX_INLINE_VARIABLES_14 0
 #define RANGES_CXX_INLINE_VARIABLES_17 201606
@@ -183,9 +87,16 @@ namespace ranges
 #define RANGES_DIAGNOSTIC_IGNORE_GLOBAL_CONSTRUCTORS
 #define RANGES_DIAGNOSTIC_IGNORE_SIGN_CONVERSION
 #define RANGES_DIAGNOSTIC_IGNORE_UNNEEDED_INTERNAL
+#define RANGES_DIAGNOSTIC_IGNORE_UNNEEDED_MEMBER
 #define RANGES_DIAGNOSTIC_IGNORE_ZERO_LENGTH_ARRAY
+#define RANGES_DIAGNOSTIC_IGNORE_CXX98_COMPAT
 #define RANGES_DIAGNOSTIC_IGNORE_CXX17_COMPAT
 #define RANGES_DIAGNOSTIC_IGNORE_ASSUME
+#define RANGES_DIAGNOSTIC_IGNORE_C_CAST
+#define RANGES_DIAGNOSTIC_IGNORE_DOCUMENTATION
+#define RANGES_DIAGNOSTIC_IGNORE_WEAK_VTABLES
+#define RANGES_DIAGNOSTIC_IGNORE_MISSING_DECLARATIONS
+#define RANGES_DIAGNOSTIC_IGNORE_MISSING_FIELD_INITIALIZERS
 
 #else // ^^^ defined(_MSC_VER) ^^^ / vvv !defined(_MSC_VER) vvv
 // Generic configuration using SD-6 feature test macros with fallback to __cplusplus
@@ -200,20 +111,35 @@ namespace ranges
 #define RANGES_DIAGNOSTIC_IGNORE_UNDEFINED_INTERNAL RANGES_DIAGNOSTIC_IGNORE("-Wundefined-internal")
 #define RANGES_DIAGNOSTIC_IGNORE_MISMATCHED_TAGS RANGES_DIAGNOSTIC_IGNORE("-Wmismatched-tags")
 #define RANGES_DIAGNOSTIC_IGNORE_SIGN_CONVERSION RANGES_DIAGNOSTIC_IGNORE("-Wsign-conversion")
+#define RANGES_DIAGNOSTIC_IGNORE_MISSING_FIELD_INITIALIZERS RANGES_DIAGNOSTIC_IGNORE("-Wmissing-field-initializers")
 #ifdef __clang__
 #define RANGES_DIAGNOSTIC_IGNORE_GLOBAL_CONSTRUCTORS RANGES_DIAGNOSTIC_IGNORE("-Wglobal-constructors")
 #define RANGES_DIAGNOSTIC_IGNORE_UNNEEDED_INTERNAL RANGES_DIAGNOSTIC_IGNORE("-Wunneeded-internal-declaration")
 #define RANGES_DIAGNOSTIC_IGNORE_UNNEEDED_MEMBER RANGES_DIAGNOSTIC_IGNORE("-Wunneeded-member-function")
 #define RANGES_DIAGNOSTIC_IGNORE_ZERO_LENGTH_ARRAY RANGES_DIAGNOSTIC_IGNORE("-Wzero-length-array")
+#define RANGES_DIAGNOSTIC_IGNORE_CXX98_COMPAT           \
+    RANGES_DIAGNOSTIC_IGNORE("-Wc++98-compat")          \
+    RANGES_DIAGNOSTIC_IGNORE("-Wc++98-compat-pedantic")
 #define RANGES_DIAGNOSTIC_IGNORE_CXX17_COMPAT RANGES_DIAGNOSTIC_IGNORE("-Wc++1z-compat")
 #define RANGES_DIAGNOSTIC_IGNORE_ASSUME RANGES_DIAGNOSTIC_IGNORE("-Wassume")
+#define RANGES_DIAGNOSTIC_IGNORE_C_CAST RANGES_DIAGNOSTIC_IGNORE("-Wold-style-cast")
+#define RANGES_DIAGNOSTIC_IGNORE_DOCUMENTATION RANGES_DIAGNOSTIC_IGNORE("-Wdocumentation")
+#define RANGES_DIAGNOSTIC_IGNORE_WEAK_VTABLES RANGES_DIAGNOSTIC_IGNORE("-Wweak-vtables")
+#define RANGES_DIAGNOSTIC_IGNORE_MISSING_DECLARATIONS           \
+    RANGES_DIAGNOSTIC_IGNORE("-Wmissing-prototypes")            \
+    RANGES_DIAGNOSTIC_IGNORE("-Wmissing-variable-declarations")
 #else
 #define RANGES_DIAGNOSTIC_IGNORE_GLOBAL_CONSTRUCTORS
 #define RANGES_DIAGNOSTIC_IGNORE_UNNEEDED_INTERNAL
 #define RANGES_DIAGNOSTIC_IGNORE_UNNEEDED_MEMBER
 #define RANGES_DIAGNOSTIC_IGNORE_ZERO_LENGTH_ARRAY
+#define RANGES_DIAGNOSTIC_IGNORE_CXX98_COMPAT
 #define RANGES_DIAGNOSTIC_IGNORE_CXX17_COMPAT
 #define RANGES_DIAGNOSTIC_IGNORE_ASSUME
+#define RANGES_DIAGNOSTIC_IGNORE_C_CAST
+#define RANGES_DIAGNOSTIC_IGNORE_DOCUMENTATION
+#define RANGES_DIAGNOSTIC_IGNORE_WEAK_VTABLES
+#define RANGES_DIAGNOSTIC_IGNORE_MISSING_DECLARATIONS
 #endif
 #else
 #define RANGES_DIAGNOSTIC_PUSH
@@ -228,8 +154,14 @@ namespace ranges
 #define RANGES_DIAGNOSTIC_IGNORE_UNNEEDED_INTERNAL
 #define RANGES_DIAGNOSTIC_IGNORE_UNNEEDED_MEMBER
 #define RANGES_DIAGNOSTIC_IGNORE_ZERO_LENGTH_ARRAY
+#define RANGES_DIAGNOSTIC_IGNORE_CXX98_COMPAT
 #define RANGES_DIAGNOSTIC_IGNORE_CXX17_COMPAT
 #define RANGES_DIAGNOSTIC_IGNORE_ASSUME
+#define RANGES_DIAGNOSTIC_IGNORE_C_CAST
+#define RANGES_DIAGNOSTIC_IGNORE_DOCUMENTATION
+#define RANGES_DIAGNOSTIC_IGNORE_WEAK_VTABLES
+#define RANGES_DIAGNOSTIC_IGNORE_MISSING_DECLARATIONS
+#define RANGES_DIAGNOSTIC_IGNORE_MISSING_FIELD_INITIALIZERS
 #endif
 #endif // MSVC/Generic configuration switch
 
@@ -385,18 +317,129 @@ namespace ranges
     }
 #endif // RANGES_CXX_INLINE_VARIABLES
 
-#ifdef RANGES_FEWER_WARNINGS
- #define RANGES_DISABLE_WARNINGS                 \
-     RANGES_DIAGNOSTIC_PUSH                      \
-     RANGES_DIAGNOSTIC_IGNORE_PRAGMAS            \
-     RANGES_DIAGNOSTIC_IGNORE_SHADOWING          \
-     RANGES_DIAGNOSTIC_IGNORE_UNDEFINED_INTERNAL \
-     RANGES_DIAGNOSTIC_IGNORE_INDENTATION        \
-     RANGES_DIAGNOSTIC_IGNORE_CXX17_COMPAT
-#else
- #define RANGES_DISABLE_WARNINGS RANGES_DIAGNOSTIC_PUSH
-#endif
 #define RANGES_RE_ENABLE_WARNINGS RANGES_DIAGNOSTIC_POP
+#define RANGES_DISABLE_WARNINGS_             \
+    RANGES_DIAGNOSTIC_PUSH                   \
+    RANGES_DIAGNOSTIC_IGNORE_PRAGMAS         \
+    RANGES_DIAGNOSTIC_IGNORE_SHADOWING       \
+    RANGES_DIAGNOSTIC_IGNORE_ASSUME          \
+    RANGES_DIAGNOSTIC_IGNORE_CXX98_COMPAT    \
+    RANGES_DIAGNOSTIC_IGNORE_C_CAST          \
+    RANGES_DIAGNOSTIC_IGNORE_MISMATCHED_TAGS \
+    RANGES_DIAGNOSTIC_IGNORE_DOCUMENTATION   \
+    RANGES_DIAGNOSTIC_IGNORE_WEAK_VTABLES
+
+#if defined(__GNUC__) && __GNUC__ < 5
+ #define RANGES_DISABLE_WARNINGS RANGES_DISABLE_WARNINGS_ RANGES_DIAGNOSTIC_IGNORE_MISSING_FIELD_INITIALIZERS
+#else
+ #define RANGES_DISABLE_WARNINGS RANGES_DISABLE_WARNINGS_
+#endif
+
+#include <iosfwd>
+#if (defined(NDEBUG) && !defined(RANGES_ENSURE_MSG)) || \
+    (!defined(NDEBUG) && !defined(RANGES_ASSERT) && \
+     defined(__GNUC__) && !defined(__clang__) && __GNUC__ < 5)
+#include <cstdio>
+#include <cstdlib>
+
+namespace ranges
+{
+    inline namespace v3
+    {
+        namespace detail
+        {
+            template<class = void>
+            [[noreturn]] void assert_failure(char const *file, int line, char const *msg) noexcept
+            {
+                std::fprintf(stderr, "%s(%d): %s\n", file, line, msg);
+                std::abort();
+            }
+        }
+    }
+}
+#endif
+
+RANGES_DISABLE_WARNINGS
+
+#ifndef RANGES_ASSERT
+ #if !defined(NDEBUG) && defined(__GNUC__) && !defined(__clang__) && __GNUC__ < 5
+  #define RANGES_ASSERT(...) \
+    static_cast<void>((__VA_ARGS__) ? void(0) : \
+        ::ranges::detail::assert_failure(__FILE__, __LINE__, "assertion failed: " #__VA_ARGS__))
+ #else
+  #include <cassert>
+  #define RANGES_ASSERT assert
+ #endif
+#endif
+
+#ifndef RANGES_ASSUME
+ #if defined(__clang__)
+  #define RANGES_ASSUME(...)                                 \
+    static_cast<void>((                                      \
+        ((__VA_ARGS__) ? void(0) : __builtin_unreachable()), \
+        __builtin_assume(static_cast<bool>(__VA_ARGS__))))
+ #elif defined(__GNUC__)
+  #define RANGES_ASSUME(...) ((__VA_ARGS__) ? void(0) : __builtin_unreachable())
+ #elif defined(_MSC_VER)
+  #define RANGES_ASSUME(...)                  \
+    (((__VA_ARGS__) ? void(0) : __assume(0)), \
+     __assume(static_cast<bool>(__VA_ARGS__)))
+ #else
+  #define RANGES_ASSUME(...) static_cast<void>(static_cast<bool>(__VA_ARGS__))
+ #endif
+#endif // RANGES_ASSUME
+
+#ifndef RANGES_EXPECT
+#ifdef NDEBUG
+#define RANGES_EXPECT(...) RANGES_ASSUME(__VA_ARGS__)
+#else // NDEBUG
+#define RANGES_EXPECT(...) RANGES_ASSERT(__VA_ARGS__)
+#endif // NDEBUG
+#endif // RANGES_EXPECT
+
+#ifndef RANGES_ENSURE_MSG
+#if defined(NDEBUG)
+#define RANGES_ENSURE_MSG(COND, MSG) \
+    static_cast<void>((COND) ? void(0) \
+        : ::ranges::detail::assert_failure(__FILE__, __LINE__, "ensure failed: " MSG))
+#else
+#define RANGES_ENSURE_MSG(COND, MSG) RANGES_ASSERT((COND) && MSG)
+#endif
+#endif
+
+#ifndef RANGES_ENSURE
+#define RANGES_ENSURE(...) RANGES_ENSURE_MSG((__VA_ARGS__), #__VA_ARGS__)
+#endif
+
+#define RANGES_DECLTYPE_AUTO_RETURN(...)                        \
+    -> decltype(__VA_ARGS__)                                    \
+    { return (__VA_ARGS__); }                                   \
+    /**/
+
+#define RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT(...)               \
+    noexcept(noexcept(decltype(__VA_ARGS__)(__VA_ARGS__))) ->   \
+    decltype(__VA_ARGS__)                                       \
+    { return (__VA_ARGS__); }                                   \
+    /**/
+
+#define RANGES_AUTO_RETURN_NOEXCEPT(...)                        \
+    noexcept(noexcept(decltype(__VA_ARGS__)(__VA_ARGS__)))      \
+    { return (__VA_ARGS__); }                                   \
+    /**/
+
+#define RANGES_DECLTYPE_NOEXCEPT(...)                           \
+    noexcept(noexcept(decltype(__VA_ARGS__)(__VA_ARGS__))) ->   \
+    decltype(__VA_ARGS__)                                       \
+    /**/
+
+// Non-portable forward declarations of standard containers
+#ifdef _LIBCPP_VERSION
+#define RANGES_BEGIN_NAMESPACE_STD _LIBCPP_BEGIN_NAMESPACE_STD
+#define RANGES_END_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
+#else
+#define RANGES_BEGIN_NAMESPACE_STD namespace std {
+#define RANGES_END_NAMESPACE_STD }
+#endif
 
 namespace ranges {
     inline namespace v3 {
@@ -411,5 +454,7 @@ namespace ranges {
         }
     }
 }
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

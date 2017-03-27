@@ -24,6 +24,8 @@
 #include <range/v3/utility/static_const.hpp>
 #include <range/v3/utility/tagged_pair.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -157,9 +159,6 @@ namespace ranges
     }
 }
 
-RANGES_DIAGNOSTIC_PUSH
-RANGES_DIAGNOSTIC_IGNORE_PRAGMAS
-RANGES_DIAGNOSTIC_IGNORE_MISMATCHED_TAGS
 namespace std
 {
     template<typename... Ts, size_t... Is>
@@ -190,6 +189,7 @@ namespace std
         using type = Second;
     };
 }
-RANGES_DIAGNOSTIC_POP
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

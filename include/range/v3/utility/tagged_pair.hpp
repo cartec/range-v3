@@ -20,6 +20,8 @@
 #include <range/v3/utility/concepts.hpp>
 #include <range/v3/utility/swap.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -207,10 +209,6 @@ namespace ranges
     }                                                                                \
     /**/
 
-RANGES_DIAGNOSTIC_PUSH
-RANGES_DIAGNOSTIC_IGNORE_PRAGMAS
-RANGES_DIAGNOSTIC_IGNORE_MISMATCHED_TAGS
-
 namespace std
 {
     template<typename Untagged, typename...Tags>
@@ -224,6 +222,6 @@ namespace std
     {};
 }
 
-RANGES_DIAGNOSTIC_POP
+RANGES_DISABLE_WARNINGS
 
 #endif

@@ -27,6 +27,8 @@
 #include "../test_utils.hpp"
 #include "../test_iterators.hpp"
 
+RANGES_DISABLE_WARNINGS
+
 template<class Iter1, class Iter2>
 void test_iter_3()
 {

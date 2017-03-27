@@ -36,6 +36,8 @@
 #include <range/v3/view/take_while.hpp>
 #include <range/v3/algorithm/find_if_not.hpp>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -84,10 +86,7 @@ namespace ranges
                 }
                 void next()
                 {
-                    RANGES_DIAGNOSTIC_PUSH
-                    RANGES_DIAGNOSTIC_IGNORE_ASSUME
                     RANGES_EXPECT(cur_ != last_);
-                    RANGES_DIAGNOSTIC_POP
                     // If the last match consumed zero elements, bump the position.
                     advance(cur_, (int)zero_, last_);
                     zero_ = false;
@@ -169,10 +168,7 @@ namespace ranges
                     operator()(iterator_t<Rng> cur, sentinel_t<Rng> end) const
                     {
                         using P = std::pair<bool, iterator_t<Rng>>;
-                        RANGES_DIAGNOSTIC_PUSH
-                        RANGES_DIAGNOSTIC_IGNORE_ASSUME
                         RANGES_EXPECT(cur != end);
-                        RANGES_DIAGNOSTIC_POP
                         return *cur == val_ ? P{true, ranges::next(cur)} : P{false, cur};
                     }
                 };
@@ -188,10 +184,7 @@ namespace ranges
                     std::pair<bool, iterator_t<Rng>>
                     operator()(iterator_t<Rng> cur, sentinel_t<Rng> end) const
                     {
-                        RANGES_DIAGNOSTIC_PUSH
-                        RANGES_DIAGNOSTIC_IGNORE_ASSUME
                         RANGES_EXPECT(cur != end);
-                        RANGES_DIAGNOSTIC_POP
                         if(SizedSentinel<sentinel_t<Rng>, iterator_t<Rng>>() &&
                             distance(cur, end) < len_)
                             return {false, cur};
@@ -290,5 +283,7 @@ namespace ranges
 }
 
 RANGES_SATISFY_BOOST_RANGE(::ranges::v3::split_view)
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

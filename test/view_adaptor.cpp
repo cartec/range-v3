@@ -18,6 +18,8 @@
 #include "./simple_test.hpp"
 #include "./test_utils.hpp"
 
+RANGES_DISABLE_WARNINGS
+
 template<typename BidiRange>
 struct my_reverse_view
   : ranges::view_adaptor<my_reverse_view<BidiRange>, BidiRange>
