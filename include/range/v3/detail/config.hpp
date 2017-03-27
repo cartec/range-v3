@@ -314,10 +314,13 @@
     }
 
 #else  // RANGES_CXX_INLINE_VARIABLES >= RANGES_CXX_INLINE_VARIABLES_17
-#define RANGES_INLINE_VARIABLE(type, name) \
-    inline namespace function_objects      \
-    {                                      \
-        inline constexpr type name{};      \
+#define RANGES_INLINE_VARIABLE(type, name)            \
+    inline namespace function_objects                 \
+    {                                                 \
+        RANGES_DIAGNOSTIC_PUSH                        \
+        RANGES_DIAGNOSTIC_IGNORE_MISSING_DECLARATIONS \
+        inline constexpr type name{};                 \
+        RANGES_DIAGNOSTIC_POP                         \
     }
 #endif // RANGES_CXX_INLINE_VARIABLES
 
