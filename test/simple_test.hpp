@@ -13,6 +13,9 @@
 #include <cstdlib>
 #include <utility>
 #include <iostream>
+#include <range/v3/detail/config.hpp>
+
+RANGES_DISABLE_WARNINGS
 
 namespace test_impl
 {
@@ -161,5 +164,7 @@ inline int test_result()
 #define CHECK(...)                                                           \
     (void)(::test_impl::S{__FILE__, __LINE__, #__VA_ARGS__} ->* __VA_ARGS__) \
     /**/
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

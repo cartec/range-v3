@@ -16,6 +16,7 @@
 
 #include <utility>
 #include <meta/meta.hpp>
+#include <range/v3/detail/config.hpp>
 
 RANGES_DISABLE_WARNINGS
 

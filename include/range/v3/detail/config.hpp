@@ -342,6 +342,8 @@
 #include <cstdio>
 #include <cstdlib>
 
+RANGES_DISABLE_WARNINGS
+
 namespace ranges
 {
     inline namespace v3
@@ -357,9 +359,9 @@ namespace ranges
         }
     }
 }
-#endif
-
+#else
 RANGES_DISABLE_WARNINGS
+#endif
 
 #ifndef RANGES_ASSERT
  #if !defined(NDEBUG) && defined(__GNUC__) && !defined(__clang__) && __GNUC__ < 5

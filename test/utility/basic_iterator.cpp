@@ -17,6 +17,7 @@
 #include "../test_utils.hpp"
 
 RANGES_DISABLE_WARNINGS
+RANGES_DIAGNOSTIC_IGNORE_MISSING_DECLARATIONS
 
 namespace test_weak_input
 {

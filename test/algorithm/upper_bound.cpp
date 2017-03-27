@@ -20,6 +20,7 @@
 #include "../simple_test.hpp"
 
 RANGES_DISABLE_WARNINGS
+RANGES_DIAGNOSTIC_IGNORE_MISSING_DECLARATIONS
 
 struct my_int
 {

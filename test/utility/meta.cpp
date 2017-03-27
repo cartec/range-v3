@@ -15,9 +15,11 @@
 //
 #include <tuple>
 #include <meta/meta.hpp>
+#include <range/v3/detail/config.hpp>
 #include "../simple_test.hpp"
 
 RANGES_DISABLE_WARNINGS
+RANGES_DIAGNOSTIC_IGNORE_MISSING_DECLARATIONS
 
 using namespace meta;
 

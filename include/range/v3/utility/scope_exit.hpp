@@ -17,6 +17,9 @@
 #include <type_traits>
 #include <utility>
 #include <meta/meta.hpp>
+#include <range/v3/detail/config.hpp>
+
+RANGES_DISABLE_WARNINGS
 
 namespace ranges
 {
@@ -91,5 +94,7 @@ namespace ranges
         }
     }
 }
+
+RANGES_RE_ENABLE_WARNINGS
 
 #endif

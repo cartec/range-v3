@@ -12,6 +12,7 @@
 #include <range/v3/detail/config.hpp>
 
 RANGES_DISABLE_WARNINGS
+RANGES_DIAGNOSTIC_IGNORE_MISSING_DECLARATIONS
 
 RANGES_DEPRECATED("compile test for \"RANGES_DEPRECATED\"") void foo() {}
 
