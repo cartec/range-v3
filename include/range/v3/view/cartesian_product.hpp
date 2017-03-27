@@ -22,6 +22,7 @@
 #include <range/v3/range_traits.hpp>
 #include <range/v3/size.hpp>
 #include <range/v3/view_facade.hpp>
+#include <range/v3/detail/satisfy_boost_range.hpp>
 #include <range/v3/utility/concepts.hpp>
 #include <range/v3/utility/static_const.hpp>
 #include <range/v3/utility/tuple_algorithm.hpp>
