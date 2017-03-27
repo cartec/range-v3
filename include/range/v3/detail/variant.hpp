@@ -64,8 +64,11 @@ namespace ranges
     #else // RANGES_CXX_INLINE_VARIABLES >= RANGES_CXX_INLINE_VARIABLES_17
         inline namespace function_objects
         {
+            RANGES_DIAGNOSTIC_PUSH
+            RANGES_DIAGNOSTIC_IGNORE_MISSING_DECLARATIONS
             template<std::size_t I>
             inline constexpr emplaced_index_t<I> emplaced_index{};
+            RANGES_DIAGNOSTIC_POP
         }
     #endif  // RANGES_CXX_INLINE_VARIABLES
 

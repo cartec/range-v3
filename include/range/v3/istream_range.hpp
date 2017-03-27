@@ -118,8 +118,11 @@ namespace ranges
     #else  // RANGES_CXX_INLINE_VARIABLES >= RANGES_CXX_INLINE_VARIABLES_17
         inline namespace function_objects
         {
+            RANGES_DIAGNOSTIC_PUSH
+            RANGES_DIAGNOSTIC_IGNORE_MISSING_DECLARATIONS
             template<typename Val>
             inline constexpr istream_fn<Val> istream{};
+            RANGES_DIAGNOSTIC_POP
         }
     #endif  // RANGES_CXX_INLINE_VARIABLES
 
