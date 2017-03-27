@@ -128,10 +128,7 @@ if(NOT RANGE_V3_NEW_VERSION_HPP STREQUAL RANGE_V3_OLD_VERSION_HPP)
   )
 endif()
 
-add_subdirectory(doc)
 add_subdirectory(test)
-add_subdirectory(example)
-add_subdirectory(perf)
 
 install(DIRECTORY include/ DESTINATION include
         FILES_MATCHING PATTERN "*.hpp")

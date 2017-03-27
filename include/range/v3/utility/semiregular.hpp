@@ -64,23 +64,23 @@ namespace ranges
             }
             operator T &()
             {
-                return get();
+                return this->get();
             }
             operator T const &() const
             {
-                return get();
+                return this->get();
             }
             template<typename...Args>
             auto operator()(Args &&...args) ->
                 decltype(std::declval<T &>()(std::forward<Args>(args)...))
             {
-                return get()(std::forward<Args>(args)...);
+                return this->get()(std::forward<Args>(args)...);
             }
             template<typename...Args>
             auto operator()(Args &&...args) const ->
                 decltype(std::declval<T const &>()(std::forward<Args>(args)...))
             {
-                return get()(std::forward<Args>(args)...);
+                return this->get()(std::forward<Args>(args)...);
             }
         };
 
