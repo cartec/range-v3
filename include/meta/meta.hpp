@@ -605,8 +605,13 @@ namespace meta
 
         /// An alias for `void`.
         /// \ingroup trait
+#if defined(_MSC_VER) && !defined(__clang__) && _MSC_VER >= 1910
+        template <typename...>
+        using void_ = void;
+#else
         template <typename... Ts>
         using void_ = invoke<id<void>, Ts...>;
+#endif
 
         /// \cond
         namespace detail
