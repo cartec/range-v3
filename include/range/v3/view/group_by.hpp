@@ -41,7 +41,7 @@ namespace ranges
 
         /// \addtogroup group-views
         /// @{
-        template<typename Rng, typename Fun>
+        template<typename Rng, typename Fun, bool = (bool) ForwardRange<Rng>()>
         struct group_by_view
           : view_facade<
                 group_by_view<Rng, Fun>,
@@ -115,6 +115,167 @@ namespace ranges
             {}
         };
 
+        template<typename Rng, typename Fun>
+        struct group_by_view<Rng, Fun, false>
+          : view_facade<
+                group_by_view<Rng, Fun>,
+                is_finite<Rng>::value ? finite : range_cardinality<Rng>::value>
+        {
+        private:
+            friend range_access;
+
+            using Key = detail::decay_t<result_of_t<Fun&(range_reference_t<Rng>)>>;
+            mutable compressed_tuple<
+                Rng,                                            // base
+                semiregular_t<Fun>,                             // projection
+                semiregular_t<Key>,                             // key
+                detail::non_propagating_cache<iterator_t<Rng>>, // it
+                bool                                            // new_extent
+            > data_{};
+
+            RANGES_CXX14_CONSTEXPR
+            Rng &base() noexcept { return ranges::get<0>(data_); }
+            RANGES_CXX14_CONSTEXPR
+            Rng const &base() const noexcept { return ranges::get<0>(data_); }
+            RANGES_CXX14_CONSTEXPR
+            Fun &projection() noexcept { return ranges::get<1>(data_); }
+            RANGES_CXX14_CONSTEXPR
+            Fun const &projection() const noexcept { return ranges::get<1>(data_); }
+            RANGES_CXX14_CONSTEXPR
+            Key &key() noexcept { return ranges::get<2>(data_); }
+            RANGES_CXX14_CONSTEXPR
+            Key const &key() const noexcept { return ranges::get<2>(data_); }
+            RANGES_CXX14_CONSTEXPR
+            detail::non_propagating_cache<iterator_t<Rng>> &cached_it() const { ranges::get<3>(data_); }
+            RANGES_CXX14_CONSTEXPR
+            iterator_t<Rng> &it() noexcept
+            {
+                auto &cache = cached_it();
+                if(!cache)
+                {
+                    cache = ranges::begin(base());
+                    key() = projection(**cache);
+                    new_extent() = true;
+                }
+                return *cache;
+            }
+            RANGES_CXX14_CONSTEXPR
+            iterator_t<Rng> const &it() const noexcept
+            {
+                return const_cast<group_by_view&>(*this).it();
+            }
+            RANGES_CXX14_CONSTEXPR
+            bool &new_extent() noexcept { return ranges::get<4>(data_); }
+            RANGES_CXX14_CONSTEXPR
+            bool const &new_extent() const noexcept { return ranges::get<4>(data_); }
+
+            RANGES_CXX14_CONSTEXPR
+            bool done() const noexcept
+            {
+                return it() == ranges::end(base());
+            }
+            RANGES_CXX14_CONSTEXPR
+            void satisfy()
+            {
+                RANGES_EXPECT(!done());
+                ++it();
+                if (done())
+                {
+                    new_extent() = true;
+                    return;
+                }
+                Key new_key = projection(*it());
+                new_extent() = new_key != key();
+                key() = detail::move(new_key);
+            }
+
+            struct outer_cursor
+            {
+            private:
+                group_by_view *rng_ = nullptr;
+
+                struct inner_view
+                  : view_facade<inner_view, is_finite<Rng>::value ? finite : unknown>
+                {
+                private:
+                    friend range_access;
+                    group_by_view *rng_ = nullptr;
+
+                    RANGES_CXX14_CONSTEXPR
+                    bool done() const noexcept
+                    {
+                        RANGES_EXPECT(rng_);
+                        RANGES_ASSERT(!rng_->done() || rng_->new_extent());
+                        return rng_->new_extent();
+                    }
+                    RANGES_CXX14_CONSTEXPR
+                    range_reference_t<Rng> read() const
+                    {
+                        RANGES_EXPECT(!done());
+                        return *rng_->it();
+                    }
+                    RANGES_CXX14_CONSTEXPR
+                    void next()
+                    {
+                        RANGES_EXPECT(!done());
+                        rng_->satisfy();
+                    }
+                    RANGES_CXX14_CONSTEXPR
+                    bool equal(default_sentinel) const
+                    {
+                        return done();
+                    }
+
+                public:
+                    inner_view() = default;
+                    constexpr explicit inner_view(group_by_view &view) noexcept
+                      : rng_(&view)
+                    {}
+                };
+            public:
+                outer_cursor() = default;
+                constexpr explicit outer_cursor(group_by_view &view) noexcept
+                  : rng_(&view)
+                {}
+                RANGES_CXX14_CONSTEXPR
+                bool done() const noexcept
+                {
+                    RANGES_EXPECT(rng_);
+                    return rng_->done();
+                }
+                RANGES_CXX14_CONSTEXPR
+                inner_view read() const
+                {
+                    RANGES_EXPECT(!done());
+                    rng_->new_extent() = false;
+                    return inner_view{*rng_};
+                }
+                RANGES_CXX14_CONSTEXPR
+                void next()
+                {
+                    RANGES_EXPECT(rng_);
+                    while(!rng_->new_extent()) {
+                        rng_->satisfy();
+                    }
+                }
+                RANGES_CXX14_CONSTEXPR
+                bool equal(default_sentinel) const
+                {
+                    return done();
+                }
+            };
+            RANGES_CXX14_CONSTEXPR
+            outer_cursor begin_cursor()
+            {
+                return outer_cursor{*this};
+            }
+        public:
+            group_by_view() = default;
+            constexpr group_by_view(Rng rng, Fun fun)
+              : data_{std::move(rng), std::move(fun), semiregular_t<Key>{}, nullopt, true}
+            {}
+        };
+
         namespace view
         {
             struct group_by_fn
@@ -129,12 +290,12 @@ namespace ranges
                 )
             public:
                 template<typename Rng, typename Fun>
-                using Concept = meta::and_<
-                    ForwardRange<Rng>,
-                    IndirectRelation<Fun, iterator_t<Rng>>>;
+                using Constraint = meta::or_<
+                    meta::and_<ForwardRange<Rng>, IndirectRelation<Fun, iterator_t<Rng>>>,
+                    meta::and_<InputRange<Rng>, IndirectRelation<Fun, iterator_t<Rng>>>>; // FIXME
 
                 template<typename Rng, typename Fun,
-                    CONCEPT_REQUIRES_(Concept<Rng, Fun>())>
+                    CONCEPT_REQUIRES_(Constraint<Rng, Fun>())>
                 group_by_view<all_t<Rng>, Fun> operator()(Rng && rng, Fun fun) const
                 {
                     return {all(static_cast<Rng&&>(rng)), std::move(fun)};
@@ -142,9 +303,9 @@ namespace ranges
 
             #ifndef RANGES_DOXYGEN_INVOKED
                 template<typename Rng, typename Fun,
-                    CONCEPT_REQUIRES_(!Concept<Rng, Fun>())>
+                    CONCEPT_REQUIRES_(!Constraint<Rng, Fun>())>
                 void operator()(Rng &&, Fun) const
-                {
+                { // FIXME
                     CONCEPT_ASSERT_MSG(ForwardRange<Rng>(),
                         "The object on which view::group_by operates must be a model of the "
                         "ForwardRange concept.");
