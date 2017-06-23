@@ -193,6 +193,43 @@ namespace ranges
                 virtual void next() override { ++current(); }
             };
 
+            constexpr size_t any_cursor_pointer_size = 4;
+            using any_cursor_storage = meta::_t<std::aligned_storage<
+                (any_cursor_pointer_size - 1) * sizeof(void *), alignof(void *)>>;
+
+            template<typename Ref, category = category::forward>
+            struct any_cursor_vtable;
+
+            template<typename Ref>
+            struct any_cursor_vtable<Ref, category::forward>
+            {
+                void (*destroy)(any_cursor_storage *self) noexcept = nullptr;
+                void (*copy_init)(any_cursor_storage *self, any_cursor_storage const *that) = nullptr;
+                void (*move_init)(any_cursor_storage *self, any_cursor_storage const *that) = nullptr;
+                void (*copy_assign)(any_cursor_storage *self, any_cursor_storage const *that) = nullptr;
+                void (*move_assign)(any_cursor_storage *self, any_cursor_storage const *that) = nullptr;
+                any_ref (*iter)(any_cursor_storage const *self) = nullptr;
+                Ref (*read)(any_cursor_storage const *self) = nullptr;
+                void (*next)(any_cursor_storage *self) = nullptr;
+                bool (*equal)(any_cursor_storage const *self, any_cursor_storage const *that) = nullptr;
+                bool (*at_end)(any_cursor_storage const *self, any_view_interface<Ref, category::forward> const *) = nullptr;
+            };
+
+            template<typename Ref>
+            struct any_cursor_vtable<Ref, category::bidirectional>
+              : any_cursor_vtable<Ref, category::forward>
+            {
+                void (*prev)(any_cursor_storage *self) = nullptr;
+            };
+
+            template<typename Ref>
+            struct any_cursor_vtable<Ref, category::random_access>
+              : any_cursor_vtable<Ref, category::bidirectional>
+            {
+                void (*advance)(any_cursor_storage *self, std::ptrdiff_t) = nullptr;
+                std::ptrdiff_t (*distance_to)(any_cursor_storage const *self, any_cursor_storage const *that) = nullptr;
+            };
+
             template<typename Ref, category Cat = category::forward>
             struct any_cursor_interface
             {
