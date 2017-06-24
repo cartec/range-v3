@@ -197,120 +197,8 @@ namespace ranges
             using any_cursor_storage = meta::_t<std::aligned_storage<
                 (any_cursor_pointer_size - 1) * sizeof(void *), alignof(void *)>>;
 
-            template<typename Ref, category = category::forward>
-            struct any_cursor_vtable;
-
-            template<typename Ref>
-            struct any_cursor_vtable<Ref, category::forward>
-            {
-                void (*destroy)(any_cursor_storage *self) noexcept = nullptr;
-                void (*copy_init)(any_cursor_storage *self, any_cursor_storage const *that) = nullptr;
-                void (*move_init)(any_cursor_storage *self, any_cursor_storage const *that) = nullptr;
-                void (*copy_assign)(any_cursor_storage *self, any_cursor_storage const *that) = nullptr;
-                void (*move_assign)(any_cursor_storage *self, any_cursor_storage const *that) = nullptr;
-                any_ref (*iter)(any_cursor_storage const *self) = nullptr;
-                Ref (*read)(any_cursor_storage const *self) = nullptr;
-                void (*next)(any_cursor_storage *self) = nullptr;
-                bool (*equal)(any_cursor_storage const *self, any_cursor_storage const *that) = nullptr;
-                bool (*at_end)(any_cursor_storage const *self, any_view_interface<Ref, category::forward> const *) = nullptr;
-            };
-
-            template<typename Ref>
-            struct any_cursor_vtable<Ref, category::bidirectional>
-              : any_cursor_vtable<Ref, category::forward>
-            {
-                void (*prev)(any_cursor_storage *self) = nullptr;
-            };
-
-            template<typename Ref>
-            struct any_cursor_vtable<Ref, category::random_access>
-              : any_cursor_vtable<Ref, category::bidirectional>
-            {
-                void (*advance)(any_cursor_storage *self, std::ptrdiff_t) = nullptr;
-                std::ptrdiff_t (*distance_to)(any_cursor_storage const *self, any_cursor_storage const *that) = nullptr;
-            };
-
-            template<typename Ref, category Cat = category::forward>
-            struct any_cursor_interface
-            {
-                virtual ~any_cursor_interface() = default;
-                virtual any_ref iter() const = 0; // returns a const ref to the cursor's wrapped iterator
-                virtual Ref read() const = 0;
-                virtual bool equal(any_cursor_interface const &) const = 0;
-                virtual void next() = 0;
-            };
-
-            template<typename Ref>
-            struct any_cursor_interface<Ref, category::bidirectional>
-              : any_cursor_interface<Ref, category::forward>
-            {
-                virtual void prev() = 0;
-            };
-
-            template<typename Ref>
-            struct any_cursor_interface<Ref, category::random_access>
-              : any_cursor_interface<Ref, category::bidirectional>
-            {
-                virtual void advance(std::ptrdiff_t) = 0;
-                virtual std::ptrdiff_t distance_to(any_cursor_interface const &) const = 0;
-            };
-
-            template<typename Ref, category Cat>
-            using any_cloneable_cursor_interface =
-                cloneable<any_cursor_interface<Ref, Cat>>;
-
-            template<typename I, typename Ref, category Cat>
-            struct any_cursor_impl
-              : any_cloneable_cursor_interface<Ref, Cat>
-            {
-                CONCEPT_ASSERT(ConvertibleTo<reference_t<I>, Ref>());
-                CONCEPT_ASSERT(Cat >= category::forward);
-
-                any_cursor_impl() = default;
-                any_cursor_impl(I it)
-                  : it_{std::move(it)}
-                {}
-            private:
-                using Forward = any_cursor_interface<Ref, category::forward>;
-
-                I it_;
-
-                any_ref iter() const // override
-                {
-                    return it_;
-                }
-                Ref read() const // override
-                {
-                    return *it_;
-                }
-                bool equal(Forward const &that_) const // override
-                {
-                    auto &that = polymorphic_downcast<any_cursor_impl const &>(that_);
-                    return that.it_ == it_;
-                }
-                void next() // override
-                {
-                    ++it_;
-                }
-                std::unique_ptr<any_cloneable_cursor_interface<Ref, Cat>> clone() const // override
-                {
-                    return detail::make_unique<any_cursor_impl>(it_);
-                }
-                void prev() // override (sometimes; it's complicated)
-                {
-                    --it_;
-                }
-                void advance(std::ptrdiff_t n) // override-ish
-                {
-                    it_ += n;
-                }
-                std::ptrdiff_t distance_to(
-                    any_cursor_interface<Ref, Cat> const &that_) const // override-ish
-                {
-                    auto &that = polymorphic_downcast<any_cursor_impl const &>(that_);
-                    return static_cast<std::ptrdiff_t>(that.it_ - it_);
-                }
-            };
+            template<typename T>
+            using any_cursor_is_small = meta::bool_<(sizeof(T) <= sizeof(any_cursor_storage))>;
 
             struct fully_erased_view
             {
@@ -319,6 +207,210 @@ namespace ranges
             protected:
                 ~fully_erased_view() = default;
             };
+
+            template<typename Ref, category = category::forward>
+            struct any_cursor_vtable;
+
+            template<typename Ref>
+            struct any_cursor_vtable<Ref, category::forward>
+            {
+                void (*destroy)(any_cursor_storage *self) noexcept;
+                void (*copy_init)(any_cursor_storage *self, any_cursor_storage const *that);
+                void (*move_init)(any_cursor_storage *self, any_cursor_storage *that);
+                void (*copy_assign)(any_cursor_storage *self, any_cursor_storage const *that);
+                void (*move_assign)(any_cursor_storage *self, any_cursor_storage *that);
+                any_ref (*iter)(any_cursor_storage const *self);
+                Ref (*read)(any_cursor_storage const *self);
+                void (*next)(any_cursor_storage *self);
+                bool (*equal)(any_cursor_storage const *self, any_cursor_storage const *that);
+                bool (*at_end)(any_cursor_storage const *self, fully_erased_view const *view);
+
+                template<typename I>
+                constexpr any_cursor_vtable(meta::id<I>) noexcept
+                  : any_cursor_vtable{meta::id<I>{}, any_cursor_is_small<I>{}}
+                {}
+            protected:
+                template<typename I,
+                    CONCEPT_REQUIRES_(any_cursor_is_small<I>())>
+                static I &get(any_cursor_storage *self) noexcept
+                {
+                    return *reinterpret_cast<I *>(self);
+                }
+                template<typename I,
+                    CONCEPT_REQUIRES_(any_cursor_is_small<I>())>
+                static I const &get(any_cursor_storage const *self) noexcept
+                {
+                    return *reinterpret_cast<I const *>(self);
+                }
+                template<typename I,
+                    CONCEPT_REQUIRES_(!any_cursor_is_small<I>())>
+                static I &get(any_cursor_storage *self) noexcept
+                {
+                    return **reinterpret_cast<I **>(self);
+                }
+                template<typename I,
+                    CONCEPT_REQUIRES_(!any_cursor_is_small<I>())>
+                static I const &get(any_cursor_storage const *self) noexcept
+                {
+                    return **reinterpret_cast<I const * const *>(self);
+                }
+            private:
+                template<typename I>
+                constexpr any_cursor_vtable(meta::id<I>, std::true_type) noexcept
+                  : destroy{&small_destroy<I>}
+                  , copy_init{&small_copy_init<I>}
+                  , move_init{&small_move_init<I>}
+                  , copy_assign{&copy_assign_impl<I>}
+                  , move_assign{&move_assign_impl<I>}
+                  , iter{&iter_impl<I>}
+                  , read{&read_impl<I>}
+                  , next{&next_impl<I>}
+                  , equal{&equal_impl<I>}
+                  , at_end{&at_end_impl<I>}
+                {}
+                template<typename I>
+                static void small_destroy(any_cursor_storage *self) noexcept
+                {
+                    get<I>(self).~I();
+                }
+                template<typename I>
+                static void small_copy_init(any_cursor_storage *self, any_cursor_storage const *that)
+                {
+                    ::new (static_cast<void *>(self)) I(get<I>(that));
+                }
+                template<typename I>
+                static void small_move_init(any_cursor_storage *self, any_cursor_storage *that)
+                {
+                    ::new (static_cast<void *>(self)) I(std::move(get<I>(that)));
+                }
+
+                template<typename I>
+                constexpr any_cursor_vtable(meta::id<I>, std::false_type) noexcept
+                  : destroy{&big_destroy<I>}
+                  , copy_init{&big_copy_init<I>}
+                  , move_init{&big_move_init<I>}
+                  , copy_assign{&copy_assign_impl<I>}
+                  , move_assign{&move_assign_impl<I>}
+                  , iter{&iter_impl<I>}
+                  , read{&read_impl<I>}
+                  , next{&next_impl<I>}
+                  , equal{&equal_impl<I>}
+                  , at_end{&at_end_impl<I>}
+                {}
+                template<typename I>
+                static I *&big_pointer(any_cursor_storage *self) noexcept
+                {
+                    return *reinterpret_cast<I **>(self);
+                }
+                template<typename I>
+                static void big_destroy(any_cursor_storage *self) noexcept
+                {
+                    delete big_pointer<I>(self);
+                }
+                template<typename I>
+                static void big_copy_init(any_cursor_storage *self, any_cursor_storage const *that)
+                {
+                    big_pointer<I>(self) = new I(get<I>(that));
+                }
+                template<typename I>
+                static void big_move_init(any_cursor_storage *self, any_cursor_storage *that)
+                {
+                    big_pointer<I>(self) = new I(std::move(get<I>(that)));
+                }
+
+                template<typename I>
+                static void copy_assign_impl(any_cursor_storage *self, any_cursor_storage const *that)
+                {
+                    get<I>(self) = get<I>(that);
+                }
+                template<typename I>
+                static void move_assign_impl(any_cursor_storage *self, any_cursor_storage *that)
+                {
+                    get<I>(self) = std::move(get<I>(that));
+                }
+                template<typename I>
+                static any_ref iter_impl(any_cursor_storage const *self)
+                {
+                    return get<I>(self);
+                }
+                template<typename I>
+                static Ref read_impl(any_cursor_storage const *self)
+                {
+                    return *get<I>(self);
+                }
+                template<typename I>
+                static void next_impl(any_cursor_storage *self)
+                {
+                    ++get<I>(self);
+                }
+                template<typename I>
+                static bool equal_impl(any_cursor_storage const *self, any_cursor_storage const *that)
+                {
+                    return get<I>(self) == get<I>(that);
+                }
+                template<typename I>
+                static bool at_end_impl(any_cursor_storage const *self, fully_erased_view const *view)
+                {
+                    return view->at_end(get<I>(self));
+                }
+            };
+
+            template<typename Ref>
+            struct any_cursor_vtable<Ref, category::bidirectional>
+              : any_cursor_vtable<Ref, category::forward>
+            {
+                void (*prev)(any_cursor_storage *self);
+
+                template<typename I>
+                constexpr any_cursor_vtable(meta::id<I>) noexcept
+                  : base_t{meta::id<I>{}}, prev{&prev_impl<I>}
+                {}
+            private:
+                using base_t = any_cursor_vtable<Ref, category::forward>;
+
+                template<typename I>
+                static void prev_impl(any_cursor_storage *self)
+                {
+                    --base_t::template get<I>(self);
+                }
+            };
+
+            template<typename Ref>
+            struct any_cursor_vtable<Ref, category::random_access>
+              : any_cursor_vtable<Ref, category::bidirectional>
+            {
+                void (*advance)(any_cursor_storage *self, std::ptrdiff_t);
+                std::ptrdiff_t (*distance_to)(any_cursor_storage const *self, any_cursor_storage const *that);
+
+                template<typename I>
+                constexpr any_cursor_vtable(meta::id<I>) noexcept
+                  : base_t{meta::id<I>{}}
+                  , advance{&advance_impl<I>}
+                  , distance_to{&distance_to_impl<I>}
+                {}
+            private:
+                using base_t = any_cursor_vtable<Ref, category::bidirectional>;
+
+                template<typename I>
+                static void advance_impl(any_cursor_storage *self, std::ptrdiff_t n)
+                {
+                    base_t::template get<I>(self) += n;
+                }
+                template<typename I>
+                static std::ptrdiff_t distance_to_impl(any_cursor_storage const *self, any_cursor_storage const *that)
+                {
+                    return base_t::template get<I>(that) - base_t::template get<I>(self);
+                }
+            };
+
+            template<typename Ref, category Cat, typename I>
+            struct any_cursor_vtable_for
+            {
+                static constexpr any_cursor_vtable<Ref, Cat> vtable_{meta::id<I>{}};
+            };
+
+            template<typename Ref, category Cat, typename I>
+            const any_cursor_vtable<Ref, Cat> any_cursor_vtable_for<Ref, Cat, I>::vtable_;
 
             struct any_sentinel
             {
@@ -333,72 +425,114 @@ namespace ranges
             };
 
             template<typename Ref, category Cat>
-            struct any_cursor
+            struct any_cursor // alignas(2 * alignof(void *))
             {
-            private:
                 CONCEPT_ASSERT(Cat >= category::forward);
 
-                std::unique_ptr<any_cloneable_cursor_interface<Ref, Cat>> ptr_;
-
-                template<typename Rng>
-                using impl_t = any_cursor_impl<iterator_t<Rng>, Ref, Cat>;
-            public:
                 any_cursor() = default;
                 template<typename Rng,
                     CONCEPT_REQUIRES_(!Same<detail::decay_t<Rng>, any_cursor>()),
                     CONCEPT_REQUIRES_(ForwardRange<Rng>() &&
                                       AnyCompatibleRange<Rng, Ref>())>
                 explicit any_cursor(Rng &&rng)
-                  : ptr_{detail::make_unique<impl_t<Rng>>(begin(rng))}
-                {}
-                any_cursor(any_cursor &&) = default;
+                  : vtable_{&any_cursor_vtable_for<Ref, Cat, iterator_t<Rng>>::vtable_}
+                {
+                    ::new (static_cast<void *>(&storage_)) iterator_t<Rng>(ranges::begin(rng));
+                }
+                any_cursor(any_cursor &&that) noexcept
+                  : vtable_{that.vtable_}
+                {
+                    if (vtable_)
+                        vtable_->move_init(&storage_, &that.storage_);
+                }
                 any_cursor(any_cursor const &that)
-                  : ptr_{that.ptr_ ? that.ptr_->clone() : nullptr}
-                {}
-                any_cursor &operator=(any_cursor &&) = default;
+                  : vtable_{that.vtable_}
+                {
+                    if (vtable_)
+                        vtable_->copy_init(&storage_, &that.storage_);
+                }
+                ~any_cursor()
+                {
+                    if (vtable_)
+                        vtable_->destroy(&storage_);
+                }
+                any_cursor &operator=(any_cursor &&that) noexcept
+                {
+                    if (vtable_ == that.vtable_)
+                    {
+                        if (vtable_)
+                            vtable_->move_assign(&storage_, &that.storage_);
+                    }
+                    else
+                    {
+                        if (vtable_)
+                            vtable_->destroy(&storage_);
+                        vtable_ = that.vtable_;
+                        if (vtable_)
+                            vtable_->move_init(&storage_, &that.storage_);
+                    }
+                    return *this;
+                }
                 any_cursor &operator=(any_cursor const &that)
                 {
-                    ptr_ = (that.ptr_ ? that.ptr_->clone() : nullptr);
+                    if (vtable_ == that.vtable_)
+                    {
+                        if (vtable_)
+                            vtable_->copy_assign(&storage_, &that.storage_);
+                    }
+                    else
+                    {
+                        if (vtable_)
+                            vtable_->destroy(&storage_);
+                        vtable_ = that.vtable_;
+                        if (vtable_)
+                            vtable_->copy_init(&storage_, &that.storage_);
+                    }
                     return *this;
                 }
                 Ref read() const
                 {
-                    RANGES_EXPECT(ptr_);
-                    return ptr_->read();
+                    RANGES_EXPECT(vtable_);
+                    return vtable_->read(&storage_);
                 }
                 bool equal(any_cursor const &that) const
                 {
-                    RANGES_EXPECT(!ptr_ == !that.ptr_);
-                    return !ptr_ || ptr_->equal(*that.ptr_);
+                    RANGES_EXPECT(vtable_ == that.vtable_);
+                    return !vtable_ || vtable_->equal(&storage_, &that.storage_);
                 }
                 bool equal(any_sentinel const &that) const
                 {
-                    RANGES_EXPECT(!ptr_ == !that.view_);
-                    return !ptr_ || that.view_->at_end(ptr_->iter());
+                    RANGES_EXPECT(!vtable_ == !that.view_);
+                    return !vtable_ || that.view_->at_end(vtable_->iter(&storage_));
                 }
                 void next()
                 {
-                    RANGES_EXPECT(ptr_);
-                    ptr_->next();
+                    RANGES_EXPECT(vtable_);
+                    vtable_->next(&storage_);
                 }
                 CONCEPT_REQUIRES(Cat >= category::bidirectional)
                 void prev()
                 {
-                    RANGES_EXPECT(ptr_);
-                    ptr_->prev();
+                    RANGES_EXPECT(vtable_);
+                    vtable_->prev(&storage_);
                 }
                 CONCEPT_REQUIRES(Cat >= category::random_access)
                 void advance(std::ptrdiff_t n)
                 {
-                    RANGES_EXPECT(ptr_);
-                    ptr_->advance(n);
+                    RANGES_EXPECT(vtable_);
+                    vtable_->advance(&storage_, n);
                 }
                 CONCEPT_REQUIRES(Cat >= category::random_access)
                 std::ptrdiff_t distance_to(any_cursor const &that) const
                 {
-                    RANGES_EXPECT(!ptr_ == !that.ptr_);
-                    return !ptr_ ? 0 : ptr_->distance_to(*that.ptr_);
+                    RANGES_EXPECT(vtable_ == that.vtable_);
+                    return !vtable_ ? 0 : vtable_->distance_to(&storage_, &that.storage_);
                 }
+            private:
+                any_cursor_storage storage_;
+                any_cursor_vtable<Ref, Cat> const *vtable_ = nullptr;
+
+                // FIXME static constexpr any_cursor_vtable<Ref, Cat> not_a_cursor;
             };
 
             template<typename Ref, category Cat>
