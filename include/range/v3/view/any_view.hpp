@@ -15,6 +15,7 @@
 #ifndef RANGES_V3_VIEW_ANY_VIEW_HPP
 #define RANGES_V3_VIEW_ANY_VIEW_HPP
 
+#include <cstring>
 #include <typeinfo>
 #include <type_traits>
 #include <utility>
@@ -208,6 +209,31 @@ namespace ranges
                 ~fully_erased_view() = default;
             };
 
+            template<typename... Args>
+            void nop_function(Args...) noexcept
+            {}
+
+            template<typename Result, typename... Args>
+            [[noreturn]] Result uncalled_function(Args...) noexcept
+            {
+                RANGES_ENSURE(false);
+            }
+
+            template<typename Result, Result Value, typename... Args>
+            Result const_function(Args...) noexcept
+            {
+                return Value;
+            }
+
+            inline void trivial_cursor_copy(any_cursor_storage *self, any_cursor_storage const *that)
+            {
+                std::memcpy(self, that, sizeof(any_cursor_storage));
+            }
+            inline void trivial_cursor_move(any_cursor_storage *self, any_cursor_storage *that)
+            {
+                trivial_cursor_copy(self, that);
+            }
+
             template<typename Ref, category = category::forward>
             struct any_cursor_vtable;
 
@@ -226,48 +252,43 @@ namespace ranges
                 bool (*at_end)(any_cursor_storage const *self, fully_erased_view const *view);
 
                 template<typename I>
-                constexpr any_cursor_vtable(meta::id<I>) noexcept
-                  : any_cursor_vtable{meta::id<I>{}, any_cursor_is_small<I>{}}
-                {}
+                static constexpr any_cursor_vtable table_() noexcept
+                {
+                    constexpr bool small = any_cursor_is_small<I>::value;
+                    return any_cursor_vtable{
+                        small ? (std::is_trivially_destructible<I>::value ? &nop_function<any_cursor_storage *> : &small_destroy<I>) : &big_destroy<I>,
+                        small ? (is_trivially_copy_constructible<I>::value ? &trivial_cursor_copy : &small_copy_init<I>) : &big_copy_init<I>,
+                        small ? (is_trivially_move_constructible<I>::value ? &trivial_cursor_move : &small_move_init<I>) : &big_move_init<I>,
+                        is_trivially_copy_assignable<I>::value ? &trivial_cursor_copy : &copy_assign_impl<I>,
+                        is_trivially_move_assignable<I>::value ? &trivial_cursor_move : &move_assign_impl<I>,
+                        &iter_impl<I>,
+                        &read_impl<I>,
+                        &next_impl<I>,
+                        &equal_impl<I>,
+                        &at_end_impl<I>
+                    };
+                }
+                template<typename I>
+                static any_cursor_vtable const *table() noexcept
+                {
+                    static constexpr any_cursor_vtable t = table_<I>();
+                    return std::addressof(t);
+                }
             protected:
-                template<typename I,
-                    CONCEPT_REQUIRES_(any_cursor_is_small<I>())>
-                static I &get(any_cursor_storage *self) noexcept
-                {
-                    return *reinterpret_cast<I *>(self);
-                }
-                template<typename I,
-                    CONCEPT_REQUIRES_(any_cursor_is_small<I>())>
+                template<typename I>
                 static I const &get(any_cursor_storage const *self) noexcept
                 {
-                    return *reinterpret_cast<I const *>(self);
+                    if /* constexpr */ (any_cursor_is_small<I>())
+                        return *reinterpret_cast<I const *>(self);
+                    else
+                        return **reinterpret_cast<I const *const *>(self);
                 }
-                template<typename I,
-                    CONCEPT_REQUIRES_(!any_cursor_is_small<I>())>
+                template<typename I>
                 static I &get(any_cursor_storage *self) noexcept
                 {
-                    return **reinterpret_cast<I **>(self);
-                }
-                template<typename I,
-                    CONCEPT_REQUIRES_(!any_cursor_is_small<I>())>
-                static I const &get(any_cursor_storage const *self) noexcept
-                {
-                    return **reinterpret_cast<I const * const *>(self);
+                    return const_cast<I &>(get<I>(const_cast<any_cursor_storage const *>(self)));
                 }
             private:
-                template<typename I>
-                constexpr any_cursor_vtable(meta::id<I>, std::true_type) noexcept
-                  : destroy{&small_destroy<I>}
-                  , copy_init{&small_copy_init<I>}
-                  , move_init{&small_move_init<I>}
-                  , copy_assign{&copy_assign_impl<I>}
-                  , move_assign{&move_assign_impl<I>}
-                  , iter{&iter_impl<I>}
-                  , read{&read_impl<I>}
-                  , next{&next_impl<I>}
-                  , equal{&equal_impl<I>}
-                  , at_end{&at_end_impl<I>}
-                {}
                 template<typename I>
                 static void small_destroy(any_cursor_storage *self) noexcept
                 {
@@ -284,19 +305,6 @@ namespace ranges
                     ::new (static_cast<void *>(self)) I(std::move(get<I>(that)));
                 }
 
-                template<typename I>
-                constexpr any_cursor_vtable(meta::id<I>, std::false_type) noexcept
-                  : destroy{&big_destroy<I>}
-                  , copy_init{&big_copy_init<I>}
-                  , move_init{&big_move_init<I>}
-                  , copy_assign{&copy_assign_impl<I>}
-                  , move_assign{&move_assign_impl<I>}
-                  , iter{&iter_impl<I>}
-                  , read{&read_impl<I>}
-                  , next{&next_impl<I>}
-                  , equal{&equal_impl<I>}
-                  , at_end{&at_end_impl<I>}
-                {}
                 template<typename I>
                 static I *&big_pointer(any_cursor_storage *self) noexcept
                 {
@@ -362,9 +370,19 @@ namespace ranges
                 void (*prev)(any_cursor_storage *self);
 
                 template<typename I>
-                constexpr any_cursor_vtable(meta::id<I>) noexcept
-                  : base_t{meta::id<I>{}}, prev{&prev_impl<I>}
-                {}
+                static constexpr any_cursor_vtable table_()
+                {
+                    return any_cursor_vtable{
+                        any_cursor_vtable<Ref, category::forward>::template table_<I>(),
+                        &prev_impl<I>
+                    };
+                }
+                template<typename I>
+                static any_cursor_vtable const *table()
+                {
+                    static constexpr any_cursor_vtable t = table_<I>();
+                    return std::addressof(t);
+                }
             private:
                 using base_t = any_cursor_vtable<Ref, category::forward>;
 
@@ -380,14 +398,24 @@ namespace ranges
               : any_cursor_vtable<Ref, category::bidirectional>
             {
                 void (*advance)(any_cursor_storage *self, std::ptrdiff_t);
-                std::ptrdiff_t (*distance_to)(any_cursor_storage const *self, any_cursor_storage const *that);
+                std::ptrdiff_t (*distance_to)(
+                    any_cursor_storage const *self, any_cursor_storage const *that);
 
                 template<typename I>
-                constexpr any_cursor_vtable(meta::id<I>) noexcept
-                  : base_t{meta::id<I>{}}
-                  , advance{&advance_impl<I>}
-                  , distance_to{&distance_to_impl<I>}
-                {}
+                static constexpr any_cursor_vtable table_()
+                {
+                    return any_cursor_vtable{
+                        any_cursor_vtable<Ref, category::bidirectional>::template table_<I>(),
+                        &advance_impl<I>,
+                        &distance_to_impl<I>
+                    };
+                }
+                template<typename I>
+                static any_cursor_vtable const *table()
+                {
+                    static constexpr any_cursor_vtable t = table_<I>();
+                    return std::addressof(t);
+                }
             private:
                 using base_t = any_cursor_vtable<Ref, category::bidirectional>;
 
@@ -397,20 +425,37 @@ namespace ranges
                     base_t::template get<I>(self) += n;
                 }
                 template<typename I>
-                static std::ptrdiff_t distance_to_impl(any_cursor_storage const *self, any_cursor_storage const *that)
+                static std::ptrdiff_t distance_to_impl(
+                    any_cursor_storage const *self, any_cursor_storage const *that)
                 {
                     return base_t::template get<I>(that) - base_t::template get<I>(self);
                 }
             };
 
-            template<typename Ref, category Cat, typename I>
-            struct any_cursor_vtable_for
+            template<typename Ref>
+            any_cursor_vtable<Ref, category::random_access> const *not_a_cursor_table() noexcept
             {
-                static constexpr any_cursor_vtable<Ref, Cat> vtable_{meta::id<I>{}};
-            };
-
-            template<typename Ref, category Cat, typename I>
-            const any_cursor_vtable<Ref, Cat> any_cursor_vtable_for<Ref, Cat, I>::vtable_;
+                static constexpr any_cursor_vtable<Ref, category::random_access> t = {
+                    {
+                        {
+                            &nop_function<any_cursor_storage *>,                                                 // destroy
+                            &nop_function<any_cursor_storage *, any_cursor_storage const *>,                     // copy_init
+                            &nop_function<any_cursor_storage *, any_cursor_storage *>,                           // move_init
+                            &nop_function<any_cursor_storage *, any_cursor_storage const *>,                     // copy_assign
+                            &nop_function<any_cursor_storage *, any_cursor_storage *>,                           // move_assign
+                            &uncalled_function<any_ref, any_cursor_storage const *>,                             // iter
+                            &uncalled_function<Ref, any_cursor_storage const *>,                                 // read
+                            &nop_function<any_cursor_storage *>,                                                 // next
+                            &const_function<bool, true, any_cursor_storage const *, any_cursor_storage const *>, // equal
+                            &const_function<bool, true, any_cursor_storage const *, fully_erased_view const *>,  // at_end
+                        },
+                        &nop_function<any_cursor_storage *>,                                                     // prev
+                    },
+                    &nop_function<any_cursor_storage *, std::ptrdiff_t>,                                         // advance
+                    &const_function<std::ptrdiff_t, 0, any_cursor_storage const *, any_cursor_storage const *>,  // distance_to
+                };
+                return std::addressof(t);
+            }
 
             struct any_sentinel
             {
@@ -425,7 +470,7 @@ namespace ranges
             };
 
             template<typename Ref, category Cat>
-            struct any_cursor // alignas(2 * alignof(void *))
+            struct any_cursor
             {
                 CONCEPT_ASSERT(Cat >= category::forward);
 
@@ -435,41 +480,34 @@ namespace ranges
                     CONCEPT_REQUIRES_(ForwardRange<Rng>() &&
                                       AnyCompatibleRange<Rng, Ref>())>
                 explicit any_cursor(Rng &&rng)
-                  : vtable_{&any_cursor_vtable_for<Ref, Cat, iterator_t<Rng>>::vtable_}
-                {
-                    ::new (static_cast<void *>(&storage_)) iterator_t<Rng>(ranges::begin(rng));
-                }
-                any_cursor(any_cursor &&that) noexcept
+                  : any_cursor{any_cursor_is_small<iterator_t<Rng>>{}, static_cast<Rng &&>(rng)}
+                {}
+                any_cursor(any_cursor &&that) // FIXME: noexcept?
                   : vtable_{that.vtable_}
                 {
-                    if (vtable_)
-                        vtable_->move_init(&storage_, &that.storage_);
+                    vtable_->move_init(&storage_, &that.storage_);
                 }
                 any_cursor(any_cursor const &that)
                   : vtable_{that.vtable_}
                 {
-                    if (vtable_)
-                        vtable_->copy_init(&storage_, &that.storage_);
+                    vtable_->copy_init(&storage_, &that.storage_);
                 }
                 ~any_cursor()
                 {
-                    if (vtable_)
-                        vtable_->destroy(&storage_);
+                    vtable_->destroy(&storage_);
                 }
-                any_cursor &operator=(any_cursor &&that) noexcept
+                any_cursor &operator=(any_cursor &&that) // FIXME: noexcept?
                 {
                     if (vtable_ == that.vtable_)
                     {
-                        if (vtable_)
-                            vtable_->move_assign(&storage_, &that.storage_);
+                        vtable_->move_assign(&storage_, &that.storage_);
                     }
                     else
                     {
-                        if (vtable_)
-                            vtable_->destroy(&storage_);
+                        vtable_->destroy(&storage_);
+                        vtable_ = not_a_cursor_table<Ref>();
+                        that.vtable_->move_init(&storage_, &that.storage_);
                         vtable_ = that.vtable_;
-                        if (vtable_)
-                            vtable_->move_init(&storage_, &that.storage_);
                     }
                     return *this;
                 }
@@ -477,62 +515,67 @@ namespace ranges
                 {
                     if (vtable_ == that.vtable_)
                     {
-                        if (vtable_)
-                            vtable_->copy_assign(&storage_, &that.storage_);
+                        vtable_->copy_assign(&storage_, &that.storage_);
                     }
                     else
                     {
-                        if (vtable_)
-                            vtable_->destroy(&storage_);
+                        vtable_->destroy(&storage_);
+                        vtable_ = not_a_cursor_table<Ref>();
+                        that.vtable_->copy_init(&storage_, &that.storage_);
                         vtable_ = that.vtable_;
-                        if (vtable_)
-                            vtable_->copy_init(&storage_, &that.storage_);
                     }
                     return *this;
                 }
                 Ref read() const
                 {
-                    RANGES_EXPECT(vtable_);
                     return vtable_->read(&storage_);
                 }
                 bool equal(any_cursor const &that) const
                 {
                     RANGES_EXPECT(vtable_ == that.vtable_);
-                    return !vtable_ || vtable_->equal(&storage_, &that.storage_);
+                    return vtable_->equal(&storage_, &that.storage_);
                 }
                 bool equal(any_sentinel const &that) const
                 {
-                    RANGES_EXPECT(!vtable_ == !that.view_);
-                    return !vtable_ || that.view_->at_end(vtable_->iter(&storage_));
+                    RANGES_ASSERT(!that.view_ == (vtable_ == not_a_cursor_table<Ref>()));
+                    return !that.view_ || that.view_->at_end(vtable_->iter(&storage_));
                 }
                 void next()
                 {
-                    RANGES_EXPECT(vtable_);
                     vtable_->next(&storage_);
                 }
                 CONCEPT_REQUIRES(Cat >= category::bidirectional)
                 void prev()
                 {
-                    RANGES_EXPECT(vtable_);
                     vtable_->prev(&storage_);
                 }
                 CONCEPT_REQUIRES(Cat >= category::random_access)
                 void advance(std::ptrdiff_t n)
                 {
-                    RANGES_EXPECT(vtable_);
                     vtable_->advance(&storage_, n);
                 }
                 CONCEPT_REQUIRES(Cat >= category::random_access)
                 std::ptrdiff_t distance_to(any_cursor const &that) const
                 {
                     RANGES_EXPECT(vtable_ == that.vtable_);
-                    return !vtable_ ? 0 : vtable_->distance_to(&storage_, &that.storage_);
+                    return vtable_->distance_to(&storage_, &that.storage_);
                 }
             private:
-                any_cursor_storage storage_;
-                any_cursor_vtable<Ref, Cat> const *vtable_ = nullptr;
+                template<typename Rng>
+                any_cursor(std::true_type, Rng &&rng)
+                  : vtable_{any_cursor_vtable<Ref, Cat>::template table<iterator_t<Rng>>()}
+                {
+                    ::new (static_cast<void *>(&storage_)) iterator_t<Rng>(ranges::begin(rng));
+                }
+                template<typename Rng>
+                any_cursor(std::false_type, Rng &&rng)
+                  : vtable_{any_cursor_vtable<Ref, Cat>::template table<iterator_t<Rng>>()}
+                {
+                    reinterpret_cast<iterator_t<Rng> *&>(storage_) = new iterator_t<Rng>(ranges::begin(rng));
+                }
 
-                // FIXME static constexpr any_cursor_vtable<Ref, Cat> not_a_cursor;
+                any_cursor_storage storage_;
+                any_cursor_vtable<Ref, Cat> const *vtable_ = not_a_cursor_table<Ref>();
             };
 
             template<typename Ref, category Cat>
