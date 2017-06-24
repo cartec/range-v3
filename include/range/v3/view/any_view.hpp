@@ -494,7 +494,7 @@ namespace ranges
                 }
                 ~any_cursor()
                 {
-                    vtable_->destroy(&storage_);
+                    reset();
                 }
                 any_cursor &operator=(any_cursor &&that) // FIXME: noexcept?
                 {
@@ -504,8 +504,7 @@ namespace ranges
                     }
                     else
                     {
-                        vtable_->destroy(&storage_);
-                        vtable_ = not_a_cursor_table<Ref>();
+                        reset();
                         that.vtable_->move_init(&storage_, &that.storage_);
                         vtable_ = that.vtable_;
                     }
@@ -519,8 +518,7 @@ namespace ranges
                     }
                     else
                     {
-                        vtable_->destroy(&storage_);
-                        vtable_ = not_a_cursor_table<Ref>();
+                        reset();
                         that.vtable_->copy_init(&storage_, &that.storage_);
                         vtable_ = that.vtable_;
                     }
@@ -565,13 +563,21 @@ namespace ranges
                 any_cursor(std::true_type, Rng &&rng)
                   : vtable_{any_cursor_vtable<Ref, Cat>::template table<iterator_t<Rng>>()}
                 {
-                    ::new (static_cast<void *>(&storage_)) iterator_t<Rng>(ranges::begin(rng));
+                    ::new (static_cast<void *>(&storage_))
+                        iterator_t<Rng>(ranges::begin(rng));
                 }
                 template<typename Rng>
                 any_cursor(std::false_type, Rng &&rng)
                   : vtable_{any_cursor_vtable<Ref, Cat>::template table<iterator_t<Rng>>()}
                 {
-                    reinterpret_cast<iterator_t<Rng> *&>(storage_) = new iterator_t<Rng>(ranges::begin(rng));
+                    reinterpret_cast<iterator_t<Rng> *&>(storage_) =
+                        new iterator_t<Rng>(ranges::begin(rng));
+                }
+
+                void reset() noexcept
+                {
+                    vtable_->destroy();
+                    vtable_= not_a_cursor_table<Ref>();
                 }
 
                 any_cursor_storage storage_;
