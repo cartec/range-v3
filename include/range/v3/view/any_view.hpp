@@ -194,24 +194,43 @@
                     virtual void next() override { ++current(); }
                 };
 
-                constexpr size_t any_cursor_pointer_size = 4;
-                struct any_cursor_storage
+                template<std::size_t PointerSize>
+                // requires PointerSize >= 2
+                struct type_erased
                 {
                     alignas(std::max_align_t) char space_[
-                        (any_cursor_pointer_size - 1) * sizeof(void *)];
+                        (PointerSize - 1) * sizeof(void *)];
                     void const *raw_vtable_;
 
-                    explicit constexpr any_cursor_storage(void const *vtable) noexcept
+                    explicit constexpr type_erased(void const *vtable) noexcept
                       : space_{}, raw_vtable_{vtable}
                     {}
+
+                    template<typename T>
+                    using is_small = meta::bool_<
+                        sizeof(T) <= sizeof(space_) &&
+                        alignof(T) <= alignof(space_);
+
+                    template<typename T>
+                    using is_nothrow_small = meta::bool_<is_small<T>::value &&
+                        std::is_nothrow_move_constructible<T>::value &&
+                        std::is_nothrow_move_assignable<T>::value>;
+
+                    void trivial_copy(type_erased *dst, type_erased const *src) noexcept
+                    {
+                        std::memcpy(self.space_, that.space_, sizeof(self.space_));
+                    }
+                    void trivial_move(type_erased *dst, type_erased *src) noexcept
+                    {
+                        trivial_copy(dst, src);
+                    }
                 };
 
+                using any_cursor_storage = type_erased<4>;
+                using any_view_storage = type_erased<6>;
+
                 template<typename T>
-                using any_cursor_is_small = meta::bool_<
-                    sizeof(T) <= sizeof(any_cursor_storage::space_) &&
-                    alignof(T) <= alignof(std::max_align_t) &&
-                    std::is_nothrow_move_constructible<T>::value &&
-                    std::is_nothrow_move_assignable<T>::value>;
+                using any_cursor_is_small = any_cursor_storage::is_nothrow_small<T>;
 
                 struct fully_erased_view
                 {
@@ -239,22 +258,11 @@
                     return Value;
                 }
 
-                inline void trivial_cursor_copy(
-                    any_cursor_storage &self, any_cursor_storage const &that) noexcept
-                {
-                    std::memcpy(self.space_, that.space_, sizeof(self.space_));
-                }
-                inline void trivial_cursor_move(
-                    any_cursor_storage &self, any_cursor_storage &that) noexcept
-                {
-                    trivial_cursor_copy(self, that);
-                }
-
                 template<typename Ref, category = category::forward>
-                struct any_cursor_vtable;
+                struct any_view_vtable;
 
                 template<typename Ref>
-                any_cursor_vtable<Ref, category::random_access> const *
+                any_view_vtable<Ref, category::random_access> const *
                 not_a_cursor_table() noexcept;
 
                 template<typename I>
@@ -361,7 +369,7 @@
                 };
 
                 template<typename Ref>
-                struct any_cursor_vtable<Ref, category::forward>
+                struct any_view_vtable<Ref, category::forward>
                 {
                     using ACS = any_cursor_storage;
 
@@ -377,7 +385,7 @@
                     bool (*at_end)(ACS const &self, fully_erased_view const *view);
 
                     template<typename I, bool Small = any_cursor_is_small<I>::value>
-                    constexpr any_cursor_vtable(meta::id<I>) noexcept
+                    constexpr any_view_vtable(meta::id<I>) noexcept
                       : destroy{Small
                             ? (std::is_trivially_destructible<I>::value
                                 ? nop_function<ACS &>
@@ -385,20 +393,20 @@
                             : any_cursor_impl<I>::big_destroy}
                       , copy_init{Small
                             ? (is_trivially_copy_constructible<I>::value
-                                ? trivial_cursor_copy
+                                ? ACS::trivial_copy
                                 : any_cursor_impl<I>::small_copy_init)
                             : any_cursor_impl<I>::big_copy_init}
                       , move_init{Small
                             ? (is_trivially_move_constructible<I>::value
-                                ? trivial_cursor_move
+                                ? ACS::trivial_move
                                 : any_cursor_impl<I>::small_move_init)
                             : any_cursor_impl<I>::template big_move_init<Ref>}
                       , copy_assign{Small && is_trivially_copy_assignable<I>::value
-                            ? trivial_cursor_copy
+                            ? ACS::trivial_copy
                             : any_cursor_impl<I>::copy_assign}
                       , move_assign{Small
                             ? (is_trivially_move_assignable<I>::value
-                                ? trivial_cursor_move
+                                ? ACS::trivial_move
                                 : any_cursor_impl<I>::small_move_assign)
                             : any_cursor_impl<I>::big_move_assign}
                       , iter{any_cursor_impl<I>::iter}
@@ -408,7 +416,7 @@
                       , at_end{any_cursor_impl<I>::at_end}
                     {}
 
-                    constexpr any_cursor_vtable() noexcept
+                    constexpr any_view_vtable() noexcept
                       : destroy{nop_function<ACS &>}
                       , copy_init{nop_function<ACS &, ACS const &>}
                       , move_init{nop_function<ACS &, ACS &>}
@@ -422,41 +430,41 @@
                     {}
 
                     template<typename I>
-                    static any_cursor_vtable const *table() noexcept
+                    static any_view_vtable const *table() noexcept
                     {
-                        static constexpr any_cursor_vtable t{meta::id<I>{}};
+                        static constexpr any_view_vtable t{meta::id<I>{}};
                         return std::addressof(t);
                     }
                 };
 
                 template<typename Ref>
-                struct any_cursor_vtable<Ref, category::bidirectional>
-                  : any_cursor_vtable<Ref, category::forward>
+                struct any_view_vtable<Ref, category::bidirectional>
+                  : any_view_vtable<Ref, category::forward>
                 {
                     void (*prev)(any_cursor_storage &self);
 
                     template<typename I>
-                    constexpr any_cursor_vtable(meta::id<I>) noexcept
-                      : any_cursor_vtable<Ref, category::forward>{meta::id<I>{}}
+                    constexpr any_view_vtable(meta::id<I>) noexcept
+                      : any_view_vtable<Ref, category::forward>{meta::id<I>{}}
                       , prev{any_cursor_impl<I>::prev}
                     {}
 
-                    constexpr any_cursor_vtable() noexcept
-                      : any_cursor_vtable<Ref, category::forward>{}
+                    constexpr any_view_vtable() noexcept
+                      : any_view_vtable<Ref, category::forward>{}
                       , prev{nop_function<any_cursor_storage &>}
                     {}
 
                     template<typename I>
-                    static any_cursor_vtable const *table()
+                    static any_view_vtable const *table()
                     {
-                        static constexpr any_cursor_vtable t{meta::id<I>{}};
+                        static constexpr any_view_vtable t{meta::id<I>{}};
                         return std::addressof(t);
                     }
                 };
 
                 template<typename Ref>
-                struct any_cursor_vtable<Ref, category::random_access>
-                  : any_cursor_vtable<Ref, category::bidirectional>
+                struct any_view_vtable<Ref, category::random_access>
+                  : any_view_vtable<Ref, category::bidirectional>
                 {
                     using ACS = any_cursor_storage;
 
@@ -464,31 +472,31 @@
                     std::ptrdiff_t (*distance_to)(ACS const &self, ACS const &that);
 
                     template<typename I>
-                    constexpr any_cursor_vtable(meta::id<I>) noexcept
-                      : any_cursor_vtable<Ref, category::bidirectional>{meta::id<I>{}}
+                    constexpr any_view_vtable(meta::id<I>) noexcept
+                      : any_view_vtable<Ref, category::bidirectional>{meta::id<I>{}}
                       , advance{any_cursor_impl<I>::advance}
                       , distance_to{any_cursor_impl<I>::distance_to}
                     {}
 
-                    constexpr any_cursor_vtable() noexcept
-                      : any_cursor_vtable<Ref, category::bidirectional>{}
+                    constexpr any_view_vtable() noexcept
+                      : any_view_vtable<Ref, category::bidirectional>{}
                       , advance{nop_function<ACS &, std::ptrdiff_t>}
                       , distance_to{const_function<std::ptrdiff_t, 0, ACS const &, ACS const &>}
                     {}
 
                     template<typename I>
-                    static any_cursor_vtable const *table()
+                    static any_view_vtable const *table()
                     {
-                        static constexpr any_cursor_vtable t{meta::id<I>{}};
+                        static constexpr any_view_vtable t{meta::id<I>{}};
                         return std::addressof(t);
                     }
                 };
 
                 template<typename Ref>
-                any_cursor_vtable<Ref, category::random_access> const *
+                any_view_vtable<Ref, category::random_access> const *
                 not_a_cursor_table() noexcept
                 {
-                    static constexpr any_cursor_vtable<Ref, category::random_access> t{};
+                    static constexpr any_view_vtable<Ref, category::random_access> t{};
                     return std::addressof(t);
                 }
 
@@ -600,8 +608,8 @@
                     {
                         ::new (static_cast<void *>(storage_.space_))
                             iterator_t<Rng>(ranges::begin(rng));
-                        using ACV = any_cursor_vtable<Ref, Cat>;
-                        storage_.raw_vtable_ = ACV::template table<iterator_t<Rng>>();
+                        using AVV = any_view_vtable<Ref, Cat>;
+                        storage_.raw_vtable_ = AVV::template table<iterator_t<Rng>>();
                     }
                     template<typename Rng>
                     any_cursor(std::false_type, Rng &&rng)
@@ -609,8 +617,8 @@
                         using IPtr = iterator_t<Rng> *;
                         ::new (static_cast<void *>(storage_.space_))
                             IPtr{new iterator_t<Rng>(ranges::begin(rng))};
-                        using ACV = any_cursor_vtable<Ref, Cat>;
-                        storage_.raw_vtable_ = ACV::template table<iterator_t<Rng>>();
+                        using AVV = any_view_vtable<Ref, Cat>;
+                        storage_.raw_vtable_ = AVV::template table<iterator_t<Rng>>();
                     }
 
                     void reset() noexcept
@@ -619,10 +627,10 @@
                         storage_.raw_vtable_ = not_a_cursor_table<Ref>();
                     }
 
-                    any_cursor_vtable<Ref, Cat> const *vtable() const noexcept
+                    any_view_vtable<Ref, Cat> const *vtable() const noexcept
                     {
-                        using ACV = any_cursor_vtable<Ref, Cat>;
-                        auto tmp = static_cast<ACV const *>(storage_.raw_vtable_);
+                        using AVV = any_view_vtable<Ref, Cat>;
+                        auto tmp = static_cast<AVV const *>(storage_.raw_vtable_);
                         RANGES_EXPECT(tmp);
                         return tmp;
                     }
