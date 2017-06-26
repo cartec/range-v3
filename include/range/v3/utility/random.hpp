@@ -67,6 +67,11 @@
 #include <thread>
 #endif
 
+#if defined(__GLIBC__)
+#include <unistd.h>
+#include <sys/syscall.h>
+#endif
+
 // Ugly platform-specific code for auto_seeded
 
 // Clang/C2 bug: __has_builtin(__builtin_readcyclecounter) reports true, but
@@ -214,9 +219,14 @@ namespace ranges
                         static_cast<std::uint32_t(*)(std::uint64_t)>(&randutils::crushto32));
 
 #if RANGES_CXX_THREAD >= RANGES_CXX_THREAD_11
-                    // Hash our thread id.  It seems to vary from run to run on OS X, not
-                    // so much on Linux.
+    #if defined(__GLIBC__)
+                    // libstdc++ will return the same id for get_id() on glibc
+                    // systems, so just use get_pid() directly
+                    *it++ = randutils::hash(getpid());
+    #else
+                    // Hash our thread id.  It seems to vary from run to run on OS X
                     *it++ = randutils::hash(std::this_thread::get_id());
+    #endif
 #endif
                     // Hash of the ID of a type.  May or may not vary, depending on
                     // implementation.
