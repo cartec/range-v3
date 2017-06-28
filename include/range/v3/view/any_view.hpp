@@ -510,12 +510,12 @@ namespace ranges
 
                 template<typename Ref, category Cat>
                 constexpr fully_erased_view_vtable(meta::id<Ref>, std::integral_constant<category, Cat>) noexcept
-                  : cursor_table{&no_cursor_vtable_for<Ref, Cat>::vtable}
+                  : cursor_table{&no_cursor_vtable_for<Ref>::vtable}
                   , at_end{} // FIXME
                 {}
 
                 constexpr fully_erased_view_vtable() noexcept
-                  : at_end{uncalled_function<bool, any_view_storage const &,
+                  : at_end{const_function<bool, true, any_view_storage const &,
                         any_cursor_storage const &>}
                 {}
             };
@@ -622,6 +622,18 @@ namespace ranges
                 any_view_storage storage_;
             };
 
+            template<typename = void>
+            struct no_fully_erased_view
+            {
+                static constexpr fully_erased_view_vtable vtable{};
+                static constexpr fully_erased_view view{&vtable};
+            };
+
+            template<typename T>
+            constexpr fully_erased_view_vtable no_fully_erased_view<T>::vtable;
+            template<typename T>
+            constexpr fully_erased_view no_fully_erased_view<T>::view;
+
             struct any_sentinel
             {
                 any_sentinel() = default;
@@ -631,7 +643,7 @@ namespace ranges
             private:
                 template<typename, category> friend struct any_cursor;
 
-                fully_erased_view const *view_ = nullptr;
+                fully_erased_view const *view_ = &no_fully_erased_view<>::view;
             };
 
             template<typename Ref, category Cat>
