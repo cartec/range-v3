@@ -17,15 +17,10 @@
 #include <type_traits>
 #include <utility>
 #include <meta/meta.hpp>
-#include <range/v3/detail/satisfy_boost_range.hpp>
 #include <range/v3/range_fwd.hpp>
-#include <range/v3/range_traits.hpp>
-#include <range/v3/size.hpp>
-#include <range/v3/view_facade.hpp>
-#include <range/v3/utility/functional.hpp>
-#include <range/v3/utility/semiregular.hpp>
 #include <range/v3/utility/static_const.hpp>
 #include <range/v3/view/generate.hpp>
+#include <range/v3/view/take_exactly.hpp>
 
 namespace ranges
 {
@@ -33,65 +28,8 @@ namespace ranges
     {
         /// \addtogroup group-views
         /// @{
-        template<typename G>
-        struct generate_n_view
-          : view_facade<generate_n_view<G>, finite>
-        {
-        private:
-            friend range_access;
-            using result_t = result_of_t<G&()>;
-            movesemiregular_t<G> gen_;
-            movesemiregular_t<result_t> val_;
-            std::size_t n_;
-            struct cursor
-            {
-            private:
-                generate_n_view *rng_;
-            public:
-                cursor() = default;
-                explicit cursor(generate_n_view &rng)
-                  : rng_(&rng)
-                {}
-                bool equal(default_sentinel) const
-                {
-                    return 0 == rng_->n_;
-                }
-                result_t read() const
-                {
-                    return rng_->val_;
-                }
-                void next()
-                {
-                    RANGES_EXPECT(0 != rng_->n_);
-                    if(0 != --rng_->n_)
-                        rng_->next();
-                }
-            };
-            void next()
-            {
-                val_ = invoke(gen_);
-            }
-            cursor begin_cursor()
-            {
-                return cursor{*this};
-            }
-        public:
-            generate_n_view() = default;
-            explicit generate_n_view(G g, std::size_t n)
-              : gen_(std::move(g)), val_{}, n_(n)
-            {
-                if(0 != n)
-                    next();
-            }
-            result_t & cached()
-            {
-                return val_;
-            }
-            std::size_t size() const
-            {
-                return n_;
-            }
-        };
+        template <typename F>
+        using generate_n_view = take_exactly_view<generate_view<F>>;
 
         namespace view
         {
@@ -101,7 +39,7 @@ namespace ranges
                     CONCEPT_REQUIRES_(generate_fn::Concept<G>())>
                 generate_n_view<G> operator()(G g, std::size_t n) const
                 {
-                    return generate_n_view<G>{std::move(g), n};
+                    return generate_n_view<G>{generate_view<G>{std::move(g)}, n};
                 }
             #ifndef RANGES_DOXYGEN_INVOKED
                 template<typename G,
