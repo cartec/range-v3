@@ -38,6 +38,7 @@ namespace ranges
                 template<typename G,
                     CONCEPT_REQUIRES_(generate_fn::Concept<G>())>
                 generate_n_view<G> operator()(G g, std::size_t n) const
+                    noexcept(std::is_nothrow_move_constructible<G>::value)
                 {
                     return generate_n_view<G>{generate_view<G>{std::move(g)}, n};
                 }
@@ -58,7 +59,5 @@ namespace ranges
         /// @}
     }
 }
-
-RANGES_SATISFY_BOOST_RANGE(::ranges::v3::generate_n_view)
 
 #endif
