@@ -247,6 +247,7 @@ matrix:
 before_install:
   - export CHECKOUT_PATH=`pwd`
   - |
+    set -e
     if [ $TRAVIS_OS_NAME == osx ]; then
       brew update
       brew install valgrind
@@ -255,10 +256,11 @@ before_install:
       brew ls --version cmake &>/dev/null || brew install cmake
     elif [ $TRAVIS_OS_NAME == linux ]; then
       mkdir -p ${DEPS_DIR}/cmake-${CMAKE_VERSION}
-      travis_retry wget --no-check-certificate --quiet -O - $CMAKE_URL | tar -xf - -C ${DEPS_DIR}/cmake-${CMAKE_VERSION} --strip-components=1
+      travis_retry wget --no-check-certificate --quiet -O - $CMAKE_URL | tar -xzf - -C ${DEPS_DIR}/cmake-${CMAKE_VERSION} --strip-components=1
       export PATH="${DEPS_DIR}/cmake-${CMAKE_VERSION}/bin:${PATH}"
     fi
   - |
+    set -e
     if [ -n "$CLANG_VERSION" ]; then
       export CXX="clang++-${CLANG_VERSION}" CC="clang-${CLANG_VERSION}"
       if [ $CLANG_VERSION == 3.7 ]; then
@@ -277,12 +279,14 @@ before_install:
   - $CXX --version
   - cmake --version
   - |
+    set -e
     if [ "$ASAN" == On ]; then
       export SANITIZER="Address;Undefined"
     elif [ "$MSAN" == On ]; then
       export SANITIZER="MemoryWithOrigins"
     fi
   - |
+    set -e
     if [ -n "$CLANG_VERSION" ]; then
       LIBCXX_PREFIX="${DEPS_DIR}/libcxx"
       ./install_libcxx.sh $CLANG_VERSION $LIBCXX_PREFIX
@@ -292,13 +296,14 @@ before_install:
   # Adapted from Boost.Compute (under the Boost License)
   # Copyright Jakub Szuppe 2016.
   - |
+    set -e
     if [ $TRAVIS_OS_NAME == linux -a "${BOOST}" == On ]; then
       if [ ! -f "${DEPS_DIR}/boost/${BOOST_VERSION}_cached" ]; then
         # create dirs for source and install
         mkdir -p ${DEPS_DIR}/boost ${DEPS_DIR}/boost${BOOST_VERSION}
         rm -rf ${DEPS_DIR}/boost/*
         # download
-        travis_retry wget --no-check-certificate --quiet -O - ${BOOST_URL} | tar --strip-components=1 -xz -C ${DEPS_DIR}/boost${BOOST_VERSION}
+        travis_retry wget --no-check-certificate --quiet -O - ${BOOST_URL} | tar --strip-components=1 -xzf - -C ${DEPS_DIR}/boost${BOOST_VERSION}
         pushd ${DEPS_DIR}/boost${BOOST_VERSION}
         # configure and install
         ./bootstrap.sh --prefix=${DEPS_DIR}/boost/ --with-libraries=program_options,date_time
@@ -318,6 +323,7 @@ install:
   # It is fixed in valgrind 3.10 so this won't be necessary if someone
   # replaces the current valgrind (3.7) with valgrind-3.10
   - |
+    set -e
     if [ $BUILD_TYPE == Release -a "$ASAN" != On -a "$MSAN" != On ]; then
       USE_VALGRIND=On
       sed -i 's/march=native/msse4.2/' cmake/ranges_flags.cmake
@@ -326,6 +332,7 @@ install:
   - mkdir -p build
   - cd build
   - |
+    set -e
     if [ "$LIBCXX" == On ]; then
       CXX_FLAGS="${CXX_FLAGS} -stdlib=libc++ -nostdinc++ -cxx-isystem ${LIBCXX_PREFIX}/include/c++/v1/ -Wno-unused-command-line-argument"
       CXX_LINKER_FLAGS="${CXX_LINKER_FLAGS} -lc++abi -L ${LIBCXX_PREFIX}/lib -Wl,-rpath,${LIBCXX_PREFIX}/lib"
@@ -339,6 +346,7 @@ install:
   - cat CMakeFiles/CMakeError.log
   - cat CMakeFiles/CMakeOutput.log
   - |
+    set -e
     if [ "$BOOST" == On ]; then
       export LD_LIBRARY_PATH=$DEPS_DIR/boost/lib:$LD_LIBRARY_PATH
       cmake .. -DRANGES_BUILD_CALENDAR_EXAMPLE=On -DBOOST_ROOT=${DEPS_DIR}/boost
