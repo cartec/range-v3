@@ -33,61 +33,52 @@ namespace ranges
         /// \ingroup group-core
         struct at_fn
         {
-            /// \return `begin(rng)[n]`
+        private:
+            template<class = void>
+            [[noreturn]] static void throw_out_of_range()
+            {
+                throw std::out_of_range("ranges::at");
+            }
+            template<class Rng,
+                class U = meta::_t<std::make_unsigned<range_difference_type_t<Rng>>>>
+            static constexpr auto check_throw(Rng &&rng, range_difference_type_t<Rng> n)
+            RANGES_DECLTYPE_AUTO_RETURN
+            (
+                (static_cast<U>(n) >= static_cast<U>(ranges::distance(rng)))
+                    ? (throw_out_of_range(), 0)
+                    : 0
+            )
+        public:
+            /// \return `ranges::begin(rng)[n]`
             template<typename Rng,
                 CONCEPT_REQUIRES_(RandomAccessRange<Rng>() && SizedRange<Rng>())>
-            RANGES_CXX14_CONSTEXPR
-            auto operator()(Rng &&rng, range_difference_type_t<Rng> n) const ->
-                decltype(ranges::begin(rng)[n])
-            {
+            constexpr auto operator()(Rng &&rng, range_difference_type_t<Rng> n) const
+            RANGES_DECLTYPE_AUTO_RETURN
+            (
                 // Workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=67371 in GCC 5
-                check_throw(rng, n);
-                return ranges::begin(rng)[n];
-            }
-            /// \return `begin(rng)[n]`
+                ((void)check_throw(rng, n),
+                    ranges::begin(rng)[n])
+            )
+            /// \return `ranges::begin(rng)[n]`
             template<typename Rng,
                 CONCEPT_REQUIRES_(RandomAccessRange<Rng>() && !SizedRange<Rng>())>
             RANGES_DEPRECATED(
-                "Checked indexed range access (ranges::at) on !SizedRanges is deprecated! "
-                "This version performs unchecked access (the range size cannot be computed in O(1) for !SizedRanges)! "
-                "Use ranges::index for unchecked access instead!")
-            RANGES_CXX14_CONSTEXPR
-            auto operator()(Rng &&rng, range_difference_type_t<Rng> n) const
-            RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT
+                "Checked indexed range access (ranges::at) on !SizedRanges is deprecated: "
+                "this version performs unchecked access (the range size cannot be computed in O(1) for !SizedRanges). "
+                "Use ranges::index for unchecked access instead.")
+            constexpr auto operator()(Rng &&rng, range_difference_type_t<Rng> n) const
+            RANGES_DECLTYPE_AUTO_RETURN
             (
                 index(std::forward<Rng>(rng), n)
             )
 
-            /// \return `begin(rng)[n]`
-            template<typename Rng, typename T, typename Self = at_fn,
-                     typename D = range_difference_type_t<Rng>,
-                CONCEPT_REQUIRES_(RandomAccessRange<Rng>() &&
-                                  !Same<uncvref_t<T>, D>() &&
-                                  ConvertibleTo<T, D>())>
-            RANGES_CXX14_CONSTEXPR
-            auto operator()(Rng &&rng, T &&t) const
-            RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT
-            (
-                Self{}((Rng &&) rng, static_cast<D>((T &&) t))
-            )
-
             /// \cond
-            template<typename R, typename T,
-                CONCEPT_REQUIRES_(!index_detail::Concept<R, T>())>
-            void operator()(R&&, T&&) const
+            template<typename Rng,
+                CONCEPT_REQUIRES_(!RandomAccessRange<Rng>())>
+            void operator()(Rng&&, range_difference_type_t<Rng>) const
             {
-                CONCEPT_ASSERT_MSG(RandomAccessRange<R>(),
-                    "ranges::at(rng, idx): rng argument must be a model of the RandomAccessRange concept.");
-                CONCEPT_ASSERT_MSG(ConvertibleTo<T, range_difference_type_t<R>>(),
-                    "ranges::at(rng, idx): idx argument must be convertible to range_difference_type_t<rng>.");
-            }
-
-        private:
-            template<class Rng>
-            RANGES_CXX14_CONSTEXPR
-            static void check_throw(Rng &&rng, range_difference_type_t<Rng> n)
-            {
-                (n < 0 || n >= ranges::distance(rng)) ? throw std::out_of_range("ranges::at") : void(0);
+                CONCEPT_ASSERT_MSG(RandomAccessRange<Rng>(),
+                    "ranges::at(rng, idx): rng argument must satisfy the RandomAccessRange concept.");
             }
             /// \endcond
         };
