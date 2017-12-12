@@ -82,7 +82,7 @@ namespace ranges
                 sorted_view() = default;
                 RANGES_CXX14_CONSTEXPR sorted_view(Rng rng, Comp comp, Proj proj)
                   : sorted_view::view_adaptor{std::move(rng)}
-                  , data_{ranges::begin(this->base()), std::move(comp), std::move(proj)}
+                  , data_{-1, std::move(comp), std::move(proj)}
                 {}
                 RANGES_CXX14_CONSTEXPR range_size_type_t<Rng> size()
                     noexcept(noexcept(ranges::size(std::declval<Rng &>())))
@@ -101,11 +101,11 @@ namespace ranges
                 friend range_access;
 
                 compressed_tuple<
-                    iterator_t<Rng>,
+                    difference_type_t<iterator_t<Rng>>,
                     semiregular_t<detail::flipped<Comp>>,
                     semiregular_t<Proj>> data_{};
 
-                iterator_t<Rng> &bound() noexcept
+                difference_type_t<iterator_t<Rng>> &len() noexcept
                 {
                     return get<0>(data_);
                 }
@@ -129,65 +129,83 @@ namespace ranges
                     iterator_t<Rng> begin(sorted_view &rng)
                     {
                         RANGES_EXPECT(&rng == rng_);
-                        auto &base = rng.base();
-                        auto &bound = rng.bound();
-                        auto first = ranges::begin(base);
-                        auto const last = ranges::end(base);
-                        if (first == bound && first != last)
+                        auto first = ranges::begin(rng.base());
+                        if (rng.len() < 0)
                         {
-                            auto rev = view::reverse(base);
-                            auto &comp = rng.comp();
-                            auto &proj = rng.proj();
-                            // worst case O(N), "amortized" O(1)
-                            ranges::make_heap(rev, comp, proj);
-                            ranges::pop_heap(rev, comp, proj);
-                            ranges::advance(bound, 1, last);
+                            rng.len() = first != ranges::end(rng.base());
+                            if (rng.len())
+                            {
+                                // worst case O(N), "amortized" O(1)
+                                auto rev = view::reverse(rng.base());
+                                // establish invariant: view::reverse([begin + rng.len(), end)) is a heap.
+                                ranges::make_heap(rev, rng.comp(), rng.proj());
+                                // establish invariant: [begin, rng.len()) is sorted.
+                                ranges::pop_heap(rev, rng.comp(), rng.proj());
+                            }
                         }
                         return first;
                     }
                     RANGES_CXX14_CONSTEXPR
                     void next(iterator_t<Rng> &it)
                     {
-                        auto const end = ranges::end(rng_->base());
-                        RANGES_EXPECT(it != end);
-                        auto &bound = rng_->bound();
-                        if (++it == bound && bound != end)
+                        auto &base = rng_->base();
+                        auto const first = ranges::begin(base);
+                        auto &len = rng_->len();
+                        auto const bound = first + len;
+                        RANGES_EXPECT(it < bound);
+                        if (++it == bound)
                         {
-                            auto rev = make_iterator_range(bound, end) | view::reverse;
+                            auto const last = ranges::end(base);
+                            auto rev = make_iterator_range(bound, last) | view::reverse;
                             // *** O(lg N) *** but O(1) on repeat passes
                             ranges::pop_heap(rev, rng_->comp(), rng_->proj());
-                            ++bound;
+                            auto const size = last - first;
+                            if (++len + 1 >= size)
+                            {
+                                // Everything is sorted; move len *past* the end of
+                                // the range so valid iterators never again reach it.
+                                len = size + 1;
+                            }
                         }
                     }
                     RANGES_CXX14_CONSTEXPR
                     void advance(iterator_t<Rng> &it, range_difference_type_t<Rng> n)
                     {
-                        auto const end = ranges::end(rng_->base());
-                        RANGES_EXPECT(n <= end - it);
+                        // |** sorted elements **|** unsorted elements **|
+                        // ^-first    it-^       ^- first + len     last-^
+                        // Advancing it past first + len requires us to sort the
+                        // intervening elements.
 
-                        auto &bound = rng_->bound();
-                        if (bound == end || n < bound - it)
+                        auto &base = rng_->base();
+                        RANGES_ASSERT(n <= ranges::end(base) - it);
+                        auto const first = ranges::begin(base);
+                        auto const i = it - first;
+                        RANGES_EXPECT(n >= -i);
+
+                        auto const target = i + n;
+                        auto &len = rng_->len();
+                        if (len <= target)
                         {
-                            // O(1) on repeat passes
-                            it += n;
-                            return;
+                            auto &comp = rng_->comp();
+                            auto &proj = rng_->proj();
+                            auto const size = last - first;
+                            while (len <= target) // *** O(n lg N) ***
+                            {
+                                auto rev = make_iterator_range(first + len, last) | view::reverse;
+                                ranges::pop_heap(rev, comp, proj);
+
+                                ++len;
+                            }
+                            if (len >= size)
+                            {
+                                // Everything is sorted; move len *past* the end of
+                                // the range so valid iterators never again reach it.
+                                len = size + 1;
+                                break;
+                            }
                         }
 
-                        if (n == end - it)
-                        {
-                            // *** O(n lg N) ***
-                            bound = ranges::sort(bound, end, rng_->comp().base(), rng_->proj());
-                            it = bound;
-                            return;
-                        }
-
-                        auto d = bound - it;
-                        it += d - 1;
-                        n -= d - 1;
-
-                        // *** O(n lg N) ***
-                        for (; n > 0; --n)
-                            this->next(it);
+                        it += n; // O(1)
                     }
                 private:
                     sorted_view *rng_ = nullptr;
