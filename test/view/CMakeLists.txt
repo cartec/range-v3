@@ -64,6 +64,9 @@ add_test(test.view.join, view.join)
 add_executable(view.linear_distribute linear_distribute.cpp)
 add_test(test.view.linear_distribute, view.linear_distribute)
 
+add_executable(view.low_pass low_pass.cpp)
+add_test(test.view.low_pass, view.low_pass)
+
 add_executable(view.map keys_value.cpp)
 add_test(test.view.map, view.map)
 
