@@ -42,15 +42,6 @@ namespace
     {}
 
     template<typename Adapted>
-    void test_bounded(Adapted& a, std::true_type)
-    {
-        ::models<concepts::BoundedRange>(a);
-    }
-    // template<typename Adapted>
-    // void test_bounded(Adapted&, std::false_type)
-    // {}
-
-    template<typename Adapted>
     void test_prev(Adapted& a, iterator_t<Adapted> const& it, std::true_type)
     {
         ::models<concepts::BidirectionalRange>(a);
@@ -86,9 +77,9 @@ namespace
         CONCEPT_ASSERT(Same<
             meta::_t<iterator_concept<iterator_t<Base>>>,
             meta::_t<iterator_concept<iterator_t<Adapted>>>>());
+        CONCEPT_ASSERT(!BoundedRange<Base>() || BoundedRange<Adapted>());
 
         auto it = ranges::begin(rng);
-        test_bounded(rng, BoundedRange<Base>());
 
         for (auto i = 0; i <= N - K; ++i)
         {

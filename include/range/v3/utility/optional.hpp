@@ -950,7 +950,11 @@ namespace ranges
 
             template<typename T, typename Tag>
             struct non_propagating_cache<T, Tag, false>
-            {};
+            {
+                non_propagating_cache() = default;
+                constexpr non_propagating_cache(nullopt_t) noexcept
+                {}
+            };
         } // namespace detail
         /// \endcond
     } // namespace v3
