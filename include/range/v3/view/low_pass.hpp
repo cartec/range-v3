@@ -67,13 +67,11 @@ namespace ranges
             }
 
             CONCEPT_REQUIRES(SizedRange<Rng>())
-            RANGES_CXX14_CONSTEXPR
             range_size_type_t<Rng> size()
             {
                 return size_(ranges::distance(this->base()));
             }
             CONCEPT_REQUIRES(SizedRange<Rng const>())
-            RANGES_CXX14_CONSTEXPR
             range_size_type_t<Rng> size() const
             {
                 return size_(ranges::distance(this->base()));
@@ -87,191 +85,156 @@ namespace ranges
 
             struct adaptor
               : adaptor_base
+              , private meta::if_<
+                    RandomAccessRange<Rng>,
+                    meta::nil_, box<iterator_t<Rng>, low_pass_view<Rng>>>
             {
                 adaptor() = default;
-                explicit RANGES_CXX14_CONSTEXPR adaptor(low_pass_view &rng) noexcept
-                  : data_{trailing_t{}, rng.count(), range_value_type_t<Rng>{}}
+                explicit adaptor(low_pass_view &rng) noexcept
+                  : count_{rng.count()}
 #ifndef NDEBUG
                   , rng_{&rng}
 #endif
                 {}
-                RANGES_CXX14_CONSTEXPR iterator_t<Rng> begin(low_pass_view &rng)
+                iterator_t<Rng> begin(low_pass_view &rng)
                 {
-                    RANGES_ASSERT(this->rng_ == &rng);
-                    return begin_(rng, RandomAccessRange<Rng>());
+                    return begin_(rng, iterator_concept<iterator_t<Rng>>{});
                 }
-                RANGES_CXX14_CONSTEXPR iterator_t<Rng> end(low_pass_view &rng)
+                iterator_t<Rng> end(low_pass_view &rng)
                 {
-                    static_assert(is_symmetric);
-                    RANGES_ASSERT(this->rng_ == &rng);
                     return end_(rng, iterator_concept<iterator_t<Rng>>{});
                 }
-                RANGES_CXX14_CONSTEXPR range_value_type_t<Rng>
-                read(iterator_t<Rng> const &it) const
+                range_value_type_t<Rng> read(iterator_t<Rng> const &it) const
                 {
                     RANGES_ASSERT(it != ranges::end(rng_->base()));
-                    return (sum() + *it) / count();
+                    return (sum_ + *it) / count_;
                 }
-                RANGES_CXX14_CONSTEXPR void next(iterator_t<Rng> &it)
+                void next(iterator_t<Rng> &it)
                 {
                     RANGES_ASSERT(it != ranges::end(rng_->base()));
-                    next_trailing(it, RandomAccessRange<Rng>());
-                    sum() += *it;
+                    next_trailing(it, iterator_concept<iterator_t<Rng>>{});
+                    sum_ += *it;
                     ++it;
                 }
                 CONCEPT_REQUIRES(BidirectionalRange<Rng>())
-                RANGES_CXX14_CONSTEXPR void prev(iterator_t<Rng> &it)
+                void prev(iterator_t<Rng> &it)
                 {
-                    prev_trailing(it, RandomAccessRange<Rng>());
-                    sum() -= *--it;
+                    prev_trailing(it, iterator_concept<iterator_t<Rng>>{});
+                    sum_ -= *--it;
                 }
                 void advance() = delete; // This adaptor never provides random access
             private:
-                RANGES_CXX14_CONSTEXPR iterator_t<Rng> begin_(low_pass_view &rng, std::true_type)
+                iterator_t<Rng> begin_(low_pass_view &rng, concepts::RandomAccessIterator*)
                 {
                     auto first = ranges::begin(rng.base());
                     if (rng.begin_sum())
                     {
-                        sum() = *rng.begin_sum();
+                        sum_ = *rng.begin_sum();
                         return first + (rng.count() - 1);
                     }
 
                     auto const last = ranges::end(rng.base());
                     for (auto i = rng.count(); --i > 0 && first != last; ++first)
-                        sum() += *first;
+                        sum_ += *first;
 
-                    rng.begin_sum().emplace(sum());
+                    rng.begin_sum().emplace(sum_);
                     return first;
                 }
-                RANGES_CXX14_CONSTEXPR iterator_t<Rng> begin_(low_pass_view &rng, std::false_type)
+                iterator_t<Rng> begin_(low_pass_view &rng, concepts::ForwardIterator*)
                 {
                     auto first = ranges::begin(rng.base());
                     trailing() = first;
                     if (rng.begin_cache())
                     {
-                        sum() = rng.begin_sum();
+                        sum_ = rng.begin_sum();
                         return *rng.begin_cache();
                     }
 
                     auto const last = ranges::end(rng.base());
                     for (auto i = rng.count(); --i > 0 && first != last; ++first)
-                        sum() += *first;
+                        sum_ += *first;
 
-                    rng.begin_sum() = sum();
+                    rng.begin_sum() = sum_;
                     rng.begin_cache().emplace(first);
                     return first;
                 }
 
-                RANGES_CXX14_CONSTEXPR iterator_t<Rng> end_(
-                    low_pass_view &rng, concepts::RandomAccessIterator*)
+                iterator_t<Rng> end_(low_pass_view &rng, concepts::RandomAccessIterator*)
                 {
                     auto /* const */ last = ranges::end(rng.base());
                     if (rng.end_sum())
                     {
-                        sum() = *rng.end_sum();
+                        sum_ = *rng.end_sum();
+                    return last;
                     }
-                    else
-                    {
+
                         auto const first = ranges::begin(rng.base());
                         auto pos = last;
                         for (auto i = rng.count(); --i > 0 && first != pos;)
-                            sum() += *--pos;
-                        rng.end_sum().emplace(sum());
-                    }
+                        sum_ += *--pos;
+                    rng.end_sum().emplace(sum_);
                     return last;
                 }
-                RANGES_CXX14_CONSTEXPR iterator_t<Rng> end_(
-                    low_pass_view &rng, concepts::BidirectionalIterator*)
+                iterator_t<Rng> end_(low_pass_view &rng, concepts::BidirectionalIterator*)
                 {
                     auto /* const */ last = ranges::end(rng.base());
                     if (rng.end_cache())
                     {
                         trailing() = *rng.end_cache();
-                        sum() = rng.end_sum();
+                        sum_ = rng.end_sum();
+                        return last;
                     }
-                    else
-                    {
-                        auto const first = ranges::begin(rng.base());
-                        auto pos = last;
-                        for (auto i = rng.count(); --i > 0 && first != pos;)
-                            sum() += *--pos;
-                        rng.end_sum() = sum();
-                        rng.end_cache().emplace(pos);
-                        trailing() = pos;
-                    }
+
+                    auto const first = ranges::begin(rng.base());
+                    auto pos = last;
+                    for (auto i = rng.count(); --i > 0 && first != pos;)
+                        sum_ += *--pos;
+                    rng.end_sum() = sum_;
+                    rng.end_cache().emplace(pos);
+                    trailing() = pos;
                     return last;
                 }
 
-                RANGES_CXX14_CONSTEXPR void next_trailing(iterator_t<Rng> const &, std::false_type)
+                void next_trailing(iterator_t<Rng> const &, concepts::ForwardIterator*)
                 {
-                    sum() -= *trailing();
-                    ++trailing();
+                    auto &trail = trailing();
+                    sum_ -= *trail;
+                    ++trail;
                 }
-                RANGES_CXX14_CONSTEXPR void next_trailing(iterator_t<Rng> const &it, std::true_type)
+                void next_trailing(iterator_t<Rng> const &it, concepts::RandomAccessIterator*)
                 {
-                    auto trail = it - (count() - 1);
-                    sum() -= *trail;
+                    auto trail = it - (count_ - 1);
+                    sum_ -= *trail;
                 }
 
-                RANGES_CXX14_CONSTEXPR void prev_trailing(iterator_t<Rng> const &, std::false_type)
+                void prev_trailing(iterator_t<Rng> const &, concepts::BidirectionalIterator*)
                 {
-                    RANGES_ASSERT(trailing() != ranges::begin(rng_->base()));
-                    sum() += *--trailing();
-                }
-                RANGES_CXX14_CONSTEXPR void prev_trailing(iterator_t<Rng> const &it, std::true_type)
-                {
-                    auto trail = it - (count() - 1);
+                    auto &trail = trailing();
                     RANGES_ASSERT(trail != ranges::begin(rng_->base()));
-                    sum() += *--trail;
+                    sum_ += *--trail;
+                }
+                void prev_trailing(iterator_t<Rng> const &it, concepts::RandomAccessIterator*)
+                {
+                    auto trail = it - (count_ - 1);
+                    RANGES_ASSERT(trail != ranges::begin(rng_->base()));
+                    sum_ += *--trail;
                 }
 
-                using trailing_t = meta::if_c<(bool) RandomAccessRange<Rng>(), meta::nil_, iterator_t<Rng>>;
-                compressed_tuple<
-                    trailing_t,                   // iterator (count - 1) steps before this one
-                    range_difference_type_t<Rng>, // count
-                    range_value_type_t<Rng>       // sum of the previous (count - 1) elements
-                > data_{};
+                iterator_t<Rng> &trailing() noexcept { return adaptor::box::get(); }
 
+                range_difference_type_t<Rng> count_ = 0;
+                range_value_type_t<Rng> sum_{}; // sum of the previous (count - 1) elements
 #ifndef NDEBUG
                 low_pass_view *rng_ = nullptr;
 #endif
-
-                RANGES_CXX14_CONSTEXPR iterator_t<Rng> &trailing() noexcept
-                {
-                    return get<0>(data_);
-                }
-
-                RANGES_CXX14_CONSTEXPR range_difference_type_t<Rng> count() const noexcept
-                {
-                    return get<1>(data_);
-                }
-
-                RANGES_CXX14_CONSTEXPR range_value_type_t<Rng> &sum() noexcept
-                {
-                    return get<2>(data_);
-                }
-                RANGES_CXX14_CONSTEXPR range_value_type_t<Rng> const &sum() const noexcept
-                {
-                    return get<2>(data_);
-                }
             };
 
-            RANGES_CXX14_CONSTEXPR adaptor begin_adaptor()
-            {
-                return adaptor{*this};
-            }
+            adaptor begin_adaptor() { return adaptor{*this}; }
             CONCEPT_REQUIRES(is_symmetric)
-            RANGES_CXX14_CONSTEXPR adaptor end_adaptor()
-            {
-                return adaptor{*this};
-            }
+            adaptor end_adaptor() { return adaptor{*this}; }
             CONCEPT_REQUIRES(!is_symmetric)
-            RANGES_CXX14_CONSTEXPR adaptor_base end_adaptor()
-            {
-                return {};
-            }
+            adaptor_base end_adaptor() { return {}; }
 
-            RANGES_CXX14_CONSTEXPR
             range_size_type_t<Rng> size_(range_difference_type_t<Rng> const n) const
             {
                 auto result = n - count() + 1;
@@ -301,28 +264,13 @@ namespace ranges
                 range_difference_type_t<Rng> // count()
             > data_;
 
-            RANGES_CXX14_CONSTEXPR begin_cache_t &begin_cache() noexcept
-            {
-                return get<0>(data_);
-            }
-            RANGES_CXX14_CONSTEXPR begin_sum_t &begin_sum() noexcept
-            {
-                return get<1>(data_);
-            }
+            begin_cache_t &begin_cache() noexcept { return get<0>(data_); }
+            begin_sum_t &begin_sum() noexcept { return get<1>(data_); }
 
-            RANGES_CXX14_CONSTEXPR end_cache_t &end_cache() noexcept
-            {
-                return get<2>(data_);
-            }
-            RANGES_CXX14_CONSTEXPR end_sum_t &end_sum() noexcept
-            {
-                return get<3>(data_);
-            }
+            end_cache_t &end_cache() noexcept { return get<2>(data_); }
+            end_sum_t &end_sum() noexcept { return get<3>(data_); }
 
-            RANGES_CXX14_CONSTEXPR range_difference_type_t<Rng> count() const noexcept
-            {
-                return get<4>(data_);
-            }
+            range_difference_type_t<Rng> count() const noexcept { return get<4>(data_); }
         };
 
         template<typename Rng>
@@ -332,8 +280,7 @@ namespace ranges
                     ? finite
                     : range_cardinality<Rng>::value>
         {
-            CONCEPT_ASSERT(detail::LowPassConstraint<Rng>() && InputView<Rng>() &&
-                !ForwardRange<Rng>());
+            CONCEPT_ASSERT(detail::LowPassConstraint<Rng>() && InputView<Rng>());
 
             low_pass_view() = default;
             explicit RANGES_CXX14_CONSTEXPR low_pass_view(Rng rng, range_difference_type_t<Rng> n)
@@ -344,40 +291,34 @@ namespace ranges
             }
 
             CONCEPT_REQUIRES(SizedRange<Rng>())
-            RANGES_CXX14_CONSTEXPR range_size_type_t<Rng> size()
+            range_size_type_t<Rng> size()
             {
                 return size_(ranges::distance(rng()));
             }
             CONCEPT_REQUIRES(SizedRange<Rng const>())
-            RANGES_CXX14_CONSTEXPR range_size_type_t<Rng> size() const
+            range_size_type_t<Rng> size() const
             {
                 return size_(ranges::distance(rng()));
             }
 
-            RANGES_CXX14_CONSTEXPR Rng &base() noexcept
-            {
-                return rng();
-            }
-            RANGES_CXX14_CONSTEXPR Rng const &base() const noexcept
-            {
-                return rng();
-            }
+            Rng &base() noexcept { return rng(); }
+            Rng const &base() const noexcept { return rng(); }
         private:
             friend range_access;
 
             struct cursor
             {
                 cursor() = default;
-                explicit RANGES_CXX14_CONSTEXPR cursor(low_pass_view &rng) noexcept
+                explicit cursor(low_pass_view &rng) noexcept
                   : rng_{&rng}
                 {}
-                RANGES_CXX14_CONSTEXPR range_value_type_t<Rng> read() const
+                range_value_type_t<Rng> read() const
                 {
                     auto const &pos = rng_->pos();
                     RANGES_ASSERT(pos != ranges::end(rng_->rng()));
                     return (rng_->sum() + *pos) / rng_->count();
                 }
-                RANGES_CXX14_CONSTEXPR void next()
+                void next()
                 {
                     auto &pos = rng_->pos();
                     RANGES_ASSERT(pos != ranges::end(rng_->rng()));
@@ -391,12 +332,11 @@ namespace ranges
                     ++pos;
                     sum += element;
                 }
-                RANGES_CXX14_CONSTEXPR bool equal(default_sentinel) const
+                bool equal(default_sentinel) const
                 {
                     return rng_->pos() == ranges::end(rng_->rng());
                 }
                 CONCEPT_REQUIRES(SizedSentinel<sentinel_t<Rng>, iterator_t<Rng>>())
-                RANGES_CXX14_CONSTEXPR
                 range_difference_type_t<Rng> distance_to(default_sentinel) const
                 {
                     return ranges::end(rng_->rng()) - rng_->pos();
@@ -405,7 +345,7 @@ namespace ranges
                 low_pass_view *rng_ = nullptr;
             };
 
-            RANGES_CXX14_CONSTEXPR cursor begin_cursor()
+            cursor begin_cursor()
             {
                 auto &vec = get<2>(data_);
                 auto const n = count();
@@ -422,7 +362,6 @@ namespace ranges
                 return cursor{*this};
             }
 
-            RANGES_CXX14_CONSTEXPR
             range_size_type_t<Rng> size_(range_difference_type_t<Rng> const n) const
             {
                 auto result = n - count() + 1;
@@ -438,43 +377,19 @@ namespace ranges
                 range_value_type_t<Rng>               // sum of the most recent (count() - 1) elements
             > data_{};
 
-            RANGES_CXX14_CONSTEXPR Rng &rng() noexcept
-            {
-                return get<0>(data_);
-            }
-            RANGES_CXX14_CONSTEXPR Rng const &rng() const noexcept
-            {
-                return get<0>(data_);
-            }
+            Rng &rng() noexcept { return get<0>(data_); }
+            Rng const &rng() const noexcept { return get<0>(data_); }
 
-            RANGES_CXX14_CONSTEXPR iterator_t<Rng> &pos() noexcept
-            {
-                return get<1>(data_);
-            }
+            iterator_t<Rng> &pos() noexcept { return get<1>(data_); }
 
-            RANGES_CXX14_CONSTEXPR range_value_type_t<Rng> *stored_data() noexcept
-            {
-                return get<2>(data_).data();
-            }
+            range_value_type_t<Rng> *stored_data() noexcept { return get<2>(data_).data(); }
 
-            RANGES_CXX14_CONSTEXPR range_difference_type_t<Rng> &index() noexcept
-            {
-                return get<3>(data_);
-            }
+            range_difference_type_t<Rng> &index() noexcept { return get<3>(data_); }
 
-            RANGES_CXX14_CONSTEXPR range_difference_type_t<Rng> count() const noexcept
-            {
-                return get<4>(data_);
-            }
+            range_difference_type_t<Rng> count() const noexcept { return get<4>(data_); }
 
-            RANGES_CXX14_CONSTEXPR range_value_type_t<Rng> &sum() noexcept
-            {
-                return get<5>(data_);
-            }
-            RANGES_CXX14_CONSTEXPR range_value_type_t<Rng> const &sum() const noexcept
-            {
-                return get<5>(data_);
-            }
+            range_value_type_t<Rng> &sum() noexcept { return get<5>(data_); }
+            range_value_type_t<Rng> const &sum() const noexcept { return get<5>(data_); }
         };
 
         namespace view
