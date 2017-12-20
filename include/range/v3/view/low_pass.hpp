@@ -349,7 +349,7 @@ namespace ranges
             {
                 auto &vec = get<2>(data_);
                 auto const n = count();
-                vec.reserve(n - 1);
+                vec.reserve(static_cast<std::size_t>(n) - 1);
                 auto &first = pos();
                 first = ranges::begin(rng());
                 auto const last = ranges::end(rng());

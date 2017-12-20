@@ -23,10 +23,15 @@
 #include <range/v3/view/reverse.hpp>
 #include <range/v3/view/take_exactly.hpp>
 #include <range/v3/view/transform.hpp>
+
+RANGES_DIAGNOSTIC_IGNORE_FLOAT_CONVERSION
+RANGES_DIAGNOSTIC_IGNORE_FLOAT_EQUAL
+
 #include "../simple_test.hpp"
 #include "../test_utils.hpp"
 
 using namespace ranges;
+
 
 namespace
 {
