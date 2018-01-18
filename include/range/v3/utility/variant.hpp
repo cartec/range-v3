@@ -68,6 +68,21 @@ namespace ranges
             template<typename... Types>
             using all_trivially_move_constructible = meta::strict_and<std::is_trivially_move_constructible<Types>...>;
 
+            template<typename... Types>
+            using all_copy_assignable = meta::strict_and<std::is_copy_assignable<Types>...>;
+
+            template<typename... Types>
+            using all_trivially_copy_assignable = meta::strict_and<std::is_trivially_copy_assignable<Types>...>;
+
+            template<typename... Types>
+            using all_move_assignable = meta::strict_and<std::is_move_assignable<Types>...>;
+
+            template<typename... Types>
+            using all_trivially_move_assignable = meta::strict_and<std::is_trivially_move_assignable<Types>...>;
+
+            template<typename... Types>
+            using any_reference_type = meta::strict_or<std::is_reference<Types>...>;
+
             template<typename T, typename = void>
             struct variant_wrapper
             {
@@ -368,7 +383,7 @@ namespace ranges
                 {
                     auto &target = variant_raw_get<I>(self_.storage_);
                     using target_t = meta::_t<remove_reference<decltype(target)>>;
-                    ::new (std::addressof(target)) target_t(static_cast<T &&>(t));
+                    ::new (std::addressof(target)) target_t(static_cast<T &&>(t).cook());
                 }
             };
 
@@ -410,17 +425,127 @@ namespace ranges
 
             template<typename... Types>
             using variant_move_layer = meta::if_c<
-                all_move_constructible<Types...>::value && !all_trivially_move_constructible<Types...>,
+                all_move_constructible<Types...>::value &&
+                    !all_trivially_move_constructible<Types...>::value,
                 variant_nontrivial_move<Types...>,
                 variant_copy_layer<Types...>>;
+
+            template<typename... Types>
+            struct variant_assign_same_visitor
+            {
+                variant_base &self_;
+
+                RANGES_CXX14_CONSTEXPR static void bad_access() noexcept
+                {}
+                template<std::size_t I, typename T>
+                RANGES_CXX14_CONSTEXPR void operator()(meta::size_t<I>, T &&t) const noexcept
+                {
+                    RANGES_EXPECT(self_.index_ == I + 1);
+                    variant_raw_get<I>(self_.storage_).cook() = static_cast<T &&>(t).cook();
+                }
+            };
+
+            template<typename... Types>
+            struct variant_nontrivial_copy_assign
+              : variant_move_layer<Types...>
+            {
+                using variant_move_layer<Types...>::variant_move_layer;
+                variant_nontrivial_copy(variant_nontrivial_copy const&) = default;
+                variant_nontrivial_copy(variant_nontrivial_copy &&) = default;
+                variant_nontrivial_copy& operator=(variant_nontrivial_copy const& that)
+                {
+                    auto const i = this->index_;
+                    if (i == that.index_)
+                    {
+                        if (i != 0)
+                            variant_raw_visit(i, that.storage_,
+                                variant_assign_same_visitor<Types...>{*this});
+                    }
+                    else
+                    {
+                        std::terminate(); // FIXME: NYI
+                    }
+                    return *this;
+                }
+                variant_nontrivial_copy& operator=(variant_nontrivial_copy &&) = default;
+            };
+
+            template<typename... Types>
+            struct variant_deleted_copy_assign
+              : variant_move_layer<Types...>
+            {
+                using variant_move_layer<Types...>::variant_move_layer;
+                variant_nontrivial_copy(variant_nontrivial_copy const&) = default;
+                variant_nontrivial_copy(variant_nontrivial_copy &&) = default;
+                variant_nontrivial_copy& operator=(variant_nontrivial_copy const&) = delete;
+                variant_nontrivial_copy& operator=(variant_nontrivial_copy &&) = default;
+            };
+
+            template<typename... Types>
+            using variant_copy_assign_layer = meta::if_c<
+                all_copy_constructible<Types...>::value && all_copy_assignable<Types...>::value,
+                meta::if_c<
+                    !any_reference_type<Types...>::value &&
+                        all_trivially_copy_constructible<Types...>::value &&
+                        all_trivially_copy_assignable<Types...>::value,
+                    variant_move_layer<Types...>,
+                    variant_nontrivial_copy_assign<Types...>>,
+                variant_deleted_copy_assign<Types...>>;
+
+            template<typename... Types>
+            struct variant_nontrivial_move_assign
+              : variant_copy_assign_layer<Types...>
+            {
+                using variant_copy_assign_layer<Types...>::variant_copy_assign_layer;
+                variant_nontrivial_move_assign(variant_nontrivial_move_assign const&) = default;
+                variant_nontrivial_move_assign(variant_nontrivial_move_assign &&) = default;
+                variant_nontrivial_move_assign& operator=(variant_nontrivial_move_assign const&) = default;
+                variant_nontrivial_move_assign& operator=(variant_nontrivial_move_assign &&that)
+                {
+                    auto const i = this->index_;
+                    if (i == that.index_)
+                    {
+                        if (i != 0)
+                            variant_raw_visit(i, std::move(that.storage_),
+                                variant_assign_same_visitor<Types...>{*this});
+                    }
+                    else
+                    {
+                        std::terminate(); // FIXME: NYI
+                    }
+                    return *this;
+                }
+            };
+
+            template<typename... Types>
+            struct variant_deleted_move_assign
+              : variant_copy_assign_layer<Types...>
+            {
+                using variant_copy_assign_layer<Types...>::variant_copy_assign_layer;
+                variant_deleted_move_assign(variant_deleted_move_assign const&) = default;
+                variant_deleted_move_assign(variant_deleted_move_assign &&) = default;
+                variant_deleted_move_assign& operator=(variant_deleted_move_assign const&) = default;
+                variant_deleted_move_assign& operator=(variant_deleted_move_assign &&) = delete;
+            };
+
+            template<typename... Types>
+            using variant_move_assign_layer = meta::if_c<
+                all_move_constructible<Types...>::value && all_move_assignable<Types...>::value,
+                meta::if_c<
+                    !any_reference_type<Types...>::value &&
+                        all_trivially_move_constructible<Types...>::value &&
+                        all_trivially_move_assignable<Types...>::value,
+                    variant_copy_assign_layer<Types...>,
+                    variant_nontrivial_move_assign<Types...>>,
+                variant_deleted_move_assign<Types...>>;
         } // namespace detail
 
         template<typename... Types>
         struct variant
-          : private detail::variant_move_layer<Types...>
+          : private detail::variant_move_assign_layer<Types...>
         {
         private:
-            using base_t = detail::variant_move_layer<Types...>;
+            using base_t = detail::variant_move_assign_layer<Types...>;
         public:
             template<class First = meta::at_c<meta::list<Types...>, 0>,
                 CONCEPT_REQUIRES_(DefaultConstructible<First>())>
@@ -435,19 +560,16 @@ namespace ranges
             }
             constexpr bool valueless_by_exception() const noexcept
             {
-                return index_ == 0;
+                return 0 == index_;
             }
         };
 
-
-        template<typename>
-        struct variant_size;
-        template<typename T>
-        struct variant_size<const T> : variant_size<T> {};
-        template<typename T>
-        struct variant_size<volatile T> : variant_size<T> {};
-        template<typename T>
-        struct variant_size<const volatile T> : variant_size<T> {};
+        template<typename> struct variant_size;
+        template<typename T> struct variant_size<T const> : variant_size<T> {};
+        template<typename T> struct variant_size<T volatile> : variant_size<T> {};
+        template<typename T> struct variant_size<T const volatile> : variant_size<T> {};
+        template<typename... Types>
+        struct variant_size<variant<Types...>> : meta::size_t<sizeof...(Types)> {};
 
 #if RANGES_CXX_VARIABLE_TEMPLATES >= RANGES_CXX_VARIABLE_TEMPLATES_14
         template<typename T>
@@ -456,9 +578,6 @@ namespace ranges
 #endif
         constexpr bool variant_size_v = variant_size<T>::value;
 #endif
-
-        template<typename... Ts>
-        struct variant_size<variant<Ts...>> : meta::size_t<sizeof...(Ts)> {};
 
         template<std::size_t, typename>
         struct variant_alternative;
@@ -470,15 +589,17 @@ namespace ranges
         struct variant_alternative<I, const volatile T> : variant_alternative<I, T> {};
 
         template<std::size_t I, typename T>
-        using variant_alternative_t = typename variant_alternative<I, T>::type;
+        using variant_alternative_t = meta::_t<variant_alternative<I, T>>;
 
-        template<std::size_t I, typename... Ts>
-        struct variant_alternative<I, variant<Ts...>> : meta::at_c<meta::list<Ts...>, I> {};
+        template<std::size_t I, typename... Types>
+        struct variant_alternative<I, variant<Types...>>
+          : meta::id<meta::at_c<meta::list<Types...>, I>>
+        {};
 
 #if RANGES_CXX_INLINE_VARIABLES >= RANGES_CXX_INLINE_VARIABLES_17
         inline
 #endif
-        constexpr std::size_t variant_npos = ~std::size_t{0};
+        constexpr auto variant_npos = ~std::size_t{0};
     } // namespace v3
 } // namespace ranges
 
