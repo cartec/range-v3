@@ -2,6 +2,7 @@
 // Range v3 library
 //
 //  Copyright Eric Niebler 2014
+//  Copyright Casey Carter 2018
 //
 //  Use, modification and distribution is subject to the
 //  Boost Software License, Version 1.0. (See accompanying
@@ -35,6 +36,23 @@ namespace ranges
 
         namespace detail
         {
+            template<typename, typename>
+            struct find_unique_index_ {};
+            template<typename List, typename T>
+            using find_unique_index = meta::_t<find_unique_index_<T, List>>;
+            template<typename... Ts, typename T>
+            struct find_unique_index_<meta::list<Ts...>, T>
+              : meta::if_c<
+                    meta::find_index<meta::list<Ts...>, T>::value != meta::npos &&
+                        meta::detail::find_index_i_(
+                            meta::find_index_<meta::list<Ts...>, T>::bools +
+                            meta::find_index<meta::list<Ts...>, T>::value + 1,
+                            meta::find_index_<meta::list<Ts...>, T>::bools +
+                            sizeof...(Ts),
+                            meta::find_index<meta::list<Ts...>, T>::value + 1) == meta::npos,
+                    meta::find_index<meta::list<Ts...>, T>, meta::nil_>
+            {};
+
             template<typename... Types>
             using all_trivially_destructible = meta::strict_and<std::is_trivially_destructible<Types>...>;
 
@@ -277,8 +295,8 @@ namespace ranges
 
             template<std::size_t N>
             using variant_index_t =
-                meta::if_c<(N < std::numeric_limits<unsigned char>::max()), unsigned char,
-                meta::if_c<(N < std::numeric_limits<unsigned short>::max()), unsigned short,
+                meta::if_c<(N < static_cast<unsigned char>(~0u)), unsigned char,
+                meta::if_c<(N < static_cast<unsigned short>(~0u)), unsigned short,
                 unsigned int>;
 
             template<typename... Types>
@@ -420,6 +438,47 @@ namespace ranges
                 return index_ == 0;
             }
         };
+
+
+        template<typename>
+        struct variant_size;
+        template<typename T>
+        struct variant_size<const T> : variant_size<T> {};
+        template<typename T>
+        struct variant_size<volatile T> : variant_size<T> {};
+        template<typename T>
+        struct variant_size<const volatile T> : variant_size<T> {};
+
+#if RANGES_CXX_VARIABLE_TEMPLATES >= RANGES_CXX_VARIABLE_TEMPLATES_14
+        template<typename T>
+#if RANGES_CXX_INLINE_VARIABLES >= RANGES_CXX_INLINE_VARIABLES_17
+        inline
+#endif
+        constexpr bool variant_size_v = variant_size<T>::value;
+#endif
+
+        template<typename... Ts>
+        struct variant_size<variant<Ts...>> : meta::size_t<sizeof...(Ts)> {};
+
+        template<std::size_t, typename>
+        struct variant_alternative;
+        template<std::size_t I, typename T>
+        struct variant_alternative<I, const T> : variant_alternative<I, T> {};
+        template<std::size_t I, typename T>
+        struct variant_alternative<I, volatile T> : variant_alternative<I, T> {};
+        template<std::size_t I, typename T>
+        struct variant_alternative<I, const volatile T> : variant_alternative<I, T> {};
+
+        template<std::size_t I, typename T>
+        using variant_alternative_t = typename variant_alternative<I, T>::type;
+
+        template<std::size_t I, typename... Ts>
+        struct variant_alternative<I, variant<Ts...>> : meta::at_c<meta::list<Ts...>, I> {};
+
+#if RANGES_CXX_INLINE_VARIABLES >= RANGES_CXX_INLINE_VARIABLES_17
+        inline
+#endif
+        constexpr std::size_t variant_npos = ~std::size_t{0};
     } // namespace v3
 } // namespace ranges
 
