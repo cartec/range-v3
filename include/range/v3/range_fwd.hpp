@@ -268,6 +268,7 @@ namespace ranges
             {};
 
         #if defined(__clang__) && !defined(_LIBCPP_VERSION)
+            #define RANGES_PROPER_TRIVIAL_TYPE_TRAITS 1
             template<typename T, typename... Args>
             using is_trivially_constructible =
                 meta::bool_<__is_trivially_constructible(T, Args...)>;
@@ -293,6 +294,7 @@ namespace ranges
             using is_trivially_copyable =
                 meta::bool_<__is_trivially_copyable(T)>;
         #elif defined(__GNUC__) && !defined(__clang__) && __GNUC__ < 5
+            #define RANGES_PROPER_TRIVIAL_TYPE_TRAITS 0
             template<typename T>
             using is_trivially_default_constructible = std::is_trivial<T>;
             template<typename T>
@@ -306,6 +308,7 @@ namespace ranges
             template<typename T>
             using is_trivially_copyable = std::is_trivial<T>;
         #else
+            #define RANGES_PROPER_TRIVIAL_TYPE_TRAITS 1
             template<typename T>
             using is_trivially_default_constructible =
                 std::is_trivially_constructible<T>;

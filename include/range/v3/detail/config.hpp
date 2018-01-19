@@ -30,7 +30,7 @@ namespace ranges
         namespace detail
         {
             template<class = void>
-            [[noreturn]] void assert_failure(char const *file, int line, char const *msg)
+            [[noreturn]] void assert_failure(char const *file, int line, char const *msg) noexcept
             {
                 std::fprintf(stderr, "%s(%d): %s\n", file, line, msg);
                 std::abort();

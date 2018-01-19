@@ -14,12 +14,373 @@
 #include <iostream>
 #include <range/v3/utility/variant.hpp>
 #include "../simple_test.hpp"
-#include "../test_utils.hpp"
+//#include "../test_utils.hpp"
+
+template<class...> class show_type; // FIXME: remove
+
+namespace bad_access
+{
+    void test()
+    {
+        CONCEPT_ASSERT(std::is_base_of<std::exception, ranges::bad_variant_access>::value);
+        static_assert(noexcept(ranges::bad_variant_access{}), "must be noexcept");
+        static_assert(noexcept(ranges::bad_variant_access{}.what()), "must be noexcept");
+        ranges::bad_variant_access ex;
+        CHECK(ex.what() != nullptr);
+    }
+}
+
+namespace npos
+{
+    CONCEPT_ASSERT(ranges::variant_npos == std::size_t(-1));
+}
+
+namespace alternative
+{
+    template <class V, size_t I, class E>
+    void single_test()
+    {
+        CONCEPT_ASSERT(std::is_same<meta::_t<ranges::variant_alternative<I, V>>, E>::value);
+        CONCEPT_ASSERT(std::is_same<meta::_t<ranges::variant_alternative<I, const V>>, const E>::value);
+        CONCEPT_ASSERT(std::is_same<meta::_t<ranges::variant_alternative<I, volatile V>>,
+            volatile E>::value);
+        CONCEPT_ASSERT(std::is_same<meta::_t<ranges::variant_alternative<I, const volatile V>>,
+            const volatile E>::value);
+        CONCEPT_ASSERT(std::is_same<ranges::variant_alternative_t<I, V>, E>::value);
+        CONCEPT_ASSERT(std::is_same<ranges::variant_alternative_t<I, const V>, const E>::value);
+        CONCEPT_ASSERT(std::is_same<ranges::variant_alternative_t<I, volatile V>, volatile E>::value);
+        CONCEPT_ASSERT(std::is_same<ranges::variant_alternative_t<I, const volatile V>,
+            const volatile E>::value);
+    }
+
+    void test()
+    {
+        {
+            using V = ranges::variant<int, void *, const void *, long double>;
+            single_test<V, 0, int>();
+            single_test<V, 1, void *>();
+            single_test<V, 2, const void *>();
+            single_test<V, 3, long double>();
+        }
+        {
+            using V = ranges::variant<int, int &, const int &, int &&, long double>;
+            single_test<V, 0, int>();
+            single_test<V, 1, int &>();
+            single_test<V, 2, const int &>();
+            single_test<V, 3, int &&>();
+            single_test<V, 4, long double>();
+        }
+    }
+}
+
+namespace size
+{
+    template <class V, size_t E>
+    void single_test()
+    {
+        CONCEPT_ASSERT(ranges::variant_size<V>::value == E);
+        CONCEPT_ASSERT(ranges::variant_size<const V>::value == E);
+        CONCEPT_ASSERT(ranges::variant_size<volatile V>::value == E);
+        CONCEPT_ASSERT(ranges::variant_size<const volatile V>::value == E);
+        CONCEPT_ASSERT(std::is_base_of<
+            std::integral_constant<std::size_t, E>, ranges::variant_size<V>>::value);
+#if RANGES_CXX_VARIABLE_TEMPLATES >= RANGES_CXX_VARIABLE_TEMPLATES_14
+        CONCEPT_ASSERT(ranges::variant_size_v<V> == E);
+        CONCEPT_ASSERT(ranges::variant_size_v<const V> == E);
+        CONCEPT_ASSERT(ranges::variant_size_v<volatile V> == E);
+        CONCEPT_ASSERT(ranges::variant_size_v<const volatile V> == E);
+#endif
+    }
+
+    void test()
+    {
+        single_test<ranges::variant<>, 0>();
+        single_test<ranges::variant<void *>, 1>();
+        single_test<ranges::variant<long, long, void *, double>, 4>();
+    }
+} // namespace size
+
+namespace holds_alternative
+{
+    void test()
+    {
+        {
+            using V = ranges::variant<int>;
+            constexpr V v;
+            CONCEPT_ASSERT(ranges::holds_alternative<int>(v));
+        }
+        {
+            using V = ranges::variant<int, long>;
+            constexpr V v;
+            CONCEPT_ASSERT(ranges::holds_alternative<int>(v));
+            CONCEPT_ASSERT(!ranges::holds_alternative<long>(v));
+        }
+        { // noexcept test
+            using V = ranges::variant<int>;
+            const V v;
+            CONCEPT_ASSERT(noexcept(ranges::holds_alternative<int>(v)));
+        }
+    }
+} // namespace holds_alternative
+
+namespace copy_ctor
+{
+    struct NonT
+    {
+        NonT(int v) : value(v) {}
+        NonT(const NonT &o) : value(o.value) {}
+        int value;
+    };
+    CONCEPT_ASSERT(!ranges::detail::is_trivially_copy_constructible<NonT>::value);
+
+    struct NoCopy
+    {
+        NoCopy(const NoCopy &) = delete;
+    };
+
+    struct MoveOnly
+    {
+        MoveOnly(const MoveOnly &) = delete;
+        MoveOnly(MoveOnly &&) = default;
+    };
+
+    struct MoveOnlyNT
+    {
+        MoveOnlyNT(const MoveOnlyNT &) = delete;
+        MoveOnlyNT(MoveOnlyNT &&) {}
+    };
+
+    struct NTCopy
+    {
+        constexpr NTCopy(int v) : value(v) {}
+        NTCopy(const NTCopy &that) : value(that.value) {}
+        NTCopy(NTCopy &&) = delete;
+        int value;
+    };
+
+    CONCEPT_ASSERT(!ranges::detail::is_trivially_copy_constructible<NTCopy>::value);
+    CONCEPT_ASSERT(std::is_copy_constructible<NTCopy>::value);
+
+    struct TCopy
+    {
+        constexpr TCopy(int v) : value(v) {}
+        TCopy(TCopy const &) = default;
+        TCopy(TCopy &&) = delete;
+        int value;
+    };
+
+    CONCEPT_ASSERT(!RANGES_PROPER_TRIVIAL_TYPE_TRAITS ||
+        ranges::detail::is_trivially_copy_constructible<TCopy>::value);
+
+    struct TCopyNTMove
+    {
+        constexpr TCopyNTMove(int v) : value(v) {}
+        TCopyNTMove(const TCopyNTMove&) = default;
+        TCopyNTMove(TCopyNTMove&& that) : value(that.value) { that.value = -1; }
+        int value;
+    };
+
+    CONCEPT_ASSERT(!RANGES_PROPER_TRIVIAL_TYPE_TRAITS ||
+        ranges::detail::is_trivially_copy_constructible<TCopyNTMove>::value);
+
+    struct MakeEmptyT {
+        static int alive;
+        MakeEmptyT() { ++alive; }
+        MakeEmptyT(const MakeEmptyT &) { ++alive; }
+        MakeEmptyT(MakeEmptyT &&) { throw 42; }
+        MakeEmptyT &operator=(const MakeEmptyT &) { throw 42; }
+        MakeEmptyT &operator=(MakeEmptyT &&) { throw 42; }
+        ~MakeEmptyT() { --alive; }
+    };
+
+    int MakeEmptyT::alive = 0;
+
+    template <class Variant>
+    void makeEmpty(Variant &v)
+    {
+        Variant v2(ranges::in_place_type<MakeEmptyT>);
+        try
+        {
+            v = std::move(v2);
+            CHECK(false);
+        }
+        catch (...)
+        {
+            CHECK(v.valueless_by_exception());
+        }
+    }
+
+    void test_copy_ctor_sfinae()
+    {
+        {
+            using V = ranges::variant<int, long>;
+            CONCEPT_ASSERT(std::is_copy_constructible<V>::value);
+        }
+        {
+            using V = ranges::variant<int, NoCopy>;
+            CONCEPT_ASSERT(!std::is_copy_constructible<V>::value);
+        }
+        {
+            using V = ranges::variant<int, MoveOnly>;
+            CONCEPT_ASSERT(!std::is_copy_constructible<V>::value);
+        }
+        {
+            using V = ranges::variant<int, MoveOnlyNT>;
+            CONCEPT_ASSERT(!std::is_copy_constructible<V>::value);
+        }
+
+        // The following tests are for not-yet-standardized behavior (P0602):
+#if RANGES_PROPER_TRIVIAL_TYPE_TRAITS
+        {
+            using V = ranges::variant<int, long>;
+            CONCEPT_ASSERT(ranges::detail::is_trivially_copy_constructible<V>::value);
+        }
+        {
+            using V = ranges::variant<int, NTCopy>;
+            CONCEPT_ASSERT(!ranges::detail::is_trivially_copy_constructible<V>::value);
+            CONCEPT_ASSERT(std::is_copy_constructible<V>::value);
+        }
+        {
+            using V = ranges::variant<int, TCopy>;
+            CONCEPT_ASSERT(ranges::detail::is_trivially_copy_constructible<V>::value);
+        }
+        {
+            using V = ranges::variant<int, TCopyNTMove>;
+            CONCEPT_ASSERT(ranges::detail::is_trivially_copy_constructible<V>::value);
+        }
+#endif
+    }
+
+    void test_copy_ctor_basic()
+    {
+        {
+            ranges::variant<int> v(ranges::in_place_index<0>, 42);
+            ranges::variant<int> v2 = v;
+            CHECK(v2.index() == 0u);
+            CHECK(ranges::get<0>(v2) == 42);
+        }
+        {
+            ranges::variant<int, long> v(ranges::in_place_index<1>, 42);
+            ranges::variant<int, long> v2 = v;
+            CHECK(v2.index() == 1u);
+            CHECK(ranges::get<1>(v2) == 42);
+        }
+        {
+            ranges::variant<NonT> v(ranges::in_place_index<0>, 42);
+            CHECK(v.index() == 0u);
+            ranges::variant<NonT> v2(v);
+            CHECK(v2.index() == 0u);
+            CHECK(ranges::get<0>(v2).value == 42);
+        }
+        {
+            ranges::variant<int, NonT> v(ranges::in_place_index<1>, 42);
+            CHECK(v.index() == 1u);
+            ranges::variant<int, NonT> v2(v);
+            CHECK(v2.index() == 1u);
+            CHECK(ranges::get<1>(v2).value == 42);
+        }
+
+        // The following tests are for not-yet-standardized behavior (P0602):
+        {
+            constexpr ranges::variant<int> v(ranges::in_place_index<0>, 42);
+            CONCEPT_ASSERT(v.index() == 0);
+            constexpr ranges::variant<int> v2 = v;
+            CONCEPT_ASSERT(v2.index() == 0);
+            CONCEPT_ASSERT(ranges::get<0>(v2) == 42);
+        }
+        {
+            constexpr ranges::variant<int, long> v(ranges::in_place_index<1>, 42);
+            CONCEPT_ASSERT(v.index() == 1);
+            constexpr ranges::variant<int, long> v2 = v;
+            CONCEPT_ASSERT(v2.index() == 1);
+            CONCEPT_ASSERT(ranges::get<1>(v2) == 42);
+        }
+        {
+            constexpr ranges::variant<TCopy> v(ranges::in_place_index<0>, 42);
+            CONCEPT_ASSERT(v.index() == 0);
+            constexpr ranges::variant<TCopy> v2(v);
+            CONCEPT_ASSERT(v2.index() == 0);
+            CONCEPT_ASSERT(ranges::get<0>(v2).value == 42);
+        }
+        {
+            constexpr ranges::variant<int, TCopy> v(ranges::in_place_index<1>, 42);
+            CONCEPT_ASSERT(v.index() == 1);
+            constexpr ranges::variant<int, TCopy> v2(v);
+            CONCEPT_ASSERT(v2.index() == 1);
+            CONCEPT_ASSERT(ranges::get<1>(v2).value == 42);
+        }
+        {
+            constexpr ranges::variant<TCopyNTMove> v(ranges::in_place_index<0>, 42);
+            CONCEPT_ASSERT(v.index() == 0);
+            constexpr ranges::variant<TCopyNTMove> v2(v);
+            CONCEPT_ASSERT(v2.index() == 0);
+            CONCEPT_ASSERT(ranges::get<0>(v2).value == 42);
+        }
+        {
+            constexpr ranges::variant<int, TCopyNTMove> v(ranges::in_place_index<1>, 42);
+            CONCEPT_ASSERT(v.index() == 1);
+            constexpr ranges::variant<int, TCopyNTMove> v2(v);
+            CONCEPT_ASSERT(v2.index() == 1);
+            CONCEPT_ASSERT(ranges::get<1>(v2).value == 42);
+        }
+    }
+
+    void test_copy_ctor_valueless_by_exception()
+    {
+        using V = ranges::variant<int, MakeEmptyT>;
+        V v1;
+        makeEmpty(v1);
+        const V &cv1 = v1;
+        V v(cv1);
+        CHECK(v.valueless_by_exception());
+    }
+
+    template <size_t Idx>
+    constexpr bool test_constexpr_copy_ctor_extension_imp(
+        ranges::variant<long, void*, const int> const& v)
+    {
+        auto v2 = v;
+        return v2.index() == v.index() &&
+            v2.index() == Idx &&
+            ranges::get<Idx>(v2) == ranges::get<Idx>(v);
+    }
+
+    void test_constexpr_copy_ctor_extension()
+    {
+        // NOTE: This test is for not yet standardized behavior. (P0602)
+        using V = ranges::variant<long, void*, const int>;
+        CONCEPT_ASSERT(std::is_trivially_copyable<V>::value);
+        CONCEPT_ASSERT(test_constexpr_copy_ctor_extension_imp<0>(V(ranges::in_place_index<0>, 42l)));
+        CONCEPT_ASSERT(test_constexpr_copy_ctor_extension_imp<1>(V(ranges::in_place_index<1>, nullptr)));
+        CONCEPT_ASSERT(test_constexpr_copy_ctor_extension_imp<2>(V(ranges::in_place_index<2>, 101)));
+    }
+
+    void test()
+    {
+        test_copy_ctor_basic();
+        test_copy_ctor_valueless_by_exception();
+        test_copy_ctor_sfinae();
+        test_constexpr_copy_ctor_extension();
+#if 0 // disable this for the moment; it fails on older compilers.
+      // Need to figure out which compilers will support it.
+        { // This is the motivating example from P0739R0
+            ranges::variant<int, double> v1(3);
+            ranges::variant v2 = v1;
+            (void) v2;
+        }
+#endif
+    }
+} // namespace copy_ctor
 
 int main()
 {
-    using namespace ranges;
+    bad_access::test();
+    alternative::test();
+    size::test();
+    holds_alternative::test();
+    copy_ctor::test();
 
+#if 0
     // Simple variant and access.
     {
         variant<int, short> v;
@@ -179,6 +540,7 @@ int main()
         variant<T[5]> vrgt{emplaced_index<0>, {T{42},T{42},T{42},T{42},T{42}}};
         (void) vrgt;
     }
+#endif
 
     return ::test_result();
 }

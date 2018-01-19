@@ -14,6 +14,7 @@
 #ifndef RANGES_V3_DETAIL_VARIANT_HPP
 #define RANGES_V3_DETAIL_VARIANT_HPP
 
+#if 0
 #include <new>
 #include <tuple>
 #include <memory>
@@ -71,17 +72,6 @@ namespace ranges
     #define RANGES_EMPLACED_INDEX_T(I) emplaced_index_t<I>
     #endif
         /// \endcond
-
-        struct bad_variant_access
-          : std::logic_error
-        {
-            explicit bad_variant_access(std::string const &what_arg)
-              : std::logic_error(what_arg)
-            {}
-            explicit bad_variant_access(char const *what_arg)
-              : std::logic_error(what_arg)
-            {}
-        };
 
         template<typename T, std::size_t Index>
         struct indexed_element
@@ -416,7 +406,7 @@ namespace ranges
                 template<typename U, std::size_t M>
                 [[noreturn]] meta::if_c<M != N> operator()(indexed_element<U, M>) const
                 {
-                    throw bad_variant_access("bad variant access");
+                    throw bad_variant_access{};
                 }
                 template<typename U>
                 void operator()(indexed_element<U, N> t) const noexcept
@@ -790,5 +780,6 @@ namespace std
 }
 
 RANGES_DIAGNOSTIC_POP
+#endif
 
 #endif
