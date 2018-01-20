@@ -768,10 +768,9 @@ namespace ranges
         constexpr auto get(V &&v)
         RANGES_DECLTYPE_AUTO_RETURN
         (
-            v.index() == I
-                ? detail::variant_raw_get<I>(
+            (void)(v.index() == I || (detail::throw_bad_variant_access(), true)),
+                detail::variant_raw_get<I>(
                     detail::variant_access::storage(static_cast<V &&>(v))).cook()
-                : throw bad_variant_access{}
         )
 
         template<std::size_t I, typename V,
