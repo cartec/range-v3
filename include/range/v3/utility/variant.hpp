@@ -159,6 +159,12 @@ namespace ranges
             template<typename... Types>
             using any_reference_type = meta::strict_or<std::is_reference<Types>...>;
 
+            template<typename = void>
+            [[noreturn]] RANGES_NOINLINE void throw_bad_variant_access()
+            {
+                throw bad_variant_access{};
+            }
+
             template<typename T, typename = void>
             struct variant_wrapper
             {

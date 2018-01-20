@@ -70,7 +70,7 @@ namespace ranges
         namespace detail
         {
             template<typename = void>
-            [[noreturn]] bool throw_bad_optional_access()
+            [[noreturn]] RANGES_NOINLINE bool throw_bad_optional_access()
             {
                 throw bad_optional_access{};
             }

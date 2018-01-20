@@ -525,6 +525,14 @@ namespace ranges
 #define RANGES_INTENDED_MODULAR_ARITHMETIC
 #endif
 
+#ifdef __GNUC__
+#define RANGES_NOINLINE [[gnu::noinline]]
+#elif defined(_MSC_VER)
+#define RANGES_NOINLINE __declspec(noinline)
+#else
+#define RANGES_NOINLINE
+#endif
+
 namespace ranges {
     inline namespace v3 {
         namespace detail {
