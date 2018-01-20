@@ -16,6 +16,8 @@
 #include "../simple_test.hpp"
 //#include "../test_utils.hpp"
 
+RANGES_DIAGNOSTIC_IGNORE_UNDEFINED_FUNC_TEMPLATE
+
 template<class...> class show_type; // FIXME: remove
 
 namespace bad_access
@@ -187,7 +189,7 @@ namespace copy_ctor
         static int alive;
         MakeEmptyT() { ++alive; }
         MakeEmptyT(const MakeEmptyT &) { ++alive; }
-        MakeEmptyT(MakeEmptyT &&) { throw 42; }
+        [[noreturn]] MakeEmptyT(MakeEmptyT &&) { throw 42; }
         MakeEmptyT &operator=(const MakeEmptyT &) { throw 42; }
         MakeEmptyT &operator=(MakeEmptyT &&) { throw 42; }
         ~MakeEmptyT() { --alive; }
@@ -295,6 +297,7 @@ namespace copy_ctor
             CONCEPT_ASSERT(v2.index() == 1);
             CONCEPT_ASSERT(ranges::get<1>(v2) == 42);
         }
+#if RANGES_PROPER_TRIVIAL_TYPE_TRAITS
         {
             constexpr ranges::variant<TCopy> v(ranges::in_place_index<0>, 42);
             CONCEPT_ASSERT(v.index() == 0);
@@ -323,6 +326,7 @@ namespace copy_ctor
             CONCEPT_ASSERT(v2.index() == 1);
             CONCEPT_ASSERT(ranges::get<1>(v2).value == 42);
         }
+#endif
     }
 
     void test_copy_ctor_valueless_by_exception()
@@ -336,23 +340,34 @@ namespace copy_ctor
     }
 
     template <size_t Idx>
+    constexpr bool test_constexpr_copy_ctor_extension_imp2(
+        ranges::variant<long, void*, const int> const& v1,
+        ranges::variant<long, void*, const int> const v2)
+    {
+        return v2.index() == v1.index() &&
+            v2.index() == Idx &&
+            ranges::get<Idx>(v2) == ranges::get<Idx>(v1);
+    }
+
+    template <size_t Idx>
     constexpr bool test_constexpr_copy_ctor_extension_imp(
         ranges::variant<long, void*, const int> const& v)
     {
-        auto v2 = v;
-        return v2.index() == v.index() &&
-            v2.index() == Idx &&
-            ranges::get<Idx>(v2) == ranges::get<Idx>(v);
+        return test_constexpr_copy_ctor_extension_imp2<Idx>(v, v);
     }
 
     void test_constexpr_copy_ctor_extension()
     {
         // NOTE: This test is for not yet standardized behavior. (P0602)
         using V = ranges::variant<long, void*, const int>;
-        CONCEPT_ASSERT(std::is_trivially_copyable<V>::value);
-        CONCEPT_ASSERT(test_constexpr_copy_ctor_extension_imp<0>(V(ranges::in_place_index<0>, 42l)));
-        CONCEPT_ASSERT(test_constexpr_copy_ctor_extension_imp<1>(V(ranges::in_place_index<1>, nullptr)));
-        CONCEPT_ASSERT(test_constexpr_copy_ctor_extension_imp<2>(V(ranges::in_place_index<2>, 101)));
+        CONCEPT_ASSERT(!RANGES_PROPER_TRIVIAL_TYPE_TRAITS ||
+            ranges::detail::is_trivially_copyable<V>::value);
+        CONCEPT_ASSERT(test_constexpr_copy_ctor_extension_imp<0>(
+            V(ranges::in_place_index<0>, 42l)));
+        CONCEPT_ASSERT(test_constexpr_copy_ctor_extension_imp<1>(
+            V(ranges::in_place_index<1>, nullptr)));
+        CONCEPT_ASSERT(test_constexpr_copy_ctor_extension_imp<2>(
+            V(ranges::in_place_index<2>, 101)));
     }
 
     void test()
@@ -361,10 +376,9 @@ namespace copy_ctor
         test_copy_ctor_valueless_by_exception();
         test_copy_ctor_sfinae();
         test_constexpr_copy_ctor_extension();
-#if 0 // disable this for the moment; it fails on older compilers.
-      // Need to figure out which compilers will support it.
+#if RANGES_CXX_DEDUCTION_GUIDES >= RANGES_CXX_DEDUCTION_GUIDES_17
         { // This is the motivating example from P0739R0
-            ranges::variant<int, double> v1(3);
+            ranges::variant<int, double> v1(ranges::in_place_index<0>, 3);
             ranges::variant v2 = v1;
             (void) v2;
         }

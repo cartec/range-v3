@@ -173,8 +173,14 @@ namespace ranges
                   : obj_(static_cast<Args &&>(args)...)
                 {}
 
-                RANGES_CXX14_CONSTEXPR T &cook() & noexcept { return obj_; }
-                constexpr T const &cook() const & noexcept { return obj_; }
+                RANGES_CXX14_CONSTEXPR T &cook() & noexcept
+                {
+                    return obj_;
+                }
+                constexpr T const &cook() const & noexcept
+                {
+                    return obj_;
+                }
                 RANGES_CXX14_CONSTEXPR T &&cook() && noexcept
                 {
                     return static_cast<T &&>(obj_);
@@ -197,7 +203,10 @@ namespace ranges
                   : ref_(static_cast<Arg &&>(arg))
                 {}
 
-                constexpr T &cook() const & noexcept { return ref_; }
+                constexpr T &cook() const & noexcept
+                {
+                    return ref_;
+                }
                 constexpr T cook() const && noexcept
                 {
                     return static_cast<T>(ref_);
@@ -326,7 +335,7 @@ namespace ranges
             constexpr auto variant_raw_get(S &&storage) noexcept
             RANGES_DECLTYPE_AUTO_RETURN
             (
-                static_cast<S &&>(storage).head_
+                (static_cast<S &&>(storage).head_)
             )
 
             template<std::size_t I, typename S,
@@ -392,16 +401,19 @@ namespace ranges
             };
 
             template<std::size_t N>
-            using variant_index_t =
-                meta::if_c<(N < static_cast<unsigned char>(~0u)), unsigned char,
-                meta::if_c<(N < static_cast<unsigned short>(~0u)), unsigned short,
-                unsigned int>>;
+            using variant_index_t = meta::if_c<
+                (N < static_cast<unsigned char>(~0u)),
+                unsigned char, unsigned short>;
 
             template<typename... Types>
             struct variant_base
             {
+                using index_t = variant_index_t<sizeof...(Types)>;
+                static_assert(sizeof...(Types) < index_t(-1),
+                    "You really need a variant with more than 2^16 alternatives?!?");
+
                 variant_storage<Types...> storage_;
-                variant_index_t<sizeof...(Types)> index_ = 0; // Invariant: index_ <= sizeof...(Types)
+                index_t index_ = 0; // Invariant: index_ <= sizeof...(Types)
 
                 variant_base() noexcept = default;
                 template<std::size_t I, typename... Args,
@@ -409,7 +421,8 @@ namespace ranges
                     CONCEPT_REQUIRES_(Constructible<T, Args...>())>
                 constexpr variant_base(meta::size_t<I>, Args &&... args)
                     noexcept(std::is_nothrow_default_constructible<T>::value)
-                  : storage_{meta::size_t<I>{}, static_cast<Args &&>(args)...}, index_{I + 1}
+                  : storage_{meta::size_t<I>{}, static_cast<Args &&>(args)...}
+                  , index_(I + 1)
                 {}
 
                 void reset() noexcept
@@ -448,6 +461,7 @@ namespace ranges
             {
                 using variant_base<Types...>::variant_base;
                 ~variant_nontrivial_destruction() { this->destroy(); }
+                variant_nontrivial_destruction() = default;
                 variant_nontrivial_destruction(variant_nontrivial_destruction const&) = default;
                 variant_nontrivial_destruction(variant_nontrivial_destruction &&) = default;
                 variant_nontrivial_destruction& operator=(variant_nontrivial_destruction const&) = default;
@@ -486,6 +500,7 @@ namespace ranges
               : variant_destruction_layer<Types...>
             {
                 using variant_destruction_layer<Types...>::variant_destruction_layer;
+                variant_nontrivial_copy() = default;
                 variant_nontrivial_copy(variant_nontrivial_copy const& that)
                     noexcept(meta::strict_and<std::is_nothrow_copy_constructible<Types>...>::value)
                   : variant_destruction_layer<Types...>{}
@@ -510,6 +525,7 @@ namespace ranges
               : variant_copy_layer<Types...>
             {
                 using variant_copy_layer<Types...>::variant_copy_layer;
+                variant_nontrivial_move() = default;
                 variant_nontrivial_move(variant_nontrivial_move const&) = default;
                 variant_nontrivial_move(variant_nontrivial_move &&that)
                     noexcept(meta::and_<std::is_nothrow_move_constructible<Types>...>::value)
@@ -587,6 +603,7 @@ namespace ranges
               : variant_move_layer<Types...>
             {
                 using variant_move_layer<Types...>::variant_move_layer;
+                variant_nontrivial_copy_assign() = default;
                 variant_nontrivial_copy_assign(variant_nontrivial_copy_assign const&) = default;
                 variant_nontrivial_copy_assign(variant_nontrivial_copy_assign &&) = default;
                 variant_nontrivial_copy_assign& operator=(variant_nontrivial_copy_assign const& that)
@@ -613,6 +630,7 @@ namespace ranges
               : variant_move_layer<Types...>
             {
                 using variant_move_layer<Types...>::variant_move_layer;
+                variant_deleted_copy_assign() = default;
                 variant_deleted_copy_assign(variant_deleted_copy_assign const&) = default;
                 variant_deleted_copy_assign(variant_deleted_copy_assign &&) = default;
                 variant_deleted_copy_assign& operator=(variant_deleted_copy_assign const&) = delete;
@@ -636,6 +654,7 @@ namespace ranges
               : variant_copy_assign_layer<Types...>
             {
                 using variant_copy_assign_layer<Types...>::variant_copy_assign_layer;
+                variant_nontrivial_move_assign() = default;
                 variant_nontrivial_move_assign(variant_nontrivial_move_assign const&) = default;
                 variant_nontrivial_move_assign(variant_nontrivial_move_assign &&) = default;
                 variant_nontrivial_move_assign& operator=(variant_nontrivial_move_assign const&) = default;
@@ -663,6 +682,7 @@ namespace ranges
               : variant_copy_assign_layer<Types...>
             {
                 using variant_copy_assign_layer<Types...>::variant_copy_assign_layer;
+                variant_deleted_move_assign() = default;
                 variant_deleted_move_assign(variant_deleted_move_assign const&) = default;
                 variant_deleted_move_assign(variant_deleted_move_assign &&) = default;
                 variant_deleted_move_assign& operator=(variant_deleted_move_assign const&) = default;
@@ -710,9 +730,10 @@ namespace ranges
             {}
 
             template<std::size_t I, typename... Args,
-                CONCEPT_REQUIRES_(Constructible<meta::at_c<meta::list<Types...>, I>, Args...>())>
+                typename T = meta::at_c<meta::list<Types...>, I>,
+                CONCEPT_REQUIRES_(Constructible<T, Args...>())>
             constexpr variant(RANGES_IN_PLACE_INDEX_T(I), Args &&... args)
-                noexcept(std::is_nothrow_constructible<meta::at_c<meta::list<Types...>, I>, Args...>::value)
+                noexcept(std::is_nothrow_constructible<T, Args...>::value)
               : base_t{meta::size_t<I>{}, static_cast<Args &&>(args)...}
             {}
 

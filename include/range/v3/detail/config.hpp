@@ -16,10 +16,6 @@
 #define RANGES_V3_DETAIL_CONFIG_HPP
 
 #include <iosfwd>
-#if (defined(NDEBUG) && !defined(RANGES_ENSURE_MSG)) || \
-    (!defined(NDEBUG) && !defined(RANGES_ASSERT) && \
-     defined(__GNUC__) && !defined(__clang__) && \
-     (__GNUC__ < 5 || defined(__MINGW32__)))
 #include <cstdio>
 #include <cstdlib>
 
@@ -30,26 +26,22 @@ namespace ranges
         namespace detail
         {
             template<class = void>
-            [[noreturn]] void assert_failure(char const *file, int line, char const *msg) noexcept
+            [[noreturn]] void assert_failure(char const *message) noexcept
             {
-                std::fprintf(stderr, "%s(%d): %s\n", file, line, msg);
+                std::fputs(message, stderr);
                 std::abort();
             }
         }
     }
 }
-#endif
+
+#define RANGES_STRINGIFY_(x) #x
+#define RANGES_STRINGIFY(x) RANGES_STRINGIFY_(x)
 
 #ifndef RANGES_ASSERT
-#if !defined(NDEBUG) && defined(__GNUC__) && !defined(__clang__) && \
-    (__GNUC__ < 5 || defined(__MINGW32__))
 #define RANGES_ASSERT(...) \
     static_cast<void>((__VA_ARGS__) ? void(0) : \
-        ::ranges::detail::assert_failure(__FILE__, __LINE__, "assertion failed: " #__VA_ARGS__))
-#else
-#include <cassert>
-#define RANGES_ASSERT assert
-#endif
+        ::ranges::detail::assert_failure(__FILE__ "(" RANGES_STRINGIFY(__LINE__) "): assertion failed: " #__VA_ARGS__))
 #endif
 
 #ifndef RANGES_ASSUME
@@ -73,8 +65,8 @@ namespace ranges
 #ifndef RANGES_ENSURE_MSG
 #if defined(NDEBUG)
 #define RANGES_ENSURE_MSG(COND, MSG) \
-    static_cast<void>((COND) ? void(0) \
-        : ::ranges::detail::assert_failure(__FILE__, __LINE__, "ensure failed: " MSG))
+    static_cast<void>((COND) ? void(0) : \
+        ::ranges::detail::assert_failure(__FILE__ "(" RANGES_STRINGIFY(__LINE__) "): ensure failed: " MSG))
 #else
 #define RANGES_ENSURE_MSG(COND, MSG) RANGES_ASSERT((COND) && MSG)
 #endif
