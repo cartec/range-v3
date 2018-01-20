@@ -25,6 +25,9 @@
 #include <range/v3/utility/concepts.hpp>
 #include <range/v3/utility/static_const.hpp>
 
+// TODO:
+// * Merge intermediate SMF layers with optional as in STLSTL
+
 namespace ranges
 {
     inline namespace v3
@@ -179,21 +182,21 @@ namespace ranges
                   : obj_(static_cast<Args &&>(args)...)
                 {}
 
-                RANGES_CXX14_CONSTEXPR T &cook() & noexcept
+                friend constexpr T &cook(variant_wrapper &w) noexcept
                 {
-                    return obj_;
+                    return w.obj_;
                 }
-                constexpr T const &cook() const & noexcept
+                friend constexpr T const &cook(variant_wrapper const &w) noexcept
                 {
-                    return obj_;
+                    return w.obj_;
                 }
-                RANGES_CXX14_CONSTEXPR T &&cook() && noexcept
+                friend constexpr T &&cook(variant_wrapper &&w) noexcept
                 {
-                    return static_cast<T &&>(obj_);
+                    return static_cast<T &&>(w.obj_);
                 }
-                constexpr T const &&cook() const && noexcept
+                friend constexpr T const &&cook(variant_wrapper const &&w) noexcept
                 {
-                    return static_cast<T const &&>(obj_);
+                    return static_cast<T const &&>(w.obj_);
                 }
             };
 
@@ -209,13 +212,13 @@ namespace ranges
                   : ref_(static_cast<Arg &&>(arg))
                 {}
 
-                constexpr T &cook() const & noexcept
+                friend constexpr T &cook(variant_wrapper const &w) noexcept
                 {
-                    return ref_;
+                    return w.ref_;
                 }
-                constexpr T cook() const && noexcept
+                friend constexpr T cook(variant_wrapper const &&w) noexcept
                 {
-                    return static_cast<T>(ref_);
+                    return static_cast<T>(w.ref_);
                 }
             };
 
@@ -488,7 +491,7 @@ namespace ranges
                 static RANGES_CXX14_CONSTEXPR void bad_access() noexcept
                 {}
                 template<std::size_t I, typename T, typename U = uncvref_t<T>,
-                    typename C = decltype(std::declval<T>().cook()),
+                    typename C = decltype(cook(std::declval<T>())),
                     CONCEPT_REQUIRES_(Constructible<U, C>())>
                 RANGES_CXX14_CONSTEXPR void operator()(meta::size_t<I>, T &&t) const
                     noexcept(std::is_nothrow_constructible<U, C>::value)
@@ -496,7 +499,7 @@ namespace ranges
                     RANGES_EXPECT(self_.index_ == 0);
                     auto &target = variant_raw_get<I>(self_.storage_);
                     CONCEPT_ASSERT(Same<U, uncvref_t<decltype(target)>>());
-                    ::new (std::addressof(target)) U(static_cast<T &&>(t).cook());
+                    ::new (std::addressof(target)) U(cook(static_cast<T &&>(t)));
                     self_.index_ = I + 1;
                 }
             };
@@ -563,7 +566,7 @@ namespace ranges
                 RANGES_AUTO_RETURN_NOEXCEPT
                 (
                     (void)(RANGES_EXPECT(self_.index_ == I + 1),
-                    variant_raw_get<I>(self_.storage_).cook() = static_cast<T &&>(t).cook())
+                    cook(variant_raw_get<I>(self_.storage_)) = cook(static_cast<T &&>(t)))
                 )
             };
 
@@ -591,13 +594,13 @@ namespace ranges
                 {
                     this->reset();
                     auto &target = variant_raw_get<I>(self_.storage_);
-                    ::new (std::addressof(target)) T(t.cook());
+                    ::new (std::addressof(target)) T(cook(t));
                 }
 
                 template<std::size_t I, typename T>
                 RANGES_CXX14_CONSTEXPR void helper(T const &t, std::false_type) const
                 {
-                    auto tmp(t.cook());
+                    auto tmp(cook(t));
                     this->reset();
                     auto &target = variant_raw_get<I>(self_.storage_);
                     ::new (std::addressof(target)) T(std::move(tmp));
@@ -711,12 +714,41 @@ namespace ranges
             {
                 template<typename V,
                     CONCEPT_REQUIRES_(meta::is<uncvref_t<V>, variant>::value)>
+                static constexpr auto index(V &&v) // FIXME: unused
+                RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT
+                (
+                    (static_cast<V &&>(v).index_)
+                )
+                template<typename V,
+                    CONCEPT_REQUIRES_(meta::is<uncvref_t<V>, variant>::value)>
                 static constexpr auto storage(V &&v)
                 RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT
                 (
                     (static_cast<V &&>(v).storage_)
                 )
             };
+
+#if 0 // FIXME: unused
+            template<std::size_t I, typename V>
+            struct variant_get_visitor
+            {
+                using result_t = decltype(cook(variant_raw_get<I>(
+                    variant_access::storage(std::declval<V>()))));
+                [[noreturn]] static result_t bad_access()
+                {
+                    throw_bad_variant_access();
+                }
+                template<typename Item>
+                constexpr result_t operator()(meta::size_t<I>, Item &&i) noexcept
+                {
+                    return cook(static_cast<Item &&>(i));
+                }
+                [[noreturn]] result_t operator()(detail::any, detail::any)
+                {
+                    throw_bad_variant_access();
+                }
+            };
+#endif
         } // namespace detail
 
         template<typename... Types>
@@ -775,8 +807,8 @@ namespace ranges
         RANGES_DECLTYPE_AUTO_RETURN
         (
             (void)(v.index() == I || (detail::throw_bad_variant_access(), true)),
-                detail::variant_raw_get<I>(
-                    detail::variant_access::storage(static_cast<V &&>(v))).cook()
+                cook(detail::variant_raw_get<I>(
+                    detail::variant_access::storage(static_cast<V &&>(v))))
         )
 
         template<std::size_t I, typename V,
@@ -785,8 +817,8 @@ namespace ranges
         RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT
         (
             RANGES_EXPECT(v.index() == I),
-            detail::variant_raw_get<I>(
-                detail::variant_access::storage(static_cast<V &&>(v))).cook()
+            cook(detail::variant_raw_get<I>(
+                detail::variant_access::storage(static_cast<V &&>(v))))
         )
 
         template<typename> struct variant_size;

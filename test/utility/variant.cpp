@@ -275,7 +275,7 @@ namespace copy_ctor
         int value;
     };
 
-    STATIC_ASSERT(!RANGES_PROPER_TRIVIAL_TYPE_TRAITS ||
+    STATIC_ASSERT(!RANGES_PROPER_TRIVIAL_TRAITS ||
         ranges::detail::is_trivially_copy_constructible<TCopy>::value);
 
     struct TCopyNTMove
@@ -286,7 +286,7 @@ namespace copy_ctor
         int value;
     };
 
-    STATIC_ASSERT(!RANGES_PROPER_TRIVIAL_TYPE_TRAITS ||
+    STATIC_ASSERT(!RANGES_PROPER_TRIVIAL_TRAITS ||
         ranges::detail::is_trivially_copy_constructible<TCopyNTMove>::value);
 
     struct MakeEmptyT {
@@ -336,7 +336,7 @@ namespace copy_ctor
         }
 
         // The following tests are for not-yet-standardized behavior (P0602):
-#if RANGES_PROPER_TRIVIAL_TYPE_TRAITS
+#if RANGES_PROPER_TRIVIAL_TRAITS
         {
             using V = ranges::variant<int, long>;
             STATIC_ASSERT(ranges::detail::is_trivially_copy_constructible<V>::value);
@@ -401,7 +401,7 @@ namespace copy_ctor
             STATIC_ASSERT(v2.index() == 1);
             STATIC_ASSERT(ranges::get<1>(v2) == 42);
         }
-#if RANGES_PROPER_TRIVIAL_TYPE_TRAITS
+#if RANGES_PROPER_TRIVIAL_TRAITS
         {
             constexpr ranges::variant<TCopy> v(ranges::in_place_index<0>, 42);
             STATIC_ASSERT(v.index() == 0);
@@ -430,7 +430,7 @@ namespace copy_ctor
             STATIC_ASSERT(v2.index() == 1);
             STATIC_ASSERT(ranges::get<1>(v2).value == 42);
         }
-#endif
+#endif // RANGES_PROPER_TRIVIAL_TRAITS
     }
 
     void test_copy_ctor_valueless_by_exception()
@@ -464,7 +464,7 @@ namespace copy_ctor
     {
         // NOTE: This test is for not yet standardized behavior. (P0602)
         using V = ranges::variant<long, void*, const int>;
-        STATIC_ASSERT(!RANGES_PROPER_TRIVIAL_TYPE_TRAITS ||
+        STATIC_ASSERT(!RANGES_PROPER_TRIVIAL_TRAITS ||
             ranges::detail::is_trivially_copyable<V>::value);
         STATIC_ASSERT(test_constexpr_copy_ctor_extension_imp<0>(
             V(ranges::in_place_index<0>, 42l)));
@@ -537,7 +537,7 @@ namespace move_ctor
         int value;
     };
 
-    STATIC_ASSERT(!RANGES_PROPER_TRIVIAL_TYPE_TRAITS ||
+    STATIC_ASSERT(!RANGES_PROPER_TRIVIAL_TRAITS ||
         ranges::detail::is_trivially_move_constructible<TMove>::value);
 
     struct TMoveNTCopy
@@ -548,7 +548,7 @@ namespace move_ctor
         int value;
     };
 
-    STATIC_ASSERT(!RANGES_PROPER_TRIVIAL_TYPE_TRAITS ||
+    STATIC_ASSERT(!RANGES_PROPER_TRIVIAL_TRAITS ||
         ranges::detail::is_trivially_move_constructible<TMoveNTCopy>::value);
 
     struct MakeEmptyT
@@ -619,7 +619,7 @@ namespace move_ctor
             STATIC_ASSERT(!std::is_move_constructible<V>::value);
         }
 
-#if RANGES_PROPER_TRIVIAL_TYPE_TRAITS
+#if RANGES_PROPER_TRIVIAL_TRAITS
         // The following tests are for not-yet-standardized behavior (P0602):
         {
             using V = ranges::variant<int, long>;
@@ -638,7 +638,7 @@ namespace move_ctor
             using V = ranges::variant<int, TMoveNTCopy>;
             STATIC_ASSERT(ranges::detail::is_trivially_move_constructible<V>::value);
         }
-#endif
+#endif // RANGES_PROPER_TRIVIAL_TRAITS
     }
 
     template <typename T>
@@ -692,10 +692,14 @@ namespace move_ctor
         // The following tests are for not-yet-standardized behavior (P0602):
         {
             struct {
+                static constexpr Result<int> impl2(ranges::variant<int> v2) {
+                    return {v2.index(), ranges::get<0>(ranges::detail::move(v2))};
+                }
+                static constexpr Result<int> impl1(ranges::variant<int> v) {
+                    return impl2(ranges::detail::move(v));
+                }
                 constexpr Result<int> operator()() const {
-                    ranges::variant<int> v(ranges::in_place_index<0>, 42);
-                    ranges::variant<int> v2 = std::move(v);
-                    return {v2.index(), ranges::get<0>(std::move(v2))};
+                    return impl1(ranges::variant<int>(ranges::in_place_index<0>, 42));
                 }
             } test;
             constexpr auto result = test();
@@ -704,16 +708,21 @@ namespace move_ctor
         }
         {
             struct {
+                static constexpr Result<long> impl2(ranges::variant<int, long> v2) {
+                    return {v2.index(), ranges::get<1>(ranges::detail::move(v2))};
+                }
+                static constexpr Result<long> impl1(ranges::variant<int, long> v) {
+                    return impl2(ranges::detail::move(v));
+                }
                 constexpr Result<long> operator()() const {
-                    ranges::variant<int, long> v(ranges::in_place_index<1>, 42);
-                    ranges::variant<int, long> v2 = std::move(v);
-                    return {v2.index(), ranges::get<1>(std::move(v2))};
+                    return impl1(ranges::variant<int, long>(ranges::in_place_index<1>, 42));
                 }
             } test;
             constexpr auto result = test();
             STATIC_ASSERT(result.index == 1);
             STATIC_ASSERT(result.value == 42);
         }
+#if RANGES_PROPER_TRIVIAL_TRAITS
         {
             struct {
                 constexpr Result<TMove> operator()() const {
@@ -762,6 +771,7 @@ namespace move_ctor
             STATIC_ASSERT(result.index == 1);
             STATIC_ASSERT(result.value.value == 42);
         }
+#endif // RANGES_PROPER_TRIVIAL_TRAITS
     }
 
     void test_move_ctor_valueless_by_exception()
@@ -774,22 +784,35 @@ namespace move_ctor
     }
 
     template <size_t Idx>
+    constexpr bool test_constexpr_ctor_extension_imp3(
+            ranges::variant<long, void*, const int> const& v1,
+            ranges::variant<long, void*, const int> v2)
+    {
+        return v2.index() == v1.index() && v2.index() == Idx &&
+            ranges::get<Idx>(v2) == ranges::get<Idx>(v1);
+    }
+    template <size_t Idx>
+    constexpr bool test_constexpr_ctor_extension_imp2(
+            ranges::variant<long, void*, const int> const& v1,
+            ranges::variant<long, void*, const int> v2)
+    {
+        return test_constexpr_ctor_extension_imp3<Idx>(v1, ranges::detail::move(v2));
+    }
+    template <size_t Idx>
     constexpr bool test_constexpr_ctor_extension_imp(
             ranges::variant<long, void*, const int> const& v)
     {
-        auto copy = v;
-        auto v2 = std::move(copy);
-        return v2.index() == v.index() &&
-                    v2.index() == Idx &&
-                    ranges::get<Idx>(v2) == ranges::get<Idx>(v);
+        return test_constexpr_ctor_extension_imp2<Idx>(v, v);
     }
 
     void test_constexpr_move_ctor_extension()
     {
         // NOTE: This test is for not yet standardized behavior. (P0602)
         using V = ranges::variant<long, void*, const int>;
-        STATIC_ASSERT(std::is_trivially_copyable<V>::value);
-        STATIC_ASSERT(std::is_trivially_move_constructible<V>::value);
+        STATIC_ASSERT(!RANGES_PROPER_TRIVIAL_TRAITS ||
+            ranges::detail::is_trivially_copyable<V>::value);
+        STATIC_ASSERT(!RANGES_PROPER_TRIVIAL_TRAITS ||
+            ranges::detail::is_trivially_move_constructible<V>::value);
         STATIC_ASSERT(test_constexpr_ctor_extension_imp<0>(V(ranges::in_place_index<0>, 42l)));
         STATIC_ASSERT(test_constexpr_ctor_extension_imp<1>(V(ranges::in_place_index<1>, nullptr)));
         STATIC_ASSERT(test_constexpr_ctor_extension_imp<2>(V(ranges::in_place_index<2>, 101)));
