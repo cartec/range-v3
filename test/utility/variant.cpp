@@ -9,6 +9,16 @@
 //
 // Project home: https://github.com/ericniebler/range-v3
 
+// -*- C++ -*-
+//===----------------------------------------------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is dual licensed under the MIT and the University of Illinois Open
+// Source Licenses. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
 #include <vector>
 #include <sstream>
 #include <iostream>
@@ -20,11 +30,17 @@ RANGES_DIAGNOSTIC_IGNORE_UNDEFINED_FUNC_TEMPLATE
 
 template<class...> class show_type; // FIXME: remove
 
+#if RANGES_CXX_STATIC_ASSERT >= RANGES_CXX_STATIC_ASSERT_17
+#define STATIC_ASSERT(...) static_assert(__VA_ARGS__)
+#else
+#define STATIC_ASSERT(...) static_assert((__VA_ARGS__), #__VA_ARGS__)
+#endif
+
 namespace bad_access
 {
     void test()
     {
-        CONCEPT_ASSERT(std::is_base_of<std::exception, ranges::bad_variant_access>::value);
+        STATIC_ASSERT(std::is_base_of<std::exception, ranges::bad_variant_access>::value);
         static_assert(noexcept(ranges::bad_variant_access{}), "must be noexcept");
         static_assert(noexcept(ranges::bad_variant_access{}.what()), "must be noexcept");
         ranges::bad_variant_access ex;
@@ -34,7 +50,7 @@ namespace bad_access
 
 namespace npos
 {
-    CONCEPT_ASSERT(ranges::variant_npos == std::size_t(-1));
+    STATIC_ASSERT(ranges::variant_npos == std::size_t(-1));
 }
 
 namespace alternative
@@ -42,16 +58,16 @@ namespace alternative
     template <class V, size_t I, class E>
     void single_test()
     {
-        CONCEPT_ASSERT(std::is_same<meta::_t<ranges::variant_alternative<I, V>>, E>::value);
-        CONCEPT_ASSERT(std::is_same<meta::_t<ranges::variant_alternative<I, const V>>, const E>::value);
-        CONCEPT_ASSERT(std::is_same<meta::_t<ranges::variant_alternative<I, volatile V>>,
+        STATIC_ASSERT(std::is_same<meta::_t<ranges::variant_alternative<I, V>>, E>::value);
+        STATIC_ASSERT(std::is_same<meta::_t<ranges::variant_alternative<I, const V>>, const E>::value);
+        STATIC_ASSERT(std::is_same<meta::_t<ranges::variant_alternative<I, volatile V>>,
             volatile E>::value);
-        CONCEPT_ASSERT(std::is_same<meta::_t<ranges::variant_alternative<I, const volatile V>>,
+        STATIC_ASSERT(std::is_same<meta::_t<ranges::variant_alternative<I, const volatile V>>,
             const volatile E>::value);
-        CONCEPT_ASSERT(std::is_same<ranges::variant_alternative_t<I, V>, E>::value);
-        CONCEPT_ASSERT(std::is_same<ranges::variant_alternative_t<I, const V>, const E>::value);
-        CONCEPT_ASSERT(std::is_same<ranges::variant_alternative_t<I, volatile V>, volatile E>::value);
-        CONCEPT_ASSERT(std::is_same<ranges::variant_alternative_t<I, const volatile V>,
+        STATIC_ASSERT(std::is_same<ranges::variant_alternative_t<I, V>, E>::value);
+        STATIC_ASSERT(std::is_same<ranges::variant_alternative_t<I, const V>, const E>::value);
+        STATIC_ASSERT(std::is_same<ranges::variant_alternative_t<I, volatile V>, volatile E>::value);
+        STATIC_ASSERT(std::is_same<ranges::variant_alternative_t<I, const volatile V>,
             const volatile E>::value);
     }
 
@@ -80,17 +96,17 @@ namespace size
     template <class V, size_t E>
     void single_test()
     {
-        CONCEPT_ASSERT(ranges::variant_size<V>::value == E);
-        CONCEPT_ASSERT(ranges::variant_size<const V>::value == E);
-        CONCEPT_ASSERT(ranges::variant_size<volatile V>::value == E);
-        CONCEPT_ASSERT(ranges::variant_size<const volatile V>::value == E);
-        CONCEPT_ASSERT(std::is_base_of<
-            std::integral_constant<std::size_t, E>, ranges::variant_size<V>>::value);
+        STATIC_ASSERT(ranges::variant_size<V>::value == E);
+        STATIC_ASSERT(ranges::variant_size<const V>::value == E);
+        STATIC_ASSERT(ranges::variant_size<volatile V>::value == E);
+        STATIC_ASSERT(ranges::variant_size<const volatile V>::value == E);
+        STATIC_ASSERT(std::is_base_of<std::integral_constant<std::size_t, E>,
+            ranges::variant_size<V>>::value);
 #if RANGES_CXX_VARIABLE_TEMPLATES >= RANGES_CXX_VARIABLE_TEMPLATES_14
-        CONCEPT_ASSERT(ranges::variant_size_v<V> == E);
-        CONCEPT_ASSERT(ranges::variant_size_v<const V> == E);
-        CONCEPT_ASSERT(ranges::variant_size_v<volatile V> == E);
-        CONCEPT_ASSERT(ranges::variant_size_v<const volatile V> == E);
+        STATIC_ASSERT(ranges::variant_size_v<V> == E);
+        STATIC_ASSERT(ranges::variant_size_v<const V> == E);
+        STATIC_ASSERT(ranges::variant_size_v<volatile V> == E);
+        STATIC_ASSERT(ranges::variant_size_v<const volatile V> == E);
 #endif
     }
 
@@ -109,18 +125,18 @@ namespace holds_alternative
         {
             using V = ranges::variant<int>;
             constexpr V v;
-            CONCEPT_ASSERT(ranges::holds_alternative<int>(v));
+            STATIC_ASSERT(ranges::holds_alternative<int>(v));
         }
         {
             using V = ranges::variant<int, long>;
             constexpr V v;
-            CONCEPT_ASSERT(ranges::holds_alternative<int>(v));
-            CONCEPT_ASSERT(!ranges::holds_alternative<long>(v));
+            STATIC_ASSERT(ranges::holds_alternative<int>(v));
+            STATIC_ASSERT(!ranges::holds_alternative<long>(v));
         }
         { // noexcept test
             using V = ranges::variant<int>;
             const V v;
-            CONCEPT_ASSERT(noexcept(ranges::holds_alternative<int>(v)));
+            STATIC_ASSERT(noexcept(ranges::holds_alternative<int>(v)));
         }
     }
 } // namespace holds_alternative
@@ -142,26 +158,26 @@ namespace default_ctor
     void test_default_ctor_sfinae() {
         {
             using V = ranges::variant<ranges::monostate, int>;
-            CONCEPT_ASSERT(std::is_default_constructible<V>::value);
+            STATIC_ASSERT(std::is_default_constructible<V>::value);
         }
         {
             using V = ranges::variant<NonDefaultConstructible, int>;
-            CONCEPT_ASSERT(!std::is_default_constructible<V>::value);
+            STATIC_ASSERT(!std::is_default_constructible<V>::value);
         }
         {
             using V = ranges::variant<int &, int>;
-            CONCEPT_ASSERT(!std::is_default_constructible<V>::value);
+            STATIC_ASSERT(!std::is_default_constructible<V>::value);
         }
     }
 
     void test_default_ctor_noexcept() {
         {
             using V = ranges::variant<int>;
-            CONCEPT_ASSERT(std::is_nothrow_default_constructible<V>::value);
+            STATIC_ASSERT(std::is_nothrow_default_constructible<V>::value);
         }
         {
             using V = ranges::variant<NotNoexcept>;
-            CONCEPT_ASSERT(!std::is_nothrow_default_constructible<V>::value);
+            STATIC_ASSERT(!std::is_nothrow_default_constructible<V>::value);
         }
     }
 
@@ -192,14 +208,14 @@ namespace default_ctor
         {
             using V = ranges::variant<int, long>;
             constexpr V v;
-            CONCEPT_ASSERT(v.index() == 0);
-            CONCEPT_ASSERT(ranges::get<0>(v) == 0);
+            STATIC_ASSERT(v.index() == 0);
+            STATIC_ASSERT(ranges::get<0>(v) == 0);
         }
         {
             using V = ranges::variant<int, long>;
             constexpr V v;
-            CONCEPT_ASSERT(v.index() == 0);
-            CONCEPT_ASSERT(ranges::get<0>(v) == 0);
+            STATIC_ASSERT(v.index() == 0);
+            STATIC_ASSERT(ranges::get<0>(v) == 0);
         }
     }
 
@@ -220,7 +236,7 @@ namespace copy_ctor
         NonT(const NonT &o) : value(o.value) {}
         int value;
     };
-    CONCEPT_ASSERT(!ranges::detail::is_trivially_copy_constructible<NonT>::value);
+    STATIC_ASSERT(!ranges::detail::is_trivially_copy_constructible<NonT>::value);
 
     struct NoCopy
     {
@@ -247,8 +263,8 @@ namespace copy_ctor
         int value;
     };
 
-    CONCEPT_ASSERT(!ranges::detail::is_trivially_copy_constructible<NTCopy>::value);
-    CONCEPT_ASSERT(std::is_copy_constructible<NTCopy>::value);
+    STATIC_ASSERT(!ranges::detail::is_trivially_copy_constructible<NTCopy>::value);
+    STATIC_ASSERT(std::is_copy_constructible<NTCopy>::value);
 
     struct TCopy
     {
@@ -258,7 +274,7 @@ namespace copy_ctor
         int value;
     };
 
-    CONCEPT_ASSERT(!RANGES_PROPER_TRIVIAL_TYPE_TRAITS ||
+    STATIC_ASSERT(!RANGES_PROPER_TRIVIAL_TYPE_TRAITS ||
         ranges::detail::is_trivially_copy_constructible<TCopy>::value);
 
     struct TCopyNTMove
@@ -269,7 +285,7 @@ namespace copy_ctor
         int value;
     };
 
-    CONCEPT_ASSERT(!RANGES_PROPER_TRIVIAL_TYPE_TRAITS ||
+    STATIC_ASSERT(!RANGES_PROPER_TRIVIAL_TYPE_TRAITS ||
         ranges::detail::is_trivially_copy_constructible<TCopyNTMove>::value);
 
     struct MakeEmptyT {
@@ -303,39 +319,39 @@ namespace copy_ctor
     {
         {
             using V = ranges::variant<int, long>;
-            CONCEPT_ASSERT(std::is_copy_constructible<V>::value);
+            STATIC_ASSERT(std::is_copy_constructible<V>::value);
         }
         {
             using V = ranges::variant<int, NoCopy>;
-            CONCEPT_ASSERT(!std::is_copy_constructible<V>::value);
+            STATIC_ASSERT(!std::is_copy_constructible<V>::value);
         }
         {
             using V = ranges::variant<int, MoveOnly>;
-            CONCEPT_ASSERT(!std::is_copy_constructible<V>::value);
+            STATIC_ASSERT(!std::is_copy_constructible<V>::value);
         }
         {
             using V = ranges::variant<int, MoveOnlyNT>;
-            CONCEPT_ASSERT(!std::is_copy_constructible<V>::value);
+            STATIC_ASSERT(!std::is_copy_constructible<V>::value);
         }
 
         // The following tests are for not-yet-standardized behavior (P0602):
 #if RANGES_PROPER_TRIVIAL_TYPE_TRAITS
         {
             using V = ranges::variant<int, long>;
-            CONCEPT_ASSERT(ranges::detail::is_trivially_copy_constructible<V>::value);
+            STATIC_ASSERT(ranges::detail::is_trivially_copy_constructible<V>::value);
         }
         {
             using V = ranges::variant<int, NTCopy>;
-            CONCEPT_ASSERT(!ranges::detail::is_trivially_copy_constructible<V>::value);
-            CONCEPT_ASSERT(std::is_copy_constructible<V>::value);
+            STATIC_ASSERT(!ranges::detail::is_trivially_copy_constructible<V>::value);
+            STATIC_ASSERT(std::is_copy_constructible<V>::value);
         }
         {
             using V = ranges::variant<int, TCopy>;
-            CONCEPT_ASSERT(ranges::detail::is_trivially_copy_constructible<V>::value);
+            STATIC_ASSERT(ranges::detail::is_trivially_copy_constructible<V>::value);
         }
         {
             using V = ranges::variant<int, TCopyNTMove>;
-            CONCEPT_ASSERT(ranges::detail::is_trivially_copy_constructible<V>::value);
+            STATIC_ASSERT(ranges::detail::is_trivially_copy_constructible<V>::value);
         }
 #endif
     }
@@ -372,46 +388,46 @@ namespace copy_ctor
         // The following tests are for not-yet-standardized behavior (P0602):
         {
             constexpr ranges::variant<int> v(ranges::in_place_index<0>, 42);
-            CONCEPT_ASSERT(v.index() == 0);
+            STATIC_ASSERT(v.index() == 0);
             constexpr ranges::variant<int> v2 = v;
-            CONCEPT_ASSERT(v2.index() == 0);
-            CONCEPT_ASSERT(ranges::get<0>(v2) == 42);
+            STATIC_ASSERT(v2.index() == 0);
+            STATIC_ASSERT(ranges::get<0>(v2) == 42);
         }
         {
             constexpr ranges::variant<int, long> v(ranges::in_place_index<1>, 42);
-            CONCEPT_ASSERT(v.index() == 1);
+            STATIC_ASSERT(v.index() == 1);
             constexpr ranges::variant<int, long> v2 = v;
-            CONCEPT_ASSERT(v2.index() == 1);
-            CONCEPT_ASSERT(ranges::get<1>(v2) == 42);
+            STATIC_ASSERT(v2.index() == 1);
+            STATIC_ASSERT(ranges::get<1>(v2) == 42);
         }
 #if RANGES_PROPER_TRIVIAL_TYPE_TRAITS
         {
             constexpr ranges::variant<TCopy> v(ranges::in_place_index<0>, 42);
-            CONCEPT_ASSERT(v.index() == 0);
+            STATIC_ASSERT(v.index() == 0);
             constexpr ranges::variant<TCopy> v2(v);
-            CONCEPT_ASSERT(v2.index() == 0);
-            CONCEPT_ASSERT(ranges::get<0>(v2).value == 42);
+            STATIC_ASSERT(v2.index() == 0);
+            STATIC_ASSERT(ranges::get<0>(v2).value == 42);
         }
         {
             constexpr ranges::variant<int, TCopy> v(ranges::in_place_index<1>, 42);
-            CONCEPT_ASSERT(v.index() == 1);
+            STATIC_ASSERT(v.index() == 1);
             constexpr ranges::variant<int, TCopy> v2(v);
-            CONCEPT_ASSERT(v2.index() == 1);
-            CONCEPT_ASSERT(ranges::get<1>(v2).value == 42);
+            STATIC_ASSERT(v2.index() == 1);
+            STATIC_ASSERT(ranges::get<1>(v2).value == 42);
         }
         {
             constexpr ranges::variant<TCopyNTMove> v(ranges::in_place_index<0>, 42);
-            CONCEPT_ASSERT(v.index() == 0);
+            STATIC_ASSERT(v.index() == 0);
             constexpr ranges::variant<TCopyNTMove> v2(v);
-            CONCEPT_ASSERT(v2.index() == 0);
-            CONCEPT_ASSERT(ranges::get<0>(v2).value == 42);
+            STATIC_ASSERT(v2.index() == 0);
+            STATIC_ASSERT(ranges::get<0>(v2).value == 42);
         }
         {
             constexpr ranges::variant<int, TCopyNTMove> v(ranges::in_place_index<1>, 42);
-            CONCEPT_ASSERT(v.index() == 1);
+            STATIC_ASSERT(v.index() == 1);
             constexpr ranges::variant<int, TCopyNTMove> v2(v);
-            CONCEPT_ASSERT(v2.index() == 1);
-            CONCEPT_ASSERT(ranges::get<1>(v2).value == 42);
+            STATIC_ASSERT(v2.index() == 1);
+            STATIC_ASSERT(ranges::get<1>(v2).value == 42);
         }
 #endif
     }
@@ -447,13 +463,13 @@ namespace copy_ctor
     {
         // NOTE: This test is for not yet standardized behavior. (P0602)
         using V = ranges::variant<long, void*, const int>;
-        CONCEPT_ASSERT(!RANGES_PROPER_TRIVIAL_TYPE_TRAITS ||
+        STATIC_ASSERT(!RANGES_PROPER_TRIVIAL_TYPE_TRAITS ||
             ranges::detail::is_trivially_copyable<V>::value);
-        CONCEPT_ASSERT(test_constexpr_copy_ctor_extension_imp<0>(
+        STATIC_ASSERT(test_constexpr_copy_ctor_extension_imp<0>(
             V(ranges::in_place_index<0>, 42l)));
-        CONCEPT_ASSERT(test_constexpr_copy_ctor_extension_imp<1>(
+        STATIC_ASSERT(test_constexpr_copy_ctor_extension_imp<1>(
             V(ranges::in_place_index<1>, nullptr)));
-        CONCEPT_ASSERT(test_constexpr_copy_ctor_extension_imp<2>(
+        STATIC_ASSERT(test_constexpr_copy_ctor_extension_imp<2>(
             V(ranges::in_place_index<2>, 101)));
     }
 
@@ -473,6 +489,20 @@ namespace copy_ctor
     }
 } // namespace copy_ctor
 
+namespace monostate
+{
+    void test()
+    {
+        using M = ranges::monostate;
+        STATIC_ASSERT(ranges::detail::is_trivially_default_constructible<M>::value);
+        STATIC_ASSERT(ranges::detail::is_trivially_copy_constructible<M>::value);
+        STATIC_ASSERT(ranges::detail::is_trivially_copy_assignable<M>::value);
+        STATIC_ASSERT(std::is_trivially_destructible<M>::value);
+        constexpr M m{};
+        (void)m;
+    }
+} // namespace monostate
+
 int main()
 {
     bad_access::test();
@@ -481,6 +511,7 @@ int main()
     holds_alternative::test();
     default_ctor::test();
     copy_ctor::test();
+    monostate::test();
 
 #if 0
     // Simple variant and access.
