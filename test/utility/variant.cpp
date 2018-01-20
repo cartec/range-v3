@@ -1,6 +1,7 @@
 // Range v3 library
 //
 //  Copyright Eric Niebler 2015
+//  Copyright Casey Carter 2018
 //
 //  Use, modification and distribution is subject to the
 //  Boost Software License, Version 1.0. (See accompanying
@@ -525,7 +526,7 @@ namespace move_ctor
         int value;
     };
 
-    STATIC_ASSERT(!std::is_trivially_move_constructible<NTMove>::value);
+    STATIC_ASSERT(!ranges::detail::is_trivially_move_constructible<NTMove>::value);
     STATIC_ASSERT(std::is_move_constructible<NTMove>::value);
 
     struct TMove
@@ -536,7 +537,8 @@ namespace move_ctor
         int value;
     };
 
-    STATIC_ASSERT(std::is_trivially_move_constructible<TMove>::value);
+    STATIC_ASSERT(!RANGES_PROPER_TRIVIAL_TYPE_TRAITS ||
+        ranges::detail::is_trivially_move_constructible<TMove>::value);
 
     struct TMoveNTCopy
     {
@@ -546,7 +548,8 @@ namespace move_ctor
         int value;
     };
 
-    STATIC_ASSERT(std::is_trivially_move_constructible<TMoveNTCopy>::value);
+    STATIC_ASSERT(!RANGES_PROPER_TRIVIAL_TYPE_TRAITS ||
+        ranges::detail::is_trivially_move_constructible<TMoveNTCopy>::value);
 
     struct MakeEmptyT
     {
@@ -616,24 +619,26 @@ namespace move_ctor
             STATIC_ASSERT(!std::is_move_constructible<V>::value);
         }
 
+#if RANGES_PROPER_TRIVIAL_TYPE_TRAITS
         // The following tests are for not-yet-standardized behavior (P0602):
         {
             using V = ranges::variant<int, long>;
-            STATIC_ASSERT(std::is_trivially_move_constructible<V>::value);
+            STATIC_ASSERT(ranges::detail::is_trivially_move_constructible<V>::value);
         }
         {
             using V = ranges::variant<int, NTMove>;
-            STATIC_ASSERT(!std::is_trivially_move_constructible<V>::value);
+            STATIC_ASSERT(!ranges::detail::is_trivially_move_constructible<V>::value);
             STATIC_ASSERT(std::is_move_constructible<V>::value);
         }
         {
             using V = ranges::variant<int, TMove>;
-            STATIC_ASSERT(std::is_trivially_move_constructible<V>::value);
+            STATIC_ASSERT(ranges::detail::is_trivially_move_constructible<V>::value);
         }
         {
             using V = ranges::variant<int, TMoveNTCopy>;
-            STATIC_ASSERT(std::is_trivially_move_constructible<V>::value);
+            STATIC_ASSERT(ranges::detail::is_trivially_move_constructible<V>::value);
         }
+#endif
     }
 
     template <typename T>
