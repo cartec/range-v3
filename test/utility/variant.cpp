@@ -125,6 +125,93 @@ namespace holds_alternative
     }
 } // namespace holds_alternative
 
+namespace default_ctor
+{
+    struct NonDefaultConstructible {
+        NonDefaultConstructible(int) {}
+    };
+
+    struct NotNoexcept {
+        NotNoexcept() noexcept(false) {}
+    };
+
+    struct DefaultCtorThrows {
+        [[noreturn]] DefaultCtorThrows() { throw 42; }
+    };
+
+    void test_default_ctor_sfinae() {
+        {
+            using V = ranges::variant<ranges::monostate, int>;
+            CONCEPT_ASSERT(std::is_default_constructible<V>::value);
+        }
+        {
+            using V = ranges::variant<NonDefaultConstructible, int>;
+            CONCEPT_ASSERT(!std::is_default_constructible<V>::value);
+        }
+        {
+            using V = ranges::variant<int &, int>;
+            CONCEPT_ASSERT(!std::is_default_constructible<V>::value);
+        }
+    }
+
+    void test_default_ctor_noexcept() {
+        {
+            using V = ranges::variant<int>;
+            CONCEPT_ASSERT(std::is_nothrow_default_constructible<V>::value);
+        }
+        {
+            using V = ranges::variant<NotNoexcept>;
+            CONCEPT_ASSERT(!std::is_nothrow_default_constructible<V>::value);
+        }
+    }
+
+    void test_default_ctor_throws() {
+        using V = ranges::variant<DefaultCtorThrows, int>;
+        try {
+            V v;
+            CHECK(false);
+        } catch (const int &ex) {
+            CHECK(ex == 42);
+        } catch (...) {
+            CHECK(false);
+        }
+    }
+
+    void test_default_ctor_basic()
+    {
+        {
+            ranges::variant<int> v;
+            CHECK(v.index() == 0u);
+            CHECK(ranges::get<0>(v) == 0);
+        }
+        {
+            ranges::variant<int, long> v;
+            CHECK(v.index() == 0u);
+            CHECK(ranges::get<0>(v) == 0);
+        }
+        {
+            using V = ranges::variant<int, long>;
+            constexpr V v;
+            CONCEPT_ASSERT(v.index() == 0);
+            CONCEPT_ASSERT(ranges::get<0>(v) == 0);
+        }
+        {
+            using V = ranges::variant<int, long>;
+            constexpr V v;
+            CONCEPT_ASSERT(v.index() == 0);
+            CONCEPT_ASSERT(ranges::get<0>(v) == 0);
+        }
+    }
+
+    void test()
+    {
+        test_default_ctor_basic();
+        test_default_ctor_sfinae();
+        test_default_ctor_noexcept();
+        test_default_ctor_throws();
+    }
+} // namespace default_ctor
+
 namespace copy_ctor
 {
     struct NonT
@@ -392,6 +479,7 @@ int main()
     alternative::test();
     size::test();
     holds_alternative::test();
+    default_ctor::test();
     copy_ctor::test();
 
 #if 0

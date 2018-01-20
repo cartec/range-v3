@@ -821,6 +821,8 @@ namespace ranges
         inline
 #endif
         constexpr auto variant_npos = ~std::size_t{0};
+
+        struct monostate {};
     } // namespace v3
 } // namespace ranges
 
