@@ -489,6 +489,317 @@ namespace copy_ctor
     }
 } // namespace copy_ctor
 
+namespace move_ctor
+{
+    struct ThrowsMove
+    {
+        ThrowsMove(ThrowsMove &&) noexcept(false) {}
+    };
+
+    struct NoCopy
+    {
+        NoCopy(const NoCopy &) = delete;
+    };
+
+    struct MoveOnly
+    {
+        int value;
+        MoveOnly(int v) : value(v) {}
+        MoveOnly(const MoveOnly &) = delete;
+        MoveOnly(MoveOnly &&) = default;
+    };
+
+    struct MoveOnlyNT
+    {
+        int value;
+        MoveOnlyNT(int v) : value(v) {}
+        MoveOnlyNT(const MoveOnlyNT &) = delete;
+        MoveOnlyNT(MoveOnlyNT &&other) : value(other.value) { other.value = -1; }
+    };
+
+    struct NTMove
+    {
+        constexpr NTMove(int v) : value(v) {}
+        NTMove(const NTMove &) = delete;
+        NTMove(NTMove &&that) : value(that.value) { that.value = -1; }
+        int value;
+    };
+
+    STATIC_ASSERT(!std::is_trivially_move_constructible<NTMove>::value);
+    STATIC_ASSERT(std::is_move_constructible<NTMove>::value);
+
+    struct TMove
+    {
+        constexpr TMove(int v) : value(v) {}
+        TMove(const TMove &) = delete;
+        TMove(TMove &&) = default;
+        int value;
+    };
+
+    STATIC_ASSERT(std::is_trivially_move_constructible<TMove>::value);
+
+    struct TMoveNTCopy
+    {
+        constexpr TMoveNTCopy(int v) : value(v) {}
+        TMoveNTCopy(const TMoveNTCopy& that) : value(that.value) {}
+        TMoveNTCopy(TMoveNTCopy&&) = default;
+        int value;
+    };
+
+    STATIC_ASSERT(std::is_trivially_move_constructible<TMoveNTCopy>::value);
+
+    struct MakeEmptyT
+    {
+        static int alive;
+        MakeEmptyT() { ++alive; }
+        MakeEmptyT(const MakeEmptyT &) {
+            ++alive;
+            // Don't throw from the copy constructor since variant's assignment
+            // operator performs a copy before committing to the assignment.
+        }
+        [[noreturn]] MakeEmptyT(MakeEmptyT &&) { throw 42; }
+        MakeEmptyT &operator=(const MakeEmptyT &) { throw 42; }
+        MakeEmptyT &operator=(MakeEmptyT &&) { throw 42; }
+        ~MakeEmptyT() { --alive; }
+    };
+
+    int MakeEmptyT::alive = 0;
+
+    template <class Variant>
+    void makeEmpty(Variant &v)
+    {
+        Variant v2(ranges::in_place_type<MakeEmptyT>);
+        try {
+            v = std::move(v2);
+            CHECK(false);
+        } catch (...) {
+            CHECK(v.valueless_by_exception());
+        }
+    }
+
+    void test_move_noexcept()
+    {
+        {
+            using V = ranges::variant<int, long>;
+            STATIC_ASSERT(std::is_nothrow_move_constructible<V>::value);
+        }
+        {
+            using V = ranges::variant<int, MoveOnly>;
+            STATIC_ASSERT(std::is_nothrow_move_constructible<V>::value);
+        }
+        {
+            using V = ranges::variant<int, MoveOnlyNT>;
+            STATIC_ASSERT(!std::is_nothrow_move_constructible<V>::value);
+        }
+        {
+            using V = ranges::variant<int, ThrowsMove>;
+            STATIC_ASSERT(!std::is_nothrow_move_constructible<V>::value);
+        }
+    }
+
+    void test_move_ctor_sfinae()
+    {
+        {
+            using V = ranges::variant<int, long>;
+            STATIC_ASSERT(std::is_move_constructible<V>::value);
+        }
+        {
+            using V = ranges::variant<int, MoveOnly>;
+            STATIC_ASSERT(std::is_move_constructible<V>::value);
+        }
+        {
+            using V = ranges::variant<int, MoveOnlyNT>;
+            STATIC_ASSERT(std::is_move_constructible<V>::value);
+        }
+        {
+            using V = ranges::variant<int, NoCopy>;
+            STATIC_ASSERT(!std::is_move_constructible<V>::value);
+        }
+
+        // The following tests are for not-yet-standardized behavior (P0602):
+        {
+            using V = ranges::variant<int, long>;
+            STATIC_ASSERT(std::is_trivially_move_constructible<V>::value);
+        }
+        {
+            using V = ranges::variant<int, NTMove>;
+            STATIC_ASSERT(!std::is_trivially_move_constructible<V>::value);
+            STATIC_ASSERT(std::is_move_constructible<V>::value);
+        }
+        {
+            using V = ranges::variant<int, TMove>;
+            STATIC_ASSERT(std::is_trivially_move_constructible<V>::value);
+        }
+        {
+            using V = ranges::variant<int, TMoveNTCopy>;
+            STATIC_ASSERT(std::is_trivially_move_constructible<V>::value);
+        }
+    }
+
+    template <typename T>
+    struct Result { size_t index; T value; };
+
+    void test_move_ctor_basic()
+    {
+        {
+            ranges::variant<int> v(ranges::in_place_index<0>, 42);
+            ranges::variant<int> v2 = std::move(v);
+            CHECK(v2.index() == 0u);
+            CHECK(ranges::get<0>(v2) == 42);
+        }
+        {
+            ranges::variant<int, long> v(ranges::in_place_index<1>, 42);
+            ranges::variant<int, long> v2 = std::move(v);
+            CHECK(v2.index() == 1u);
+            CHECK(ranges::get<1>(v2) == 42);
+        }
+        {
+            ranges::variant<MoveOnly> v(ranges::in_place_index<0>, 42);
+            CHECK(v.index() == 0u);
+            ranges::variant<MoveOnly> v2(std::move(v));
+            CHECK(v2.index() == 0u);
+            CHECK(ranges::get<0>(v2).value == 42);
+        }
+        {
+            ranges::variant<int, MoveOnly> v(ranges::in_place_index<1>, 42);
+            CHECK(v.index() == 1u);
+            ranges::variant<int, MoveOnly> v2(std::move(v));
+            CHECK(v2.index() == 1u);
+            CHECK(ranges::get<1>(v2).value == 42);
+        }
+        {
+            ranges::variant<MoveOnlyNT> v(ranges::in_place_index<0>, 42);
+            CHECK(v.index() == 0u);
+            ranges::variant<MoveOnlyNT> v2(std::move(v));
+            CHECK(v2.index() == 0u);
+            CHECK(ranges::get<0>(v).value == -1);
+            CHECK(ranges::get<0>(v2).value == 42);
+        }
+        {
+            ranges::variant<int, MoveOnlyNT> v(ranges::in_place_index<1>, 42);
+            CHECK(v.index() == 1u);
+            ranges::variant<int, MoveOnlyNT> v2(std::move(v));
+            CHECK(v2.index() == 1u);
+            CHECK(ranges::get<1>(v).value == -1);
+            CHECK(ranges::get<1>(v2).value == 42);
+        }
+
+        // The following tests are for not-yet-standardized behavior (P0602):
+        {
+            struct {
+                constexpr Result<int> operator()() const {
+                    ranges::variant<int> v(ranges::in_place_index<0>, 42);
+                    ranges::variant<int> v2 = std::move(v);
+                    return {v2.index(), ranges::get<0>(std::move(v2))};
+                }
+            } test;
+            constexpr auto result = test();
+            STATIC_ASSERT(result.index == 0);
+            STATIC_ASSERT(result.value == 42);
+        }
+        {
+            struct {
+                constexpr Result<long> operator()() const {
+                    ranges::variant<int, long> v(ranges::in_place_index<1>, 42);
+                    ranges::variant<int, long> v2 = std::move(v);
+                    return {v2.index(), ranges::get<1>(std::move(v2))};
+                }
+            } test;
+            constexpr auto result = test();
+            STATIC_ASSERT(result.index == 1);
+            STATIC_ASSERT(result.value == 42);
+        }
+        {
+            struct {
+                constexpr Result<TMove> operator()() const {
+                    ranges::variant<TMove> v(ranges::in_place_index<0>, 42);
+                    ranges::variant<TMove> v2(std::move(v));
+                    return {v2.index(), ranges::get<0>(std::move(v2))};
+                }
+            } test;
+            constexpr auto result = test();
+            STATIC_ASSERT(result.index == 0);
+            STATIC_ASSERT(result.value.value == 42);
+        }
+        {
+            struct {
+                constexpr Result<TMove> operator()() const {
+                    ranges::variant<int, TMove> v(ranges::in_place_index<1>, 42);
+                    ranges::variant<int, TMove> v2(std::move(v));
+                    return {v2.index(), ranges::get<1>(std::move(v2))};
+                }
+            } test;
+            constexpr auto result = test();
+            STATIC_ASSERT(result.index == 1);
+            STATIC_ASSERT(result.value.value == 42);
+        }
+        {
+            struct {
+                constexpr Result<TMoveNTCopy> operator()() const {
+                    ranges::variant<TMoveNTCopy> v(ranges::in_place_index<0>, 42);
+                    ranges::variant<TMoveNTCopy> v2(std::move(v));
+                    return {v2.index(), ranges::get<0>(std::move(v2))};
+                }
+            } test;
+            constexpr auto result = test();
+            STATIC_ASSERT(result.index == 0);
+            STATIC_ASSERT(result.value.value == 42);
+        }
+        {
+            struct {
+                constexpr Result<TMoveNTCopy> operator()() const {
+                    ranges::variant<int, TMoveNTCopy> v(ranges::in_place_index<1>, 42);
+                    ranges::variant<int, TMoveNTCopy> v2(std::move(v));
+                    return {v2.index(), ranges::get<1>(std::move(v2))};
+                }
+            } test;
+            constexpr auto result = test();
+            STATIC_ASSERT(result.index == 1);
+            STATIC_ASSERT(result.value.value == 42);
+        }
+    }
+
+    void test_move_ctor_valueless_by_exception()
+    {
+        using V = ranges::variant<int, MakeEmptyT>;
+        V v1;
+        makeEmpty(v1);
+        V v(std::move(v1));
+        CHECK(v.valueless_by_exception());
+    }
+
+    template <size_t Idx>
+    constexpr bool test_constexpr_ctor_extension_imp(
+            ranges::variant<long, void*, const int> const& v)
+    {
+        auto copy = v;
+        auto v2 = std::move(copy);
+        return v2.index() == v.index() &&
+                    v2.index() == Idx &&
+                    ranges::get<Idx>(v2) == ranges::get<Idx>(v);
+    }
+
+    void test_constexpr_move_ctor_extension()
+    {
+        // NOTE: This test is for not yet standardized behavior. (P0602)
+        using V = ranges::variant<long, void*, const int>;
+        STATIC_ASSERT(std::is_trivially_copyable<V>::value);
+        STATIC_ASSERT(std::is_trivially_move_constructible<V>::value);
+        STATIC_ASSERT(test_constexpr_ctor_extension_imp<0>(V(ranges::in_place_index<0>, 42l)));
+        STATIC_ASSERT(test_constexpr_ctor_extension_imp<1>(V(ranges::in_place_index<1>, nullptr)));
+        STATIC_ASSERT(test_constexpr_ctor_extension_imp<2>(V(ranges::in_place_index<2>, 101)));
+    }
+
+    void test()
+    {
+        test_move_ctor_basic();
+        test_move_ctor_valueless_by_exception();
+        test_move_noexcept();
+        test_move_ctor_sfinae();
+        test_constexpr_move_ctor_extension();
+    }
+} // namespace move_ctor
+
 namespace monostate
 {
     void test()
@@ -511,6 +822,7 @@ int main()
     holds_alternative::test();
     default_ctor::test();
     copy_ctor::test();
+    move_ctor::test();
     monostate::test();
 
 #if 0
@@ -644,8 +956,8 @@ int main()
     // constexpr variant
     {
         constexpr variant<int, short> v{emplaced_index<1>, (short)2};
-        static_assert(v.index() == 1,"");
-        static_assert(v.valid(),"");
+        STATIC_ASSERT(v.index() == 1);
+        STATIC_ASSERT(v.valid());
     }
 
     // Variant and arrays
