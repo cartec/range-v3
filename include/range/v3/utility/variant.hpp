@@ -24,6 +24,7 @@
 #include <range/v3/utility/concepts.hpp>
 #include <range/v3/utility/memory.hpp>
 #include <range/v3/utility/static_const.hpp>
+#include <range/v3/utility/swap.hpp>
 
 // TODO:
 // * Merge intermediate SMF layers with optional as in STLSTL
@@ -40,27 +41,31 @@ namespace ranges
             }
         };
 
+        /// \cond
+    #if !RANGES_CXX_VARIABLE_TEMPLATES
+        template<std::size_t I>
+        struct _in_place_index_
+          : meta::size_t<I>
+        {};
+
+        template<std::size_t I>
+        constexpr _in_place_index_<I> in_place_index() noexcept
+        {
+            return {};
+        }
+        template<std::size_t I>
+        using in_place_index_t = _in_place_index_<I>(&)();
+    #else
+        /// \endcond
+
         template<std::size_t I>
         struct in_place_index_t
           : meta::size_t<I>
         {};
 
-        /// \cond
-    #if !RANGES_CXX_VARIABLE_TEMPLATES
-        template<std::size_t I>
-        in_place_index_t<I> in_place_index()
-        {
-            return {};
-        }
-        template<std::size_t I>
-        using _in_place_index_t_ = in_place_index_t<I>(&)();
-    #define RANGES_IN_PLACE_INDEX_T(I) _in_place_index_t_<I>
-    #else
-        /// \endcond
-
     #if RANGES_CXX_INLINE_VARIABLES >= RANGES_CXX_INLINE_VARIABLES_17
         template<std::size_t I>
-        inline constexpr auto in_place_index = in_place_index_t<I>{};
+        inline constexpr in_place_index_t<I> in_place_index{};
     #else
         inline namespace
         {
@@ -70,8 +75,24 @@ namespace ranges
     #endif
 
         /// \cond
-    #define RANGES_IN_PLACE_INDEX_T(I) in_place_index_t<I>
     #endif
+        /// \endcond
+
+        /// \cond
+    #if !RANGES_CXX_VARIABLE_TEMPLATES
+        template<typename T>
+        struct _in_place_type_
+          : meta::id<T>
+        {};
+
+        template<typename T>
+        _in_place_type_<T> in_place_type()
+        {
+            return {};
+        }
+        template<typename T>
+        using in_place_type_t = _in_place_type_<T>(&)();
+    #else
         /// \endcond
 
         template<typename T>
@@ -79,22 +100,9 @@ namespace ranges
           : meta::id<T>
         {};
 
-        /// \cond
-    #if !RANGES_CXX_VARIABLE_TEMPLATES
-        template<typename T>
-        in_place_type_t<T> in_place_type()
-        {
-            return {};
-        }
-        template<typename T>
-        using _in_place_type_t_ = in_place_type_t<T>(&)();
-    #define RANGES_IN_PLACE_TYPE_T(I) _in_place_type_t_<I>
-    #else
-        /// \endcond
-
     #if RANGES_CXX_INLINE_VARIABLES >= RANGES_CXX_INLINE_VARIABLES_17
         template<typename T>
-        inline constexpr auto in_place_type = in_place_type_t<T>{};
+        inline constexpr in_place_type_t<T> in_place_type{};
     #else
         inline namespace
         {
@@ -104,7 +112,6 @@ namespace ranges
     #endif
 
         /// \cond
-    #define RANGES_IN_PLACE_TYPE_T(I) in_place_type_t<I>
     #endif
         /// \endcond
 
@@ -125,11 +132,11 @@ namespace ranges
             struct find_unique_index_ {};
             template<typename List, typename T>
             using find_unique_index = meta::_t<find_unique_index_<List, T>>;
-            template<typename... Ts, typename T>
-            struct find_unique_index_<meta::list<Ts...>, T>
+            template<typename... Types, typename T>
+            struct find_unique_index_<meta::list<Types...>, T>
             {
-                static constexpr bool bools[sizeof...(Ts)] = {std::is_same<Ts, T>::value...};
-                using type = meta::size_t<find_unique_index_i_(bools, sizeof...(Ts))>;
+                static constexpr bool bools[sizeof...(Types)] = {std::is_same<Types, T>::value...};
+                using type = meta::size_t<find_unique_index_i_(bools, sizeof...(Types))>;
             };
 
             template<typename... Types>
@@ -405,7 +412,8 @@ namespace ranges
                 template<std::size_t I, typename T>
                 RANGES_CXX14_CONSTEXPR void operator()(meta::size_t<I>, T &t) const noexcept
                 {
-                    t.~T();
+                    using U = uncvref_t<T>;
+                    t.~U();
                 }
             };
 
@@ -413,6 +421,55 @@ namespace ranges
             using variant_index_t = meta::if_c<
                 (N < static_cast<unsigned char>(~0u)),
                 unsigned char, unsigned short>;
+
+            template<typename...>
+            struct variant_base;
+
+            template<typename... Types>
+            struct variant_construct_visitor
+            {
+                variant_base<Types...> &self_;
+
+                static RANGES_CXX14_CONSTEXPR void bad_access() noexcept
+                {}
+                template<std::size_t I, typename T, typename U = uncvref_t<T>,
+                    typename C = decltype(cook(std::declval<T>())),
+                    CONCEPT_REQUIRES_(Constructible<U, C>())>
+                RANGES_CXX14_CONSTEXPR void operator()(meta::size_t<I>, T &&t) const
+                    noexcept(std::is_nothrow_constructible<U, C>::value)
+                {
+                    RANGES_EXPECT(self_.index_ == 0);
+                    auto &target = variant_raw_get<I>(self_.storage_);
+                    CONCEPT_ASSERT(Same<U, uncvref_t<decltype(target)>>());
+                    ::new (detail::addressof(target)) U(cook(static_cast<T &&>(t)));
+                    self_.index_ = I + 1;
+                }
+            };
+
+            template<typename... Types>
+            struct variant_transfer_visitor
+              : variant_construct_visitor<Types...>
+            {
+                variant_base<Types...> &source_;
+
+                variant_transfer_visitor(variant_base<Types...> &source,
+                    variant_base<Types...> &target)
+                  : variant_construct_visitor<Types...>(target)
+                  , source_(source)
+                {}
+
+                template<std::size_t I, typename T, typename U = uncvref_t<T>,
+                    typename C = decltype(cook(std::declval<T>())),
+                    CONCEPT_REQUIRES_(Constructible<U, C>())>
+                RANGES_CXX14_CONSTEXPR void operator()(meta::size_t<I>, T &&t) const
+                    noexcept(std::is_nothrow_constructible<U, C>::value)
+                {
+                    variant_construct_visitor<Types...>::operator()(
+                        meta::size_t<I>{}, static_cast<T &&>(t));
+                    t.~U();
+                    source_.index_ = 0;
+                }
+            };
 
             template<typename... Types>
             struct variant_base
@@ -440,6 +497,13 @@ namespace ranges
                     index_ = 0;
                 }
 
+                CONCEPT_REQUIRES(meta::strict_and<MoveConstructible<Types>...>::value)
+                void swap(variant_base& that)
+                    noexcept(meta::strict_and<std::is_nothrow_move_constructible<Types>...>::value)
+                {
+                    swap_(that, 42);
+                }
+
                 void destroy() noexcept
                 {
 #if RANGES_CXX_IF_CONSTEXPR >= RANGES_CXX_IF_CONSTEXPR_17
@@ -462,6 +526,30 @@ namespace ranges
                     variant_raw_visit(index_, storage_, variant_destroy_visitor{});
                 }
 #endif
+            private:
+                CONCEPT_REQUIRES(detail::is_trivially_copyable<variant_storage<Types...>>::value
+                    && !meta::strict_or<adl_swap_detail::is_adl_swappable_<Types &>...>::value)
+                void swap_(variant_base &that, int) noexcept
+                {
+                    ranges::swap(*this, that);
+                }
+                CONCEPT_REQUIRES(meta::strict_and<MoveConstructible<Types>...>::value)
+                void steal_from(variant_base &source)
+                    noexcept(meta::strict_and<std::is_nothrow_move_constructible<Types>...>::value)
+                {
+                    variant_raw_visit(source.index_, detail::move(source.storage_),
+                        variant_transfer_visitor<Types...>{source, *this});
+                }
+                CONCEPT_REQUIRES(meta::strict_and<MoveConstructible<Types>...>::value)
+                void swap_(variant_base &that, ...)
+                    noexcept(meta::strict_and<std::is_nothrow_move_constructible<Types>...>::value)
+                {
+                    variant_base tmp;
+                    tmp.steal_from(that);
+                    that.steal_from(*this);
+                    this->steal_from(tmp);
+                    RANGES_EXPECT(tmp.index_ == 0);
+                }
             };
 
             template<typename... Types>
@@ -482,27 +570,6 @@ namespace ranges
                 all_trivially_destructible<Types...>,
                 variant_base<Types...>,
                 variant_nontrivial_destruction<Types...>>;
-
-            template<typename... Types>
-            struct variant_construct_visitor
-            {
-                variant_base<Types...> &self_;
-
-                static RANGES_CXX14_CONSTEXPR void bad_access() noexcept
-                {}
-                template<std::size_t I, typename T, typename U = uncvref_t<T>,
-                    typename C = decltype(cook(std::declval<T>())),
-                    CONCEPT_REQUIRES_(Constructible<U, C>())>
-                RANGES_CXX14_CONSTEXPR void operator()(meta::size_t<I>, T &&t) const
-                    noexcept(std::is_nothrow_constructible<U, C>::value)
-                {
-                    RANGES_EXPECT(self_.index_ == 0);
-                    auto &target = variant_raw_get<I>(self_.storage_);
-                    CONCEPT_ASSERT(Same<U, uncvref_t<decltype(target)>>());
-                    ::new (detail::addressof(target)) U(cook(static_cast<T &&>(t)));
-                    self_.index_ = I + 1;
-                }
-            };
 
             template<typename... Types>
             struct variant_nontrivial_copy
@@ -770,7 +837,7 @@ namespace ranges
             template<std::size_t I, typename... Args,
                 typename T = meta::at_c<meta::list<Types...>, I>,
                 CONCEPT_REQUIRES_(Constructible<T, Args...>())>
-            constexpr variant(RANGES_IN_PLACE_INDEX_T(I), Args &&... args)
+            explicit constexpr variant(in_place_index_t<I>, Args &&... args)
                 noexcept(std::is_nothrow_constructible<T, Args...>::value)
               : base_t{meta::size_t<I>{}, static_cast<Args &&>(args)...}
             {}
@@ -778,7 +845,7 @@ namespace ranges
             template<typename T, typename... Args,
                 std::size_t I = detail::find_unique_index<meta::list<Types...>, T>::value,
                 CONCEPT_REQUIRES_(0 <= I && Constructible<T, Args...>())>
-            constexpr variant(RANGES_IN_PLACE_TYPE_T(T), Args &&... args)
+            explicit constexpr variant(in_place_type_t<T>, Args &&... args)
                 noexcept(std::is_nothrow_constructible<T, Args...>::value)
               : base_t{meta::size_t<I>{}, static_cast<Args &&>(args)...}
             {}
@@ -790,6 +857,11 @@ namespace ranges
             constexpr bool valueless_by_exception() const noexcept
             {
                 return 0 == index_;
+            }
+
+            void swap(variant &that) // FIXME!!
+            {
+                base_t::swap(that);
             }
         };
 

@@ -38,6 +38,22 @@ template<class...> class show_type; // FIXME: remove
 #endif
 #define ASSERT_NOEXCEPT(...) STATIC_ASSERT(noexcept(__VA_ARGS__))
 
+namespace detail {
+    template <class Tp> void eat_type(Tp);
+
+    template <class Tp, class ...Args>
+    constexpr auto test_convertible_imp(int)
+        -> decltype(eat_type<Tp>({std::declval<Args>()...}), true)
+    { return true; }
+
+    template <class Tp, class ...Args>
+    constexpr auto test_convertible_imp(long) -> bool { return false; }
+}
+
+template <class Tp, class ...Args>
+constexpr bool test_convertible()
+{ return detail::test_convertible_imp<Tp, Args...>(0); }
+
 namespace bad_access
 {
     void test()
@@ -829,6 +845,89 @@ namespace move_ctor
     }
 } // namespace move_ctor
 
+namespace in_place_index_ctor
+{
+    void test_ctor_sfinae()
+    {
+        {
+            using V = ranges::variant<int>;
+            STATIC_ASSERT(
+                std::is_constructible<V, ranges::in_place_index_t<0>, int>::value);
+            STATIC_ASSERT(!test_convertible<V, ranges::in_place_index_t<0>, int>());
+        }
+        {
+            using V = ranges::variant<int, long, long long>;
+            STATIC_ASSERT(
+                std::is_constructible<V, ranges::in_place_index_t<1>, int>::value);
+            STATIC_ASSERT(!test_convertible<V, ranges::in_place_index_t<1>, int>());
+        }
+        {
+            using V = ranges::variant<int, long, int *>;
+            STATIC_ASSERT(
+                    std::is_constructible<V, ranges::in_place_index_t<2>, int *>::value);
+            STATIC_ASSERT(!test_convertible<V, ranges::in_place_index_t<2>, int *>());
+        }
+        { // args not convertible to type
+            using V = ranges::variant<int, long, int *>;
+            STATIC_ASSERT(
+                    !std::is_constructible<V, ranges::in_place_index_t<0>, int *>::value);
+            STATIC_ASSERT(!test_convertible<V, ranges::in_place_index_t<0>, int *>());
+        }
+        { // index not in variant
+            using V = ranges::variant<int, long, int *>;
+            STATIC_ASSERT(
+                    !std::is_constructible<V, ranges::in_place_index_t<3>, int>::value);
+            STATIC_ASSERT(!test_convertible<V, ranges::in_place_index_t<3>, int>());
+        }
+    }
+
+    void test_ctor_basic()
+    {
+        {
+            constexpr ranges::variant<int> v(ranges::in_place_index<0>, 42);
+            STATIC_ASSERT(v.index() == 0);
+            STATIC_ASSERT(ranges::get<0>(v) == 42);
+        }
+        {
+            constexpr ranges::variant<int, long, long> v(ranges::in_place_index<1>, 42);
+            STATIC_ASSERT(v.index() == 1);
+            STATIC_ASSERT(ranges::get<1>(v) == 42);
+        }
+        {
+            constexpr ranges::variant<int, const int, long> v(ranges::in_place_index<1>, 42);
+            STATIC_ASSERT(v.index() == 1);
+            STATIC_ASSERT(ranges::get<1>(v) == 42);
+        }
+        {
+            using V = ranges::variant<const int, volatile int, int>;
+            int x = 42;
+            V v(ranges::in_place_index<0>, x);
+            CHECK(v.index() == 0u);
+            CHECK(ranges::get<0>(v) == x);
+        }
+        {
+            using V = ranges::variant<const int, volatile int, int>;
+            int x = 42;
+            V v(ranges::in_place_index<1>, x);
+            CHECK(v.index() == 1u);
+            CHECK(ranges::get<1>(v) == x);
+        }
+        {
+            using V = ranges::variant<const int, volatile int, int>;
+            int x = 42;
+            V v(ranges::in_place_index<2>, x);
+            CHECK(v.index() == 2u);
+            CHECK(ranges::get<2>(v) == x);
+        }
+    }
+
+    void test()
+    {
+        test_ctor_basic();
+        test_ctor_sfinae();
+    }
+} // namespace in_place_index_ctor
+
 namespace monostate
 {
     void test()
@@ -886,6 +985,7 @@ int main()
     default_ctor::test();
     copy_ctor::test();
     move_ctor::test();
+    in_place_index_ctor::test();
     monostate::test();
     monostate_relops::test();
 
@@ -1045,7 +1145,7 @@ int main()
             T &operator=(T const &) = default;
         };
 
-        // Should compile and not assert at runtime.
+        // Should compile and not CHECK at runtime.
         variant<T[5]> vrgt{emplaced_index<0>, {T{42},T{42},T{42},T{42},T{42}}};
         (void) vrgt;
     }
