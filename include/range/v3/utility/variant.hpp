@@ -16,13 +16,13 @@
 #define RANGES_V3_UTILITY_VARIANT_HPP
 
 #include <exception>
-#include <memory>
 #include <new>
 #include <type_traits>
 #include <utility>
 #include <meta/meta.hpp>
 #include <range/v3/range_fwd.hpp>
 #include <range/v3/utility/concepts.hpp>
+#include <range/v3/utility/memory.hpp>
 #include <range/v3/utility/static_const.hpp>
 
 // TODO:
@@ -499,7 +499,7 @@ namespace ranges
                     RANGES_EXPECT(self_.index_ == 0);
                     auto &target = variant_raw_get<I>(self_.storage_);
                     CONCEPT_ASSERT(Same<U, uncvref_t<decltype(target)>>());
-                    ::new (std::addressof(target)) U(cook(static_cast<T &&>(t)));
+                    ::new (detail::addressof(target)) U(cook(static_cast<T &&>(t)));
                     self_.index_ = I + 1;
                 }
             };
@@ -594,7 +594,7 @@ namespace ranges
                 {
                     this->reset();
                     auto &target = variant_raw_get<I>(self_.storage_);
-                    ::new (std::addressof(target)) T(cook(t));
+                    ::new (detail::addressof(target)) T(cook(t));
                 }
 
                 template<std::size_t I, typename T>
@@ -603,7 +603,7 @@ namespace ranges
                     auto tmp(cook(t));
                     this->reset();
                     auto &target = variant_raw_get<I>(self_.storage_);
-                    ::new (std::addressof(target)) T(std::move(tmp));
+                    ::new (detail::addressof(target)) T(std::move(tmp));
                 }
             };
 

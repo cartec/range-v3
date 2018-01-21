@@ -17,6 +17,7 @@
 #include <type_traits>
 #include <meta/meta.hpp>
 #include <range/v3/range_fwd.hpp>
+#include <range/v3/detail/addressof.hpp>
 #include <range/v3/utility/basic_iterator.hpp>
 #include <range/v3/utility/common_tuple.hpp>
 #include <range/v3/utility/concepts.hpp>
@@ -82,7 +83,7 @@ namespace ranges
             public:
                 const value_type_t<I>* operator->() const noexcept
                 {
-                    return std::addressof(keep_);
+                    return detail::addressof(keep_);
                 }
             };
             template<typename T>
@@ -100,7 +101,7 @@ namespace ranges
             static meta::_t<std::add_pointer<R>> operator_arrow_(J const &j, long) noexcept
             {
                 auto &&r = *j;
-                return std::addressof(r);
+                return detail::addressof(r);
             }
             template<typename J, typename V = value_type_t<J>,
                 typename R = reference_t<J>,

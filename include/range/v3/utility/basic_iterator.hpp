@@ -19,6 +19,7 @@
 #include <meta/meta.hpp>
 #include <range/v3/range_fwd.hpp>
 #include <range/v3/range_access.hpp>
+#include <range/v3/detail/addressof.hpp>
 #include <range/v3/utility/box.hpp>
 #include <range/v3/utility/move.hpp>
 #include <range/v3/utility/concepts.hpp>
@@ -470,7 +471,7 @@ namespace ranges
             operator->() const
                 noexcept(noexcept(*std::declval<basic_iterator const &>()))
             {
-                return std::addressof(**this);
+                return detail::addressof(**this);
             }
 
             CONCEPT_REQUIRES(detail::HasCursorNext<Cur>())

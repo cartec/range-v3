@@ -19,6 +19,7 @@
 #include <range/v3/range_fwd.hpp>
 #include <range/v3/range_concepts.hpp>
 #include <range/v3/view_facade.hpp>
+#include <range/v3/detail/addressof.hpp>
 #include <range/v3/utility/functional.hpp>
 #include <range/v3/utility/static_const.hpp>
 
@@ -51,7 +52,7 @@ namespace ranges
             public:
                 cursor() = default;
                 explicit cursor(Val const &value)
-                  : value_(std::addressof(value))
+                  : value_(detail::addressof(value))
                 {}
                 Val const &read() const
                 {

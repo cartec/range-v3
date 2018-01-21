@@ -24,6 +24,7 @@
 #include <memory>
 #include <type_traits>
 #include <meta/meta.hpp>
+#include <range/v3/detail/addressof.hpp>
 #include <range/v3/detail/config.hpp>
 #include <range/v3/utility/iterator_concepts.hpp>
 #include <range/v3/utility/iterator_traits.hpp>
@@ -77,13 +78,13 @@ namespace ranges
             CONCEPT_REQUIRES(CopyConstructible<Val>())
             raw_storage_iterator &operator=(Val const & val)
             {
-                ::new((void*) std::addressof(*out_)) Val(val);
+                ::new((void*) detail::addressof(*out_)) Val(val);
                 return *this;
             }
             CONCEPT_REQUIRES(MoveConstructible<Val>())
             raw_storage_iterator &operator=(Val && val)
             {
-                ::new((void*) std::addressof(*out_)) Val(std::move(val));
+                ::new((void*) detail::addressof(*out_)) Val(std::move(val));
                 return *this;
             }
             raw_storage_iterator &operator++()
@@ -130,7 +131,7 @@ namespace ranges
                 return *this;
             }
             iterator_wrapper(I &i)
-              : i_(std::addressof(i))
+              : i_(detail::addressof(i))
             {}
             auto operator*() const
             RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT

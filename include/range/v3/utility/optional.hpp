@@ -16,10 +16,10 @@
 
 #include <exception>
 #include <initializer_list>
-#include <memory>
 #include <new>
 #include <range/v3/detail/config.hpp>
 #include <range/v3/utility/concepts.hpp>
+#include <range/v3/utility/memory.hpp>
 #include <range/v3/utility/static_const.hpp>
 #include <range/v3/utility/swap.hpp>
 
@@ -181,11 +181,11 @@ namespace ranges
                     }
                     RANGES_CXX14_CONSTEXPR T *operator->() noexcept
                     {
-                        return RANGES_EXPECT(engaged_), std::addressof(data_);
+                        return RANGES_EXPECT(engaged_), detail::addressof(data_);
                     }
                     constexpr T const *operator->() const noexcept
                     {
-                        return RANGES_EXPECT(engaged_), std::addressof(data_);
+                        return RANGES_EXPECT(engaged_), detail::addressof(data_);
                     }
                     CONCEPT_REQUIRES(MoveConstructible<T>() && Swappable<T &>())
                     RANGES_CXX14_CONSTEXPR void swap(optional_base &that)
@@ -206,7 +206,7 @@ namespace ranges
                         noexcept(std::is_nothrow_constructible<T, Args...>::value)
                     {
                         RANGES_EXPECT(!engaged_);
-                        auto const address = static_cast<void *>(std::addressof(data_));
+                        auto const address = static_cast<void *>(detail::addressof(data_));
                         ::new (address) T(static_cast<Args &&>(args)...);
                         engaged_ = true;
                         return data_;
@@ -225,7 +225,7 @@ namespace ranges
                             data_ = *static_cast<U &&>(that);
                         else
                         {
-                            auto const address = static_cast<void *>(std::addressof(data_));
+                            auto const address = static_cast<void *>(detail::addressof(data_));
                             ::new (address) T(*static_cast<U &&>(that));
                             engaged_ = true;
                         }
@@ -268,7 +268,7 @@ namespace ranges
                     template<typename Arg,
                         CONCEPT_REQUIRES_(Constructible<T &, Arg>())>
                     constexpr explicit optional_base(in_place_t, Arg &&arg) noexcept
-                      : ptr_(std::addressof(arg))
+                      : ptr_(detail::addressof(arg))
                     {}
                     constexpr bool has_value() const noexcept
                     {
@@ -301,7 +301,7 @@ namespace ranges
                     RANGES_CXX14_CONSTEXPR T &construct_from(U &&ref) noexcept
                     {
                         RANGES_EXPECT(!ptr_);
-                        ptr_ = std::addressof(ref);
+                        ptr_ = detail::addressof(ref);
                         return *ptr_;
                     }
                     template<typename U>

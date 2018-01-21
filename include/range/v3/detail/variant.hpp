@@ -17,7 +17,6 @@
 #if 0
 #include <new>
 #include <tuple>
-#include <memory>
 #include <utility>
 #include <iterator>
 #include <stdexcept>
@@ -28,6 +27,7 @@
 #include <range/v3/utility/iterator_concepts.hpp>
 #include <range/v3/utility/iterator_traits.hpp>
 #include <range/v3/utility/functional.hpp>
+#include <range/v3/utility/memory.hpp>
 
 namespace ranges
 {
@@ -96,7 +96,7 @@ namespace ranges
             O uninitialized_copy(I first, S last, O out)
             {
                 for(; first != last; ++first, ++out)
-                    ::new((void *) std::addressof(*out)) value_type_t<O>(*first);
+                    ::new((void *) detail::addressof(*out)) value_type_t<O>(*first);
                 return out;
             }
 
@@ -370,7 +370,7 @@ namespace ranges
                 void construct_(U &u, meta::index_sequence<Is...>)
                     noexcept(std::is_nothrow_constructible<U, Ts...>::value)
                 {
-                    ::new((void*)std::addressof(u)) U(static_cast<Ts&&>(std::get<Is>(args_))...);
+                    ::new((void*)detail::addressof(u)) U(static_cast<Ts&&>(std::get<Is>(args_))...);
                 }
 
                 construct_fn(Ts &&...ts)
@@ -411,7 +411,7 @@ namespace ranges
                 template<typename U>
                 void operator()(indexed_element<U, N> t) const noexcept
                 {
-                    *t_ = std::addressof(t.get());
+                    *t_ = detail::addressof(t.get());
                 }
                 void operator()(indexed_element<void, N>) const noexcept
                 {}

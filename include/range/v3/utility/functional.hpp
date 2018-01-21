@@ -14,19 +14,19 @@
 #ifndef RANGES_V3_UTILITY_FUNCTIONAL_HPP
 #define RANGES_V3_UTILITY_FUNCTIONAL_HPP
 
-#include <memory> // std::addressof
-#include <utility>
 #include <functional> // std::reference_wrapper
-#include <type_traits>
 #include <initializer_list>
+#include <type_traits>
+#include <utility>
 #include <meta/meta.hpp>
 #include <range/v3/range_fwd.hpp>
+#include <range/v3/detail/addressof.hpp>
 #include <range/v3/utility/box.hpp>
-#include <range/v3/utility/move.hpp>
+#include <range/v3/utility/compressed_pair.hpp>
 #include <range/v3/utility/concepts.hpp>
 #include <range/v3/utility/invoke.hpp>
+#include <range/v3/utility/move.hpp>
 #include <range/v3/utility/static_const.hpp>
-#include <range/v3/utility/compressed_pair.hpp>
 
 RANGES_DISABLE_WARNINGS
 

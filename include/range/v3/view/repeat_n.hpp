@@ -15,10 +15,11 @@
 #define RANGES_V3_VIEW_REPEAT_N_HPP
 
 #include <utility>
-#include <range/v3/detail/satisfy_boost_range.hpp>
 #include <range/v3/range_fwd.hpp>
 #include <range/v3/range_concepts.hpp>
 #include <range/v3/view_facade.hpp>
+#include <range/v3/detail/satisfy_boost_range.hpp>
+#include <range/v3/detail/addressof.hpp>
 #include <range/v3/utility/static_const.hpp>
 
 namespace ranges
@@ -52,7 +53,7 @@ namespace ranges
             public:
                 cursor() = default;
                 cursor(Val const &value, std::ptrdiff_t n)
-                  : value_(std::addressof(value)), n_(n)
+                  : value_(detail::addressof(value)), n_(n)
                 {}
                 Val const &read() const
                 {

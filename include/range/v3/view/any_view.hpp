@@ -116,7 +116,7 @@ namespace ranges
                 any_ref() = default;
                 template<class T>
                 constexpr any_ref(T &obj) noexcept
-                  : obj_{std::addressof(obj)}
+                  : obj_{detail::addressof(obj)}
 #ifndef NDEBUG
                   , info_{&typeid(rtti_tag<T>)}
 #endif
@@ -209,7 +209,7 @@ namespace ranges
 
                 any_input_cursor() = default;
                 constexpr any_input_cursor(any_input_view_interface<Ref> &view) noexcept
-                  : view_{std::addressof(view)}
+                  : view_{detail::addressof(view)}
                 {}
                 Ref read() const { return view_->read(); }
                 void next() { view_->next(); }
