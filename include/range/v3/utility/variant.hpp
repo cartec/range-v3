@@ -842,12 +842,28 @@ namespace ranges
               : base_t{meta::size_t<I>{}, static_cast<Args &&>(args)...}
             {}
 
+            template<std::size_t I, typename E, typename... Args,
+                typename T = meta::at_c<meta::list<Types...>, I>,
+                CONCEPT_REQUIRES_(Constructible<T, std::initializer_list<E>, Args...>())>
+            explicit constexpr variant(in_place_index_t<I>, std::initializer_list<E>&& il, Args &&... args)
+                noexcept(std::is_nothrow_constructible<T, std::initializer_list<E>, Args...>::value)
+              : base_t{meta::size_t<I>{}, detail::move(il), static_cast<Args &&>(args)...}
+            {}
+
             template<typename T, typename... Args,
                 std::size_t I = detail::find_unique_index<meta::list<Types...>, T>::value,
-                CONCEPT_REQUIRES_(0 <= I && Constructible<T, Args...>())>
+                CONCEPT_REQUIRES_(I != std::size_t(-1) && Constructible<T, Args...>())>
             explicit constexpr variant(in_place_type_t<T>, Args &&... args)
                 noexcept(std::is_nothrow_constructible<T, Args...>::value)
               : base_t{meta::size_t<I>{}, static_cast<Args &&>(args)...}
+            {}
+
+            template<typename T, typename E, typename... Args,
+                std::size_t I = detail::find_unique_index<meta::list<Types...>, T>::value,
+                CONCEPT_REQUIRES_(I != std::size_t(-1) && Constructible<T, std::initializer_list<E>, Args...>())>
+            explicit constexpr variant(in_place_type_t<T>, std::initializer_list<E>&& il, Args &&... args)
+                noexcept(std::is_nothrow_constructible<T, std::initializer_list<E>, Args...>::value)
+              : base_t{meta::size_t<I>{}, detail::move(il), static_cast<Args &&>(args)...}
             {}
 
             constexpr std::size_t index() const noexcept
@@ -868,8 +884,8 @@ namespace ranges
         template<class T, class... Types>
         constexpr bool holds_alternative(variant<Types...> const &v) noexcept
         {
-            static_assert(detail::find_unique_index<meta::list<Types...>, T>::value >= 0,
-                "T must appear exactly once in Types");
+            static_assert(detail::find_unique_index<meta::list<Types...>, T>::value !=
+                std::size_t(-1), "T must appear exactly once in Types");
             return detail::find_unique_index<meta::list<Types...>, T>::value == v.index();
         }
 

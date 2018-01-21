@@ -928,6 +928,247 @@ namespace in_place_index_ctor
     }
 } // namespace in_place_index_ctor
 
+namespace in_place_index_il_ctor
+{
+    struct InitList
+    {
+        std::size_t size;
+        constexpr InitList(std::initializer_list<int> il)
+          : size(il.size())
+        {}
+    };
+
+    struct InitListArg
+    {
+        std::size_t size;
+        int value;
+        constexpr InitListArg(std::initializer_list<int> il, int v)
+          : size(il.size()), value(v)
+        {}
+    };
+
+    void test_ctor_sfinae()
+    {
+        using IL = std::initializer_list<int>;
+        { // just init list
+            using V = ranges::variant<InitList, InitListArg, int>;
+            STATIC_ASSERT(std::is_constructible<V, ranges::in_place_index_t<0>, IL>::value);
+            STATIC_ASSERT(!test_convertible<V, ranges::in_place_index_t<0>, IL>());
+        }
+        { // too many arguments
+            using V = ranges::variant<InitList, InitListArg, int>;
+            STATIC_ASSERT(!std::is_constructible<V, ranges::in_place_index_t<0>, IL, int>::value);
+            STATIC_ASSERT(!test_convertible<V, ranges::in_place_index_t<0>, IL, int>());
+        }
+        { // too few arguments
+            using V = ranges::variant<InitList, InitListArg, int>;
+            STATIC_ASSERT(!std::is_constructible<V, ranges::in_place_index_t<1>, IL>::value);
+            STATIC_ASSERT(!test_convertible<V, ranges::in_place_index_t<1>, IL>());
+        }
+        { // init list and arguments
+            using V = ranges::variant<InitList, InitListArg, int>;
+            STATIC_ASSERT(std::is_constructible<V, ranges::in_place_index_t<1>, IL, int>::value);
+            STATIC_ASSERT(!test_convertible<V, ranges::in_place_index_t<1>, IL, int>());
+        }
+        { // not constructible from arguments
+            using V = ranges::variant<InitList, InitListArg, int>;
+            STATIC_ASSERT(!std::is_constructible<V, ranges::in_place_index_t<2>, IL>::value);
+            STATIC_ASSERT(!test_convertible<V, ranges::in_place_index_t<2>, IL>());
+        }
+    }
+
+    void test_ctor_basic()
+    {
+        {
+            constexpr ranges::variant<InitList, InitListArg, InitList> v(
+                    ranges::in_place_index<0>, {1, 2, 3});
+            STATIC_ASSERT(v.index() == 0);
+            STATIC_ASSERT(ranges::get<0>(v).size == 3);
+        }
+        {
+            constexpr ranges::variant<InitList, InitListArg, InitList> v(
+                    ranges::in_place_index<2>, {1, 2, 3});
+            STATIC_ASSERT(v.index() == 2);
+            STATIC_ASSERT(ranges::get<2>(v).size == 3);
+        }
+        {
+            constexpr ranges::variant<InitList, InitListArg, InitListArg> v(
+                    ranges::in_place_index<1>, {1, 2, 3, 4}, 42);
+            STATIC_ASSERT(v.index() == 1);
+            STATIC_ASSERT(ranges::get<1>(v).size == 4);
+            STATIC_ASSERT(ranges::get<1>(v).value == 42);
+        }
+    }
+
+    void test()
+    {
+        test_ctor_basic();
+        test_ctor_sfinae();
+    }
+} // namespace in_place_index_il_ctor
+
+namespace in_place_type_ctor
+{
+    void test_ctor_sfinae()
+    {
+        {
+            using V = ranges::variant<int>;
+            STATIC_ASSERT(std::is_constructible<V, ranges::in_place_type_t<int>, int>::value);
+            STATIC_ASSERT(!test_convertible<V, ranges::in_place_type_t<int>, int>());
+        }
+        {
+            using V = ranges::variant<int, long, long long>;
+            STATIC_ASSERT(std::is_constructible<V, ranges::in_place_type_t<long>, int>::value);
+            STATIC_ASSERT(!test_convertible<V, ranges::in_place_type_t<long>, int>());
+        }
+        {
+            using V = ranges::variant<int, long, int *>;
+            STATIC_ASSERT(std::is_constructible<V, ranges::in_place_type_t<int *>, int *>::value);
+            STATIC_ASSERT(!test_convertible<V, ranges::in_place_type_t<int *>, int *>());
+        }
+        { // duplicate type
+            using V = ranges::variant<int, long, int>;
+            STATIC_ASSERT(!std::is_constructible<V, ranges::in_place_type_t<int>, int>::value);
+            STATIC_ASSERT(!test_convertible<V, ranges::in_place_type_t<int>, int>());
+        }
+        { // args not convertible to type
+            using V = ranges::variant<int, long, int *>;
+            STATIC_ASSERT(!std::is_constructible<V, ranges::in_place_type_t<int>, int *>::value);
+            STATIC_ASSERT(!test_convertible<V, ranges::in_place_type_t<int>, int *>());
+        }
+        { // type not in variant
+            using V = ranges::variant<int, long, int *>;
+            STATIC_ASSERT(!std::is_constructible<V, ranges::in_place_type_t<long long>, int>::value);
+            STATIC_ASSERT(!test_convertible<V, ranges::in_place_type_t<long long>, int>());
+        }
+    }
+
+    void test_ctor_basic()
+    {
+        {
+            constexpr ranges::variant<int> v(ranges::in_place_type<int>, 42);
+            STATIC_ASSERT(v.index() == 0);
+            STATIC_ASSERT(ranges::get<0>(v) == 42);
+        }
+        {
+            constexpr ranges::variant<int, long> v(ranges::in_place_type<long>, 42);
+            STATIC_ASSERT(v.index() == 1);
+            STATIC_ASSERT(ranges::get<1>(v) == 42);
+        }
+        {
+            constexpr ranges::variant<int, const int, long> v(
+                    ranges::in_place_type<const int>, 42);
+            STATIC_ASSERT(v.index() == 1);
+            STATIC_ASSERT(ranges::get<1>(v) == 42);
+        }
+        {
+            using V = ranges::variant<const int, volatile int, int>;
+            int x = 42;
+            V v(ranges::in_place_type<const int>, x);
+            CHECK(v.index() == 0u);
+            CHECK(ranges::get<0>(v) == x);
+        }
+        {
+            using V = ranges::variant<const int, volatile int, int>;
+            int x = 42;
+            V v(ranges::in_place_type<volatile int>, x);
+            CHECK(v.index() == 1u);
+            CHECK(ranges::get<1>(v) == x);
+        }
+        {
+            using V = ranges::variant<const int, volatile int, int>;
+            int x = 42;
+            V v(ranges::in_place_type<int>, x);
+            CHECK(v.index() == 2u);
+            CHECK(ranges::get<2>(v) == x);
+        }
+    }
+
+    void test()
+    {
+        test_ctor_basic();
+        test_ctor_sfinae();
+    }
+} // namespace in_place_type_ctor
+
+namespace in_place_type_il_ctor
+{
+    struct InitList
+    {
+        std::size_t size;
+        constexpr InitList(std::initializer_list<int> il)
+          : size(il.size())
+        {}
+    };
+
+    struct InitListArg
+    {
+        std::size_t size;
+        int value;
+        constexpr InitListArg(std::initializer_list<int> il, int v)
+          : size(il.size()), value(v)
+        {}
+    };
+
+    void test_ctor_sfinae()
+    {
+        using IL = std::initializer_list<int>;
+        { // just init list
+            using V = ranges::variant<InitList, InitListArg, int>;
+            STATIC_ASSERT(std::is_constructible<V, ranges::in_place_type_t<InitList>, IL>::value);
+            STATIC_ASSERT(!test_convertible<V, ranges::in_place_type_t<InitList>, IL>());
+        }
+        { // too many arguments
+            using V = ranges::variant<InitList, InitListArg, int>;
+            STATIC_ASSERT(!std::is_constructible<V, ranges::in_place_type_t<InitList>, IL, int>::value);
+            STATIC_ASSERT(!test_convertible<V, ranges::in_place_type_t<InitList>, IL, int>());
+        }
+        { // too few arguments
+            using V = ranges::variant<InitList, InitListArg, int>;
+            STATIC_ASSERT(!std::is_constructible<V, ranges::in_place_type_t<InitListArg>, IL>::value);
+            STATIC_ASSERT(!test_convertible<V, ranges::in_place_type_t<InitListArg>, IL>());
+        }
+        { // init list and arguments
+            using V = ranges::variant<InitList, InitListArg, int>;
+            STATIC_ASSERT(std::is_constructible<V, ranges::in_place_type_t<InitListArg>, IL, int>::value);
+            STATIC_ASSERT(!test_convertible<V, ranges::in_place_type_t<InitListArg>, IL, int>());
+        }
+        { // not constructible from arguments
+            using V = ranges::variant<InitList, InitListArg, int>;
+            STATIC_ASSERT(!std::is_constructible<V, ranges::in_place_type_t<int>, IL>::value);
+            STATIC_ASSERT(!test_convertible<V, ranges::in_place_type_t<int>, IL>());
+        }
+        { // duplicate types in variant
+            using V = ranges::variant<InitListArg, InitListArg, int>;
+            STATIC_ASSERT(!std::is_constructible<V, ranges::in_place_type_t<InitListArg>, IL, int>::value);
+            STATIC_ASSERT(!test_convertible<V, ranges::in_place_type_t<InitListArg>, IL, int>());
+        }
+    }
+
+    void test_ctor_basic()
+    {
+        {
+            constexpr ranges::variant<InitList, InitListArg> v(
+                ranges::in_place_type<InitList>, {1, 2, 3});
+            STATIC_ASSERT(v.index() == 0);
+            STATIC_ASSERT(ranges::get<0>(v).size == 3);
+        }
+        {
+            constexpr ranges::variant<InitList, InitListArg> v(
+                ranges::in_place_type<InitListArg>, {1, 2, 3, 4}, 42);
+            STATIC_ASSERT(v.index() == 1);
+            STATIC_ASSERT(ranges::get<1>(v).size == 4);
+            STATIC_ASSERT(ranges::get<1>(v).value == 42);
+        }
+    }
+
+    void test()
+    {
+        test_ctor_basic();
+        test_ctor_sfinae();
+    }
+} // namespace in_place_type_il_ctor
+
 namespace monostate
 {
     void test()
@@ -986,6 +1227,9 @@ int main()
     copy_ctor::test();
     move_ctor::test();
     in_place_index_ctor::test();
+    in_place_index_il_ctor::test();
+    in_place_type_ctor::test();
+    in_place_type_il_ctor::test();
     monostate::test();
     monostate_relops::test();
 
