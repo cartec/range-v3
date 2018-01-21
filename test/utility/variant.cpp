@@ -1306,6 +1306,65 @@ namespace converting_ctor {
     }
 } // namespace converting_ctor
 
+namespace dtor
+{
+    struct NonTDtor
+    {
+        static int count;
+        NonTDtor() = default;
+        ~NonTDtor() { ++count; }
+    };
+    int NonTDtor::count = 0;
+    STATIC_ASSERT(!std::is_trivially_destructible<NonTDtor>::value);
+
+    struct NonTDtor1
+    {
+        static int count;
+        NonTDtor1() = default;
+        ~NonTDtor1() { ++count; }
+    };
+    int NonTDtor1::count = 0;
+    STATIC_ASSERT(!std::is_trivially_destructible<NonTDtor1>::value);
+
+    struct TDtor
+    {
+        TDtor(const TDtor &) {} // non-trivial copy
+        ~TDtor() = default;
+    };
+    STATIC_ASSERT(!ranges::detail::is_trivially_copy_constructible<TDtor>::value);
+    STATIC_ASSERT(std::is_trivially_destructible<TDtor>::value);
+
+    void test()
+    {
+        {
+            using V = ranges::variant<int, long, TDtor>;
+            STATIC_ASSERT(std::is_trivially_destructible<V>::value);
+        }
+        {
+            using V = ranges::variant<NonTDtor, int, NonTDtor1>;
+            STATIC_ASSERT(!std::is_trivially_destructible<V>::value);
+            {
+                V v(ranges::in_place_index<0>);
+                CHECK(NonTDtor::count == 0);
+                CHECK(NonTDtor1::count == 0);
+            }
+            CHECK(NonTDtor::count == 1);
+            CHECK(NonTDtor1::count == 0);
+            NonTDtor::count = 0;
+            { V v(ranges::in_place_index<1>); }
+            CHECK(NonTDtor::count == 0);
+            CHECK(NonTDtor1::count == 0);
+            {
+                V v(ranges::in_place_index<2>);
+                CHECK(NonTDtor::count == 0);
+                CHECK(NonTDtor1::count == 0);
+            }
+            CHECK(NonTDtor::count == 0);
+            CHECK(NonTDtor1::count == 1);
+        }
+    }
+} // namespace dtor
+
 namespace monostate
 {
     void test()
@@ -1368,6 +1427,7 @@ int main()
     in_place_type_ctor::test();
     in_place_type_il_ctor::test();
     converting_ctor::test();
+    dtor::test();
     monostate::test();
     monostate_relops::test();
 
