@@ -708,7 +708,8 @@ namespace move_ctor
 
         // The following tests are for not-yet-standardized behavior (P0602):
         {
-            struct {
+            struct
+            {
                 static constexpr Result<int> impl2(ranges::variant<int> v2) {
                     return {v2.index(), ranges::get<0>(ranges::detail::move(v2))};
                 }
@@ -724,7 +725,8 @@ namespace move_ctor
             STATIC_ASSERT(result.value == 42);
         }
         {
-            struct {
+            struct
+            {
                 static constexpr Result<long> impl2(ranges::variant<int, long> v2) {
                     return {v2.index(), ranges::get<1>(ranges::detail::move(v2))};
                 }
@@ -741,51 +743,95 @@ namespace move_ctor
         }
 #if RANGES_PROPER_TRIVIAL_TRAITS
         {
-            struct {
-                constexpr Result<TMove> operator()() const {
-                    ranges::variant<TMove> v(ranges::in_place_index<0>, 42);
-                    ranges::variant<TMove> v2(std::move(v));
-                    return {v2.index(), ranges::get<0>(std::move(v2))};
+            using V = ranges::variant<TMove>;
+            constexpr std::size_t I = 0;
+            struct
+            {
+                using R = Result<ranges::variant_alternative_t<I, V>>;
+                static constexpr R impl2(V v)
+                {
+                    return {v.index(), ranges::get<I>(ranges::detail::move(v))};
+                }
+                static constexpr R impl1(V v)
+                {
+                    return impl2(V{ranges::detail::move(v)});
+                }
+                constexpr R operator()() const
+                {
+                    return impl1(V{ranges::in_place_index<I>, 42});
                 }
             } test;
             constexpr auto result = test();
-            STATIC_ASSERT(result.index == 0);
+            STATIC_ASSERT(result.index == I);
             STATIC_ASSERT(result.value.value == 42);
         }
         {
-            struct {
-                constexpr Result<TMove> operator()() const {
-                    ranges::variant<int, TMove> v(ranges::in_place_index<1>, 42);
-                    ranges::variant<int, TMove> v2(std::move(v));
-                    return {v2.index(), ranges::get<1>(std::move(v2))};
+            using V = ranges::variant<int, TMove>;
+            constexpr std::size_t I = 1;
+            struct
+            {
+                using R = Result<ranges::variant_alternative_t<I, V>>;
+                static constexpr R impl2(V v)
+                {
+                    return {v.index(), ranges::get<I>(ranges::detail::move(v))};
+                }
+                static constexpr R impl1(V v)
+                {
+                    return impl2(V{ranges::detail::move(v)});
+                }
+                constexpr R operator()() const
+                {
+                    return impl1(V{ranges::in_place_index<I>, 42});
                 }
             } test;
             constexpr auto result = test();
-            STATIC_ASSERT(result.index == 1);
+            STATIC_ASSERT(result.index == I);
             STATIC_ASSERT(result.value.value == 42);
         }
         {
-            struct {
-                constexpr Result<TMoveNTCopy> operator()() const {
-                    ranges::variant<TMoveNTCopy> v(ranges::in_place_index<0>, 42);
-                    ranges::variant<TMoveNTCopy> v2(std::move(v));
-                    return {v2.index(), ranges::get<0>(std::move(v2))};
+            using V = ranges::variant<TMoveNTCopy>;
+            constexpr std::size_t I = 0;
+            struct
+            {
+                using R = Result<ranges::variant_alternative_t<I, V>>;
+                static constexpr R impl2(V v)
+                {
+                    return {v.index(), ranges::get<I>(ranges::detail::move(v))};
+                }
+                static constexpr R impl1(V v)
+                {
+                    return impl2(V{ranges::detail::move(v)});
+                }
+                constexpr R operator()() const
+                {
+                    return impl1(V{ranges::in_place_index<I>, 42});
                 }
             } test;
             constexpr auto result = test();
-            STATIC_ASSERT(result.index == 0);
+            STATIC_ASSERT(result.index == I);
             STATIC_ASSERT(result.value.value == 42);
         }
         {
-            struct {
-                constexpr Result<TMoveNTCopy> operator()() const {
-                    ranges::variant<int, TMoveNTCopy> v(ranges::in_place_index<1>, 42);
-                    ranges::variant<int, TMoveNTCopy> v2(std::move(v));
-                    return {v2.index(), ranges::get<1>(std::move(v2))};
+            using V = ranges::variant<int, TMoveNTCopy>;
+            constexpr std::size_t I = 1;
+            struct
+            {
+                using R = Result<ranges::variant_alternative_t<I, V>>;
+                static constexpr R impl2(V v)
+                {
+                    return {v.index(), ranges::get<I>(ranges::detail::move(v))};
+                }
+                static constexpr R impl1(V v)
+                {
+                    return impl2(V{ranges::detail::move(v)});
+                }
+                constexpr R operator()() const
+                {
+                    return impl1(V{ranges::in_place_index<I>, 42});
                 }
             } test;
             constexpr auto result = test();
-            STATIC_ASSERT(result.index == 1);
+            STATIC_ASSERT(result.index == I);
             STATIC_ASSERT(result.value.value == 42);
         }
 #endif // RANGES_PROPER_TRIVIAL_TRAITS
@@ -1169,6 +1215,97 @@ namespace in_place_type_il_ctor
     }
 } // namespace in_place_type_il_ctor
 
+namespace converting_ctor {
+    struct Dummy { Dummy() = default; };
+
+    struct ThrowsT { ThrowsT(int) noexcept(false) {} };
+
+    struct NoThrowT { NoThrowT(int) noexcept(true) {} };
+
+    struct AnyConstructible { template <typename T> AnyConstructible(T &&) {} };
+    struct NoConstructible { NoConstructible() = delete; };
+
+    void test_T_ctor_noexcept()
+    {
+        {
+            using V = ranges::variant<Dummy, NoThrowT>;
+            STATIC_ASSERT(std::is_nothrow_constructible<V, int>::value);
+        }
+        {
+            using V = ranges::variant<Dummy, ThrowsT>;
+            STATIC_ASSERT(!std::is_nothrow_constructible<V, int>::value);
+        }
+    }
+
+    void test_T_ctor_sfinae() {
+        {
+            using V = ranges::variant<long, unsigned>;
+            static_assert(!std::is_constructible<V, int>::value, "ambiguous");
+        }
+        {
+            using V = ranges::variant<std::string, std::string>;
+            static_assert(!std::is_constructible<V, const char *>::value, "ambiguous");
+        }
+        {
+            using V = ranges::variant<std::string, void *>;
+            static_assert(!std::is_constructible<V, int>::value, "no matching constructor");
+        }
+        {
+            using V = ranges::variant<AnyConstructible, NoConstructible>;
+            static_assert(
+                !std::is_constructible<V, ranges::in_place_type_t<NoConstructible>>::value,
+                "no matching constructor");
+            static_assert(!std::is_constructible<V, ranges::in_place_index_t<1>>::value,
+                "no matching constructor");
+        }
+
+        {
+            using V = ranges::variant<int, int &&>;
+            static_assert(!std::is_constructible<V, int>::value, "ambiguous");
+        }
+        {
+            using V = ranges::variant<int, const int &>;
+            static_assert(!std::is_constructible<V, int>::value, "ambiguous");
+        }
+    }
+
+    void test_T_ctor_basic() {
+        {
+            constexpr ranges::variant<int> v(42);
+            STATIC_ASSERT(v.index() == 0);
+            STATIC_ASSERT(ranges::get<0>(v) == 42);
+        }
+        {
+            constexpr ranges::variant<int, long> v(42l);
+            STATIC_ASSERT(v.index() == 1);
+            STATIC_ASSERT(ranges::get<1>(v) == 42);
+        }
+        {
+            using V = ranges::variant<const int &, int &&, long>;
+            static_assert(std::is_convertible<int &, V>::value, "must be implicit");
+            int x = 42;
+            V v(x);
+            CHECK(v.index() == 0u);
+            CHECK(&ranges::get<0>(v) == &x);
+        }
+        {
+            using V = ranges::variant<const int &, int &&, long>;
+            static_assert(std::is_convertible<int, V>::value, "must be implicit");
+            int x = 42;
+            V v(std::move(x));
+            CHECK(v.index() == 1u);
+            CHECK(&ranges::get<1>(v) == &x);
+        }
+    }
+
+    void test()
+    {
+        test_T_ctor_basic();
+        test_T_ctor_noexcept();
+        test_T_ctor_sfinae();
+    }
+} // namespace converting_ctor
+
 namespace monostate
 {
     void test()
@@ -1230,6 +1367,7 @@ int main()
     in_place_index_il_ctor::test();
     in_place_type_ctor::test();
     in_place_type_il_ctor::test();
+    converting_ctor::test();
     monostate::test();
     monostate_relops::test();
 
