@@ -36,6 +36,7 @@ template<class...> class show_type; // FIXME: remove
 #else
 #define STATIC_ASSERT(...) static_assert((__VA_ARGS__), #__VA_ARGS__)
 #endif
+#define ASSERT_NOEXCEPT(...) STATIC_ASSERT(noexcept(__VA_ARGS__))
 
 namespace bad_access
 {
@@ -842,6 +843,40 @@ namespace monostate
     }
 } // namespace monostate
 
+namespace monostate_relops
+{
+    void test()
+    {
+        using M = ranges::monostate;
+        constexpr M m1{};
+        constexpr M m2{};
+        {
+            STATIC_ASSERT((m1 < m2) == false);
+            ASSERT_NOEXCEPT(m1 < m2);
+        }
+        {
+            STATIC_ASSERT((m1 > m2) == false);
+            ASSERT_NOEXCEPT(m1 > m2);
+        }
+        {
+            STATIC_ASSERT((m1 <= m2) == true);
+            ASSERT_NOEXCEPT(m1 <= m2);
+        }
+        {
+            STATIC_ASSERT((m1 >= m2) == true);
+            ASSERT_NOEXCEPT(m1 >= m2);
+        }
+        {
+            STATIC_ASSERT((m1 == m2) == true);
+            ASSERT_NOEXCEPT(m1 == m2);
+        }
+        {
+            STATIC_ASSERT((m1 != m2) == false);
+            ASSERT_NOEXCEPT(m1 != m2);
+        }
+    }
+} // namespace monostate_relops
+
 int main()
 {
     bad_access::test();
@@ -852,6 +887,7 @@ int main()
     copy_ctor::test();
     move_ctor::test();
     monostate::test();
+    monostate_relops::test();
 
 #if 0
     // Simple variant and access.
