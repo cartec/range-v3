@@ -650,10 +650,12 @@ namespace ranges
             {
                 variant_base<Types...> &self_;
 
-                static RANGES_CXX14_CONSTEXPR void bad_access() noexcept
-                {}
+                void bad_access() noexcept
+                {
+                    self_.reset();
+                }
                 template<std::size_t I, typename T>
-                RANGES_CXX14_CONSTEXPR void operator()(meta::size_t<I>, T const &t) const
+                void operator()(meta::size_t<I>, T const &t) const
                     noexcept(std::is_nothrow_copy_constructible<T>::value)
                 {
                     constexpr bool copy_does_not_throw =
@@ -664,21 +666,23 @@ namespace ranges
 
             private:
                 template<std::size_t I, typename T>
-                RANGES_CXX14_CONSTEXPR void helper(T const &t, std::true_type) const
+                void helper(T const &t, std::true_type) const
                     noexcept(std::is_nothrow_copy_constructible<T>::value)
                 {
-                    this->reset();
+                    self_.reset();
                     auto &target = variant_raw_get<I>(self_.storage_);
                     ::new (detail::addressof(target)) T(cook(t));
+                    self_.index_ = I + 1;
                 }
 
                 template<std::size_t I, typename T>
-                RANGES_CXX14_CONSTEXPR void helper(T const &t, std::false_type) const
+                void helper(T const &t, std::false_type) const
                 {
                     auto tmp(cook(t));
-                    this->reset();
+                    self_.reset();
                     auto &target = variant_raw_get<I>(self_.storage_);
                     ::new (detail::addressof(target)) T(std::move(tmp));
+                    self_.index_ = I + 1;
                 }
             };
 
@@ -693,8 +697,8 @@ namespace ranges
                 variant_nontrivial_copy_assign& operator=(variant_nontrivial_copy_assign const& that)
                     noexcept(meta::and_<std::is_nothrow_copy_assignable<Types>...>::value) // FIXME
                 {
-                    auto const i = this->index_;
-                    if (i == that.index_)
+                    auto const i = that.index_;
+                    if (i == this->index_)
                     {
                         variant_raw_visit(i, that.storage_,
                             variant_assign_same_visitor<Types...>{*this});
@@ -745,8 +749,8 @@ namespace ranges
                 variant_nontrivial_move_assign& operator=(variant_nontrivial_move_assign &&that)
                     noexcept(meta::and_<std::is_nothrow_move_assignable<Types>...>::value) // FIXME
                 {
-                    auto const i = this->index_;
-                    if (i == that.index_)
+                    auto const i = that.index_;
+                    if (i == this->index_)
                     {
                         variant_raw_visit(i, std::move(that.storage_),
                             variant_assign_same_visitor<Types...>{*this});
