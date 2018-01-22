@@ -180,54 +180,49 @@ namespace ranges
             {
                 CONCEPT_ASSERT(std::is_object<T>::value);
 
-                meta::_t<std::remove_const<T>> obj_;
+                meta::_t<std::remove_const<T>> t_;
 
                 template<typename... Args,
                     CONCEPT_REQUIRES_(Constructible<T, Args...>())>
                 constexpr variant_wrapper(Args &&... args)
                     noexcept(std::is_nothrow_constructible<T, Args...>::value)
-                  : obj_(static_cast<Args &&>(args)...)
+                  : t_(static_cast<Args &&>(args)...)
                 {}
-
-                friend constexpr T &cook(variant_wrapper &w) noexcept
-                {
-                    return w.obj_;
-                }
-                friend constexpr T const &cook(variant_wrapper const &w) noexcept
-                {
-                    return w.obj_;
-                }
-                friend constexpr T &&cook(variant_wrapper &&w) noexcept
-                {
-                    return static_cast<T &&>(w.obj_);
-                }
-                friend constexpr T const &&cook(variant_wrapper const &&w) noexcept
-                {
-                    return static_cast<T const &&>(w.obj_);
-                }
             };
 
             template<typename T>
             struct variant_wrapper<T, meta::if_<std::is_reference<T>>>
             {
-                T ref_;
+                T t_;
 
                 template<typename Arg,
                     CONCEPT_REQUIRES_(Constructible<T, Arg>())>
                 constexpr variant_wrapper(Arg &&arg)
                     noexcept(std::is_nothrow_constructible<T, Arg>::value)
-                  : ref_(static_cast<Arg &&>(arg))
+                  : t_(static_cast<Arg &&>(arg))
                 {}
-
-                friend constexpr T &cook(variant_wrapper const &w) noexcept
-                {
-                    return w.ref_;
-                }
-                friend constexpr T cook(variant_wrapper const &&w) noexcept
-                {
-                    return static_cast<T>(w.ref_);
-                }
             };
+
+            template<typename T>
+            constexpr T &cook(variant_wrapper<T> &w) noexcept
+            {
+                return w.t_;
+            }
+            template<typename T>
+            constexpr T const &cook(variant_wrapper<T> const &w) noexcept
+            {
+                return w.t_;
+            }
+            template<typename T>
+            constexpr T &&cook(variant_wrapper<T> &&w) noexcept
+            {
+                return static_cast<T &&>(w.t_);
+            }
+            template<typename T>
+            constexpr T const &&cook(variant_wrapper<T> const &&w) noexcept
+            {
+                return static_cast<T const &&>(w.t_);
+            }
 
             template<bool AllTriviallyDestructible, typename... Types>
             struct variant_storage_
@@ -433,7 +428,7 @@ namespace ranges
                 static void bad_access() noexcept
                 {}
                 template<std::size_t I, typename T, typename U = uncvref_t<T>,
-                    typename C = decltype(cook(std::declval<T>())),
+                    typename C = decltype(detail::cook(std::declval<T>())),
                     CONCEPT_REQUIRES_(Constructible<U, C>())>
                 void operator()(meta::size_t<I>, T &&t) const
                     noexcept(std::is_nothrow_constructible<U, C>::value)
@@ -441,7 +436,7 @@ namespace ranges
                     RANGES_EXPECT(self_.index_ == 0);
                     auto &target = variant_raw_get<I>(self_.storage_);
                     CONCEPT_ASSERT(Same<U, uncvref_t<decltype(target)>>());
-                    ::new (detail::addressof(target)) U(cook(static_cast<T &&>(t)));
+                    ::new (detail::addressof(target)) U(detail::cook(static_cast<T &&>(t)));
                     self_.index_ = I + 1;
                 }
             };
@@ -459,7 +454,7 @@ namespace ranges
                 {}
 
                 template<std::size_t I, typename T, typename U = uncvref_t<T>,
-                    typename C = decltype(cook(std::declval<T>())),
+                    typename C = decltype(detail::cook(std::declval<T>())),
                     CONCEPT_REQUIRES_(Constructible<U, C>())>
                 void operator()(meta::size_t<I>, T &&t) const
                     noexcept(std::is_nothrow_constructible<U, C>::value)
@@ -641,7 +636,7 @@ namespace ranges
                 RANGES_AUTO_RETURN_NOEXCEPT
                 (
                     (void)(RANGES_EXPECT(self_.index_ == I + 1),
-                    cook(variant_raw_get<I>(self_.storage_)) = cook(static_cast<T &&>(t)))
+                    detail::cook(variant_raw_get<I>(self_.storage_)) = detail::cook(static_cast<T &&>(t)))
                 )
             };
 
@@ -670,13 +665,13 @@ namespace ranges
                 {
                     self_.reset_();
                     auto &target = variant_raw_get<I>(self_.storage_);
-                    ::new (detail::addressof(target)) T(cook(t));
+                    ::new (detail::addressof(target)) T(detail::cook(t));
                     self_.index_ = I + 1;
                 }
                 template<std::size_t I, typename T>
                 void impl(T const &t, std::false_type) const
                 {
-                    auto tmp(cook(t));
+                    auto tmp(detail::cook(t));
                     self_.reset_();
                     auto &target = variant_raw_get<I>(self_.storage_);
                     ::new (detail::addressof(target)) T(std::move(tmp));
@@ -830,7 +825,7 @@ namespace ranges
             template<std::size_t I, typename V>
             struct variant_get_visitor
             {
-                using result_t = decltype(cook(variant_raw_get<I>(
+                using result_t = decltype(detail::cook(variant_raw_get<I>(
                     variant_access::storage(std::declval<V>()))));
                 [[noreturn]] static result_t bad_access()
                 {
@@ -839,7 +834,7 @@ namespace ranges
                 template<typename Item>
                 constexpr result_t operator()(meta::size_t<I>, Item &&i) noexcept
                 {
-                    return cook(static_cast<Item &&>(i));
+                    return detail::cook(static_cast<Item &&>(i));
                 }
                 [[noreturn]] static result_t operator()(detail::any, detail::any)
                 {
@@ -946,7 +941,7 @@ namespace ranges
             {
                 auto const i = index_;
                 if (i == I + 1)
-                    cook(detail::variant_raw_get<I>(storage_)) = static_cast<T &&>(t);
+                    detail::cook(detail::variant_raw_get<I>(storage_)) = static_cast<T &&>(t);
                 else
                 {
                     constexpr bool construct_in_place =
@@ -986,7 +981,7 @@ namespace ranges
         RANGES_DECLTYPE_AUTO_RETURN
         (
             (void)(v.index() == I || (detail::throw_bad_variant_access(), true)),
-                cook(detail::variant_raw_get<I>(
+                detail::cook(detail::variant_raw_get<I>(
                     detail::variant_access::storage(static_cast<V &&>(v))))
         )
 
@@ -996,7 +991,7 @@ namespace ranges
         RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT
         (
             RANGES_EXPECT(v.index() == I),
-            cook(detail::variant_raw_get<I>(
+            detail::cook(detail::variant_raw_get<I>(
                 detail::variant_access::storage(static_cast<V &&>(v))))
         )
 
