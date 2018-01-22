@@ -747,7 +747,8 @@ namespace ranges
                 variant_nontrivial_move_assign(variant_nontrivial_move_assign &&) = default;
                 variant_nontrivial_move_assign& operator=(variant_nontrivial_move_assign const&) = default;
                 variant_nontrivial_move_assign& operator=(variant_nontrivial_move_assign &&that)
-                    noexcept(meta::and_<std::is_nothrow_move_assignable<Types>...>::value) // FIXME
+                    noexcept(meta::and_<std::is_nothrow_move_constructible<Types>...,
+                        std::is_nothrow_move_assignable<Types>...>::value)
                 {
                     auto const i = that.index_;
                     if (i == this->index_)

@@ -54,6 +54,52 @@ template <class Tp, class ...Args>
 constexpr bool test_convertible()
 { return detail::test_convertible_imp<Tp, Args...>(0); }
 
+
+struct MakeEmptyT
+{
+    static int alive;
+    MakeEmptyT() { ++alive; }
+    MakeEmptyT(MakeEmptyT const&) {
+        ++alive;
+        // Don't throw from the copy constructor since variant's assignment
+        // operator performs a copy before committing to the assignment.
+    }
+    [[noreturn]] MakeEmptyT(MakeEmptyT &&)
+    {
+        throw 42;
+    }
+    MakeEmptyT& operator=(MakeEmptyT const&)
+    {
+        throw 42;
+    }
+    MakeEmptyT& operator=(MakeEmptyT&&)
+    {
+        throw 42;
+    }
+    ~MakeEmptyT()
+    {
+        --alive;
+    }
+};
+STATIC_ASSERT(ranges::is_swappable<MakeEmptyT>::value); // required for test
+
+int MakeEmptyT::alive = 0;
+
+template <class Variant>
+void makeEmpty(Variant &v)
+{
+    Variant v2(ranges::in_place_type<MakeEmptyT>);
+    try
+    {
+        v = std::move(v2);
+        CHECK(false);
+    }
+    catch (...)
+    {
+        CHECK(v.valueless_by_exception());
+    }
+}
+
 namespace bad_access
 {
     void test()
@@ -306,33 +352,6 @@ namespace copy_ctor
     STATIC_ASSERT(!RANGES_PROPER_TRIVIAL_TRAITS ||
         ranges::detail::is_trivially_copy_constructible<TCopyNTMove>::value);
 
-    struct MakeEmptyT {
-        static int alive;
-        MakeEmptyT() { ++alive; }
-        MakeEmptyT(const MakeEmptyT &) { ++alive; }
-        [[noreturn]] MakeEmptyT(MakeEmptyT &&) { throw 42; }
-        MakeEmptyT &operator=(const MakeEmptyT &) { throw 42; }
-        MakeEmptyT &operator=(MakeEmptyT &&) { throw 42; }
-        ~MakeEmptyT() { --alive; }
-    };
-
-    int MakeEmptyT::alive = 0;
-
-    template <class Variant>
-    void makeEmpty(Variant &v)
-    {
-        Variant v2(ranges::in_place_type<MakeEmptyT>);
-        try
-        {
-            v = std::move(v2);
-            CHECK(false);
-        }
-        catch (...)
-        {
-            CHECK(v.valueless_by_exception());
-        }
-    }
-
     void test_copy_ctor_sfinae()
     {
         {
@@ -567,35 +586,6 @@ namespace move_ctor
 
     STATIC_ASSERT(!RANGES_PROPER_TRIVIAL_TRAITS ||
         ranges::detail::is_trivially_move_constructible<TMoveNTCopy>::value);
-
-    struct MakeEmptyT
-    {
-        static int alive;
-        MakeEmptyT() { ++alive; }
-        MakeEmptyT(const MakeEmptyT &) {
-            ++alive;
-            // Don't throw from the copy constructor since variant's assignment
-            // operator performs a copy before committing to the assignment.
-        }
-        [[noreturn]] MakeEmptyT(MakeEmptyT &&) { throw 42; }
-        MakeEmptyT &operator=(const MakeEmptyT &) { throw 42; }
-        MakeEmptyT &operator=(MakeEmptyT &&) { throw 42; }
-        ~MakeEmptyT() { --alive; }
-    };
-
-    int MakeEmptyT::alive = 0;
-
-    template <class Variant>
-    void makeEmpty(Variant &v)
-    {
-        Variant v2(ranges::in_place_type<MakeEmptyT>);
-        try {
-            v = std::move(v2);
-            CHECK(false);
-        } catch (...) {
-            CHECK(v.valueless_by_exception());
-        }
-    }
 
     void test_move_noexcept()
     {
@@ -1526,34 +1516,6 @@ namespace copy_assign
 
     int MoveThrows::alive = 0;
 
-    struct MakeEmptyT
-    {
-        static int alive;
-        MakeEmptyT() { ++alive; }
-        MakeEmptyT(const MakeEmptyT &) {
-            ++alive;
-            // Don't throw from the copy constructor since variant's assignment
-            // operator performs a copy before committing to the assignment.
-        }
-        [[noreturn]] MakeEmptyT(MakeEmptyT &&) { throw 42; }
-        MakeEmptyT &operator=(const MakeEmptyT &) { throw 42; }
-        MakeEmptyT &operator=(MakeEmptyT &&) { throw 42; }
-        ~MakeEmptyT() { --alive; }
-    };
-
-    int MakeEmptyT::alive = 0;
-
-    template <class Variant> void makeEmpty(Variant &v)
-    {
-        Variant v2(ranges::in_place_type<MakeEmptyT>);
-        try {
-            v = std::move(v2);
-            CHECK(false);
-        } catch (...) {
-            CHECK(v.valueless_by_exception());
-        }
-    }
-
     void test_copy_assignment_not_noexcept()
     {
         {
@@ -1921,19 +1883,23 @@ namespace copy_assign
         v = cp;
         return v.index() == NewIdx && ranges::get<NewIdx>(v) == ranges::get<NewIdx>(cp);
     }
+#endif // RANGES_CXX_CONSTEXPR
 
     void test_constexpr_copy_assignment_extension()
     {
         // The following tests are for not-yet-standardized behavior (P0602):
         using V = ranges::variant<long, void*, int>;
-        STATIC_ASSERT(ranges::detail::is_trivially_copyable<V>::value);
-        STATIC_ASSERT(ranges::detail::is_trivially_copy_assignable<V>::value);
+        STATIC_ASSERT(!RANGES_PROPER_TRIVIAL_TRAITS ||
+            ranges::detail::is_trivially_copyable<V>::value);
+        STATIC_ASSERT(!RANGES_PROPER_TRIVIAL_TRAITS ||
+            ranges::detail::is_trivially_copy_assignable<V>::value);
+#if RANGES_CXX_CONSTEXPR >= RANGES_CXX_CONSTEXPR_14
         STATIC_ASSERT(test_constexpr_assign_extension_imp<0>(V(42l), 101l));
         STATIC_ASSERT(test_constexpr_assign_extension_imp<0>(V(nullptr), 101l));
         STATIC_ASSERT(test_constexpr_assign_extension_imp<1>(V(42l), nullptr));
         STATIC_ASSERT(test_constexpr_assign_extension_imp<2>(V(42l), 101));
-    }
 #endif
+    }
 
     void test()
     {
@@ -1944,11 +1910,508 @@ namespace copy_assign
         test_copy_assignment_different_index();
         test_copy_assignment_sfinae();
         test_copy_assignment_not_noexcept();
-#if RANGES_CXX_CONSTEXPR >= RANGES_CXX_CONSTEXPR_14
         test_constexpr_copy_assignment_extension();
-#endif
     }
 } // namespace copy_assign
+
+namespace move_assign
+{
+    struct NoCopy
+    {
+        NoCopy(const NoCopy &) = delete;
+        NoCopy &operator=(const NoCopy &) = default;
+    };
+
+    struct CopyOnly
+    {
+        CopyOnly(const CopyOnly &) = default;
+        CopyOnly(CopyOnly &&) = delete;
+        CopyOnly &operator=(const CopyOnly &) = default;
+        CopyOnly &operator=(CopyOnly &&) = delete;
+    };
+
+    struct MoveOnly
+    {
+        MoveOnly(const MoveOnly &) = delete;
+        MoveOnly(MoveOnly &&) = default;
+        MoveOnly &operator=(const MoveOnly &) = delete;
+        MoveOnly &operator=(MoveOnly &&) = default;
+    };
+
+    struct MoveOnlyNT
+    {
+        MoveOnlyNT(const MoveOnlyNT &) = delete;
+        MoveOnlyNT(MoveOnlyNT &&) {}
+        MoveOnlyNT &operator=(const MoveOnlyNT &) = delete;
+        MoveOnlyNT &operator=(MoveOnlyNT &&) = default;
+    };
+
+    struct MoveOnlyOddNothrow
+    {
+        MoveOnlyOddNothrow(MoveOnlyOddNothrow &&) noexcept(false) {}
+        MoveOnlyOddNothrow(const MoveOnlyOddNothrow &) = delete;
+        MoveOnlyOddNothrow &operator=(MoveOnlyOddNothrow &&) noexcept = default;
+        MoveOnlyOddNothrow &operator=(const MoveOnlyOddNothrow &) = delete;
+    };
+
+    struct MoveAssignOnly
+    {
+        MoveAssignOnly(MoveAssignOnly &&) = delete;
+        MoveAssignOnly &operator=(MoveAssignOnly &&) = default;
+    };
+
+    struct MoveAssign
+    {
+        static int move_construct;
+        static int move_assign;
+        static void reset() { move_construct = move_assign = 0; }
+        MoveAssign(int v) : value(v) {}
+        MoveAssign(MoveAssign &&o) : value(o.value) {
+            ++move_construct;
+            o.value = -1;
+        }
+        MoveAssign &operator=(MoveAssign &&o) {
+            value = o.value;
+            ++move_assign;
+            o.value = -1;
+            return *this;
+        }
+        int value;
+    };
+
+    int MoveAssign::move_construct = 0;
+    int MoveAssign::move_assign = 0;
+
+    struct NTMoveAssign
+    {
+        constexpr NTMoveAssign(int v) : value(v) {}
+        NTMoveAssign(const NTMoveAssign &) = default;
+        NTMoveAssign(NTMoveAssign &&) = default;
+        NTMoveAssign &operator=(const NTMoveAssign &that) = default;
+        NTMoveAssign &operator=(NTMoveAssign &&that) {
+            value = that.value;
+            that.value = -1;
+            return *this;
+        }
+        int value;
+    };
+
+    STATIC_ASSERT(!ranges::detail::is_trivially_move_assignable<NTMoveAssign>::value);
+    STATIC_ASSERT(std::is_move_assignable<NTMoveAssign>::value);
+
+    struct TMoveAssign
+    {
+        constexpr TMoveAssign(int v) : value(v) {}
+        TMoveAssign(const TMoveAssign &) = delete;
+        TMoveAssign(TMoveAssign &&) = default;
+        TMoveAssign &operator=(const TMoveAssign &) = delete;
+        TMoveAssign &operator=(TMoveAssign &&) = default;
+        int value;
+    };
+
+    STATIC_ASSERT(!RANGES_PROPER_TRIVIAL_TRAITS ||
+        ranges::detail::is_trivially_move_assignable<TMoveAssign>::value);
+
+    struct TMoveAssignNTCopyAssign
+    {
+        constexpr TMoveAssignNTCopyAssign(int v) : value(v) {}
+        TMoveAssignNTCopyAssign(const TMoveAssignNTCopyAssign &) = default;
+        TMoveAssignNTCopyAssign(TMoveAssignNTCopyAssign &&) = default;
+        TMoveAssignNTCopyAssign &operator=(const TMoveAssignNTCopyAssign &that) {
+            value = that.value;
+            return *this;
+        }
+        TMoveAssignNTCopyAssign &operator=(TMoveAssignNTCopyAssign &&) = default;
+        int value;
+    };
+
+    STATIC_ASSERT(~RANGES_PROPER_TRIVIAL_TRAITS ||
+        ranges::detail::is_trivially_move_assignable<TMoveAssignNTCopyAssign>::value);
+
+    struct TrivialCopyNontrivialMove
+    {
+        TrivialCopyNontrivialMove(TrivialCopyNontrivialMove const&) = default;
+        TrivialCopyNontrivialMove(TrivialCopyNontrivialMove&&) noexcept {}
+        TrivialCopyNontrivialMove& operator=(TrivialCopyNontrivialMove const&) = default;
+        TrivialCopyNontrivialMove& operator=(TrivialCopyNontrivialMove&&) noexcept {
+            return *this;
+        }
+    };
+
+    STATIC_ASSERT(!RANGES_PROPER_TRIVIAL_TRAITS ||
+        ranges::detail::is_trivially_copy_assignable<TrivialCopyNontrivialMove>::value);
+    STATIC_ASSERT(!ranges::detail::is_trivially_move_assignable<TrivialCopyNontrivialMove>::value);
+
+    void test_move_assignment_noexcept()
+    {
+        {
+            using V = ranges::variant<int>;
+            STATIC_ASSERT(std::is_nothrow_move_assignable<V>::value);
+        }
+        {
+            using V = ranges::variant<MoveOnly>;
+            STATIC_ASSERT(std::is_nothrow_move_assignable<V>::value);
+        }
+        {
+            using V = ranges::variant<int, long>;
+            STATIC_ASSERT(std::is_nothrow_move_assignable<V>::value);
+        }
+        {
+            using V = ranges::variant<int, MoveOnly>;
+            STATIC_ASSERT(std::is_nothrow_move_assignable<V>::value);
+        }
+        {
+            using V = ranges::variant<MoveOnlyNT>;
+            STATIC_ASSERT(!std::is_nothrow_move_assignable<V>::value);
+        }
+        {
+            using V = ranges::variant<MoveOnlyOddNothrow>;
+            STATIC_ASSERT(!std::is_nothrow_move_assignable<V>::value);
+        }
+    }
+
+    void test_move_assignment_sfinae()
+    {
+        {
+            using V = ranges::variant<int, long>;
+            STATIC_ASSERT(std::is_move_assignable<V>::value);
+        }
+        {
+            using V = ranges::variant<int, CopyOnly>;
+            STATIC_ASSERT(std::is_move_assignable<V>::value);
+        }
+        {
+            using V = ranges::variant<int, NoCopy>;
+            STATIC_ASSERT(!std::is_move_assignable<V>::value);
+        }
+        {
+            using V = ranges::variant<int, MoveOnly>;
+            STATIC_ASSERT(std::is_move_assignable<V>::value);
+        }
+        {
+            using V = ranges::variant<int, MoveOnlyNT>;
+            STATIC_ASSERT(std::is_move_assignable<V>::value);
+        }
+        {
+            // variant only provides move assignment when the types also provide
+            // a move constructor.
+            using V = ranges::variant<int, MoveAssignOnly>;
+            STATIC_ASSERT(!std::is_move_assignable<V>::value);
+        }
+
+#if RANGES_PROPER_TRIVIAL_TRAITS
+        // The following tests are for not-yet-standardized behavior (P0602):
+        {
+            using V = ranges::variant<int, long>;
+            STATIC_ASSERT(ranges::detail::is_trivially_move_assignable<V>::value);
+        }
+        {
+            using V = ranges::variant<int, NTMoveAssign>;
+            STATIC_ASSERT(!ranges::detail::is_trivially_move_assignable<V>::value);
+            STATIC_ASSERT(std::is_move_assignable<V>::value);
+        }
+        {
+            using V = ranges::variant<int, TMoveAssign>;
+            STATIC_ASSERT(ranges::detail::is_trivially_move_assignable<V>::value);
+        }
+        {
+            using V = ranges::variant<int, TMoveAssignNTCopyAssign>;
+            STATIC_ASSERT(ranges::detail::is_trivially_move_assignable<V>::value);
+        }
+        {
+            using V = ranges::variant<int, TrivialCopyNontrivialMove>;
+            STATIC_ASSERT(!ranges::detail::is_trivially_move_assignable<V>::value);
+        }
+        {
+            using V = ranges::variant<int, CopyOnly>;
+            STATIC_ASSERT(ranges::detail::is_trivially_move_assignable<V>::value);
+        }
+#endif // RANGES_PROPER_TRIVIAL_TRAITS
+    }
+
+    void test_move_assignment_empty_empty()
+    {
+        using MET = MakeEmptyT;
+        {
+            using V = ranges::variant<int, long, MET>;
+            V v1(ranges::in_place_index<0>);
+            makeEmpty(v1);
+            V v2(ranges::in_place_index<0>);
+            makeEmpty(v2);
+            V &vref = (v1 = std::move(v2));
+            CHECK(&vref == &v1);
+            CHECK(v1.valueless_by_exception());
+            CHECK(v1.index() == ranges::variant_npos);
+        }
+    }
+
+    void test_move_assignment_non_empty_empty()
+    {
+        using MET = MakeEmptyT;
+        {
+            using V = ranges::variant<int, MET>;
+            V v1(ranges::in_place_index<0>, 42);
+            V v2(ranges::in_place_index<0>);
+            makeEmpty(v2);
+            V &vref = (v1 = std::move(v2));
+            CHECK(&vref == &v1);
+            CHECK(v1.valueless_by_exception());
+            CHECK(v1.index() == ranges::variant_npos);
+        }
+        {
+            using V = ranges::variant<int, MET, std::string>;
+            V v1(ranges::in_place_index<2>, "hello");
+            V v2(ranges::in_place_index<0>);
+            makeEmpty(v2);
+            V &vref = (v1 = std::move(v2));
+            CHECK(&vref == &v1);
+            CHECK(v1.valueless_by_exception());
+            CHECK(v1.index() == ranges::variant_npos);
+        }
+    }
+
+    void test_move_assignment_empty_non_empty()
+    {
+        using MET = MakeEmptyT;
+        {
+            using V = ranges::variant<int, MET>;
+            V v1(ranges::in_place_index<0>);
+            makeEmpty(v1);
+            V v2(ranges::in_place_index<0>, 42);
+            V &vref = (v1 = std::move(v2));
+            CHECK(&vref == &v1);
+            CHECK(v1.index() == 0u);
+            CHECK(ranges::get<0>(v1) == 42);
+        }
+        {
+            using V = ranges::variant<int, MET, std::string>;
+            V v1(ranges::in_place_index<0>);
+            makeEmpty(v1);
+            V v2(ranges::in_place_type<std::string>, "hello");
+            V &vref = (v1 = std::move(v2));
+            CHECK(&vref == &v1);
+            CHECK(v1.index() == 2u);
+            CHECK(ranges::get<2>(v1) == "hello");
+        }
+    }
+
+    template <typename T> struct Result { size_t index; T value; };
+
+    void test_move_assignment_same_index()
+    {
+        {
+            using V = ranges::variant<int>;
+            V v1(43);
+            V v2(42);
+            V &vref = (v1 = std::move(v2));
+            CHECK(&vref == &v1);
+            CHECK(v1.index() == 0u);
+            CHECK(ranges::get<0>(v1) == 42);
+        }
+        {
+            using V = ranges::variant<int, long, unsigned>;
+            V v1(43l);
+            V v2(42l);
+            V &vref = (v1 = std::move(v2));
+            CHECK(&vref == &v1);
+            CHECK(v1.index() == 1u);
+            CHECK(ranges::get<1>(v1) == 42);
+        }
+        {
+            using V = ranges::variant<int, MoveAssign, unsigned>;
+            V v1(ranges::in_place_type<MoveAssign>, 43);
+            V v2(ranges::in_place_type<MoveAssign>, 42);
+            MoveAssign::reset();
+            V &vref = (v1 = std::move(v2));
+            CHECK(&vref == &v1);
+            CHECK(v1.index() == 1u);
+            CHECK(ranges::get<1>(v1).value == 42);
+            CHECK(MoveAssign::move_construct == 0);
+            CHECK(MoveAssign::move_assign == 1);
+        }
+
+        using MET = MakeEmptyT;
+        {
+            using V = ranges::variant<int, MET, std::string>;
+            V v1(ranges::in_place_type<MET>);
+            MET &mref = ranges::get<1>(v1);
+            V v2(ranges::in_place_type<MET>);
+            try {
+                v1 = std::move(v2);
+                CHECK(false);
+            } catch (...) {
+            }
+            CHECK(v1.index() == 1u);
+            CHECK(&ranges::get<1>(v1) == &mref);
+        }
+
+#if RANGES_CXX_CONSTEXPR >= RANGES_CXX_CONSTEXPR_14
+        // The following tests are for not-yet-standardized behavior (P0602):
+        {
+            struct {
+                constexpr Result<int> operator()() const {
+                    using V = ranges::variant<int>;
+                    V v(43);
+                    V v2(42);
+                    v = std::move(v2);
+                    return {v.index(), ranges::get<0>(v)};
+                }
+            } test;
+            constexpr auto result = test();
+            STATIC_ASSERT(result.index == 0);
+            STATIC_ASSERT(result.value == 42);
+        }
+        {
+            struct {
+                constexpr Result<long> operator()() const {
+                    using V = ranges::variant<int, long, unsigned>;
+                    V v(43l);
+                    V v2(42l);
+                    v = std::move(v2);
+                    return {v.index(), ranges::get<1>(v)};
+                }
+            } test;
+            constexpr auto result = test();
+            STATIC_ASSERT(result.index == 1);
+            STATIC_ASSERT(result.value == 42l);
+        }
+        {
+            struct {
+                constexpr Result<int> operator()() const {
+                    using V = ranges::variant<int, TMoveAssign, unsigned>;
+                    V v(ranges::in_place_type<TMoveAssign>, 43);
+                    V v2(ranges::in_place_type<TMoveAssign>, 42);
+                    v = std::move(v2);
+                    return {v.index(), ranges::get<1>(v).value};
+                }
+            } test;
+            constexpr auto result = test();
+            STATIC_ASSERT(result.index == 1);
+            STATIC_ASSERT(result.value == 42);
+        }
+#endif // RANGES_CXX_CONSTEXPR
+    }
+
+    void test_move_assignment_different_index()
+    {
+        {
+            using V = ranges::variant<int, long, unsigned>;
+            V v1(43);
+            V v2(42l);
+            V &vref = (v1 = std::move(v2));
+            CHECK(&vref == &v1);
+            CHECK(v1.index() == 1u);
+            CHECK(ranges::get<1>(v1) == 42);
+        }
+        {
+            using V = ranges::variant<int, MoveAssign, unsigned>;
+            V v1(ranges::in_place_type<unsigned>, 43u);
+            V v2(ranges::in_place_type<MoveAssign>, 42);
+            MoveAssign::reset();
+            V &vref = (v1 = std::move(v2));
+            CHECK(&vref == &v1);
+            CHECK(v1.index() == 1u);
+            CHECK(ranges::get<1>(v1).value == 42);
+            CHECK(MoveAssign::move_construct == 1);
+            CHECK(MoveAssign::move_assign == 0);
+        }
+
+        using MET = MakeEmptyT;
+        {
+            using V = ranges::variant<int, MET, std::string>;
+            V v1(ranges::in_place_type<int>);
+            V v2(ranges::in_place_type<MET>);
+            try {
+                v1 = std::move(v2);
+                CHECK(false);
+            } catch (...) {
+            }
+            CHECK(v1.valueless_by_exception());
+            CHECK(v1.index() == ranges::variant_npos);
+        }
+        {
+            using V = ranges::variant<int, MET, std::string>;
+            V v1(ranges::in_place_type<MET>);
+            V v2(ranges::in_place_type<std::string>, "hello");
+            V &vref = (v1 = std::move(v2));
+            CHECK(&vref == &v1);
+            CHECK(v1.index() == 2u);
+            CHECK(ranges::get<2>(v1) == "hello");
+        }
+
+#if RANGES_CXX_CONSTEXPR >= RANGES_CXX_CONSTEXPR_14
+        // The following tests are for not-yet-standardized behavior (P0602):
+        {
+            struct {
+                constexpr Result<long> operator()() const {
+                    using V = ranges::variant<int, long, unsigned>;
+                    V v(43);
+                    V v2(42l);
+                    v = std::move(v2);
+                    return {v.index(), ranges::get<1>(v)};
+                }
+            } test;
+            constexpr auto result = test();
+            STATIC_ASSERT(result.index == 1);
+            STATIC_ASSERT(result.value == 42l);
+        }
+        {
+            struct {
+                constexpr Result<long> operator()() const {
+                    using V = ranges::variant<int, TMoveAssign, unsigned>;
+                    V v(ranges::in_place_type<unsigned>, 43u);
+                    V v2(ranges::in_place_type<TMoveAssign>, 42);
+                    v = std::move(v2);
+                    return {v.index(), ranges::get<1>(v).value};
+                }
+            } test;
+            constexpr auto result = test();
+            STATIC_ASSERT(result.index == 1);
+            STATIC_ASSERT(result.value == 42);
+        }
+#endif // RANGES_CXX_CONSTEXPR
+    }
+
+#if RANGES_CXX_CONSTEXPR >= RANGES_CXX_CONSTEXPR_14
+    template <size_t NewIdx, class ValueType>
+    constexpr bool test_constexpr_assign_extension_imp(
+            ranges::variant<long, void*, int>&& v, ValueType&& new_value)
+    {
+        ranges::variant<long, void*, int> v2(std::forward<ValueType>(new_value));
+        const auto cp = v2;
+        v = std::move(v2);
+        return v.index() == NewIdx && ranges::get<NewIdx>(v) == ranges::get<NewIdx>(cp);
+    }
+#endif // RANGES_CXX_CONSTEXPR
+
+    void test_constexpr_move_assignment_extension()
+    {
+        // The following tests are for not-yet-standardized behavior (P0602):
+        using V = ranges::variant<long, void*, int>;
+        STATIC_ASSERT(!RANGES_PROPER_TRIVIAL_TRAITS ||
+            ranges::detail::is_trivially_copyable<V>::value);
+        STATIC_ASSERT(!RANGES_PROPER_TRIVIAL_TRAITS ||
+            ranges::detail::is_trivially_move_assignable<V>::value);
+#if RANGES_CXX_CONSTEXPR >= RANGES_CXX_CONSTEXPR_14
+        STATIC_ASSERT(test_constexpr_assign_extension_imp<0>(V(42l), 101l));
+        STATIC_ASSERT(test_constexpr_assign_extension_imp<0>(V(nullptr), 101l));
+        STATIC_ASSERT(test_constexpr_assign_extension_imp<1>(V(42l), nullptr));
+        STATIC_ASSERT(test_constexpr_assign_extension_imp<2>(V(42l), 101));
+#endif
+    }
+
+    void test()
+    {
+        test_move_assignment_empty_empty();
+        test_move_assignment_non_empty_empty();
+        test_move_assignment_empty_non_empty();
+        test_move_assignment_same_index();
+        test_move_assignment_different_index();
+        test_move_assignment_sfinae();
+        test_move_assignment_noexcept();
+        test_constexpr_move_assignment_extension();
+    }
+} // namespace move_assign
 
 namespace monostate
 {
@@ -2014,6 +2477,7 @@ int main()
     converting_ctor::test();
     dtor::test();
     copy_assign::test();
+    move_assign::test();
     monostate::test();
     monostate_relops::test();
 
