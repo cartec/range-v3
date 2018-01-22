@@ -2413,6 +2413,240 @@ namespace move_assign
     }
 } // namespace move_assign
 
+namespace T_assign
+{
+    namespace MetaHelpers {
+        struct Dummy
+        {
+            Dummy() = default;
+        };
+
+        struct ThrowsCtorT
+        {
+            ThrowsCtorT(int) noexcept(false) {}
+            ThrowsCtorT &operator=(int) noexcept { return *this; }
+        };
+
+        struct ThrowsAssignT
+        {
+            ThrowsAssignT(int) noexcept {}
+            ThrowsAssignT &operator=(int) noexcept(false) { return *this; }
+        };
+
+        struct NoThrowT
+        {
+            NoThrowT(int) noexcept {}
+            NoThrowT &operator=(int) noexcept { return *this; }
+        };
+    } // namespace MetaHelpers
+
+    namespace RuntimeHelpers {
+        struct ThrowsCtorT
+        {
+            int value;
+            ThrowsCtorT() : value(0) {}
+            [[noreturn]] ThrowsCtorT(int) noexcept(false) { throw 42; }
+            ThrowsCtorT &operator=(int v) noexcept {
+                value = v;
+                return *this;
+            }
+        };
+
+        struct MoveCrashes
+        {
+            int value;
+            MoveCrashes(int v = 0) noexcept : value{v} {}
+            MoveCrashes(MoveCrashes &&) noexcept { CHECK(false); }
+            MoveCrashes &operator=(MoveCrashes &&) noexcept { CHECK(false); return *this; }
+            MoveCrashes &operator=(int v) noexcept {
+                value = v;
+                return *this;
+            }
+        };
+
+        struct ThrowsCtorTandMove
+        {
+            int value;
+            ThrowsCtorTandMove() : value(0) {}
+            [[noreturn]] ThrowsCtorTandMove(int) noexcept(false) { throw 42; }
+            ThrowsCtorTandMove(ThrowsCtorTandMove &&) noexcept(false) { CHECK(false); }
+            ThrowsCtorTandMove &operator=(int v) noexcept {
+                value = v;
+                return *this;
+            }
+        };
+
+        struct ThrowsAssignT
+        {
+            int value;
+            ThrowsAssignT() : value(0) {}
+            ThrowsAssignT(int v) noexcept : value(v) {}
+            ThrowsAssignT &operator=(int) noexcept(false) { throw 42; }
+        };
+
+        struct NoThrowT
+        {
+            int value;
+            NoThrowT() : value(0) {}
+            NoThrowT(int v) noexcept : value(v) {}
+            NoThrowT &operator=(int v) noexcept {
+                value = v;
+                return *this;
+            }
+        };
+    } // namespace RuntimeHelpers
+
+    void test_T_assignment_noexcept()
+    {
+        using namespace MetaHelpers;
+        {
+            using V = ranges::variant<Dummy, NoThrowT>;
+            STATIC_ASSERT(std::is_nothrow_assignable<V, int>::value);
+        }
+        {
+            using V = ranges::variant<Dummy, ThrowsCtorT>;
+            STATIC_ASSERT(!std::is_nothrow_assignable<V, int>::value);
+        }
+        {
+            using V = ranges::variant<Dummy, ThrowsAssignT>;
+            STATIC_ASSERT(!std::is_nothrow_assignable<V, int>::value);
+        }
+    }
+
+    void test_T_assignment_sfinae()
+    {
+        {
+            using V = ranges::variant<long, unsigned>;
+            static_assert(!std::is_assignable<V, int>::value, "ambiguous");
+        }
+        {
+            using V = ranges::variant<std::string, std::string>;
+            static_assert(!std::is_assignable<V, const char *>::value, "ambiguous");
+        }
+        {
+            using V = ranges::variant<std::string, void *>;
+            static_assert(!std::is_assignable<V, int>::value, "no matching operator=");
+        }
+        {
+            using V = ranges::variant<int, int &&>;
+            static_assert(!std::is_assignable<V, int>::value, "ambiguous");
+        }
+        {
+            using V = ranges::variant<int, const int &>;
+            static_assert(!std::is_assignable<V, int>::value, "ambiguous");
+        }
+    }
+
+    void test_T_assignment_basic()
+    {
+        {
+            ranges::variant<int> v(43);
+            v = 42;
+            CHECK(v.index() == 0u);
+            CHECK(ranges::get<0>(v) == 42);
+        }
+        {
+            ranges::variant<int, long> v(43l);
+            v = 42;
+            CHECK(v.index() == 0u);
+            CHECK(ranges::get<0>(v) == 42);
+            v = 43l;
+            CHECK(v.index() == 1u);
+            CHECK(ranges::get<1>(v) == 43);
+        }
+        {
+            using V = ranges::variant<int &, int &&, long>;
+            int x = 42;
+            V v(43l);
+            v = x;
+            CHECK(v.index() == 0u);
+            CHECK(&ranges::get<0>(v) == &x);
+            v = std::move(x);
+            CHECK(v.index() == 1u);
+            CHECK(&ranges::get<1>(v) == &x);
+            // 'long' is selected by FUN(const int &) since 'const int &' cannot bind
+            // to 'int&'.
+            const int &cx = x;
+            v = cx;
+            CHECK(v.index() == 2u);
+            CHECK(ranges::get<2>(v) == 42);
+        }
+    }
+
+    void test_T_assignment_performs_construction()
+    {
+        using namespace RuntimeHelpers;
+        {
+            using V = ranges::variant<std::string, ThrowsCtorT>;
+            V v(ranges::in_place_type<std::string>, "hello");
+            try {
+                v = 42;
+                CHECK(false);
+            } catch (...) { /* ... */
+            }
+            CHECK(v.index() == 0u);
+            CHECK(ranges::get<0>(v) == "hello");
+        }
+        {
+            using V = ranges::variant<ThrowsAssignT, std::string>;
+            V v(ranges::in_place_type<std::string>, "hello");
+            v = 42;
+            CHECK(v.index() == 0u);
+            CHECK(ranges::get<0>(v).value == 42);
+        }
+    }
+
+    void test_T_assignment_performs_assignment()
+    {
+        using namespace RuntimeHelpers;
+        {
+            using V = ranges::variant<ThrowsCtorT>;
+            V v;
+            v = 42;
+            CHECK(v.index() == 0u);
+            CHECK(ranges::get<0>(v).value == 42);
+        }
+        {
+            using V = ranges::variant<ThrowsCtorT, std::string>;
+            V v;
+            v = 42;
+            CHECK(v.index() == 0u);
+            CHECK(ranges::get<0>(v).value == 42);
+        }
+        {
+            using V = ranges::variant<ThrowsAssignT>;
+            V v(100);
+            try {
+                v = 42;
+                CHECK(false);
+            } catch (...) { /* ... */
+            }
+            CHECK(v.index() == 0u);
+            CHECK(ranges::get<0>(v).value == 100);
+        }
+        {
+            using V = ranges::variant<std::string, ThrowsAssignT>;
+            V v(100);
+            try {
+                v = 42;
+                CHECK(false);
+            } catch (...) { /* ... */
+            }
+            CHECK(v.index() == 1u);
+            CHECK(ranges::get<1>(v).value == 100);
+        }
+    }
+
+    void test()
+    {
+        test_T_assignment_basic();
+        test_T_assignment_performs_construction();
+        test_T_assignment_performs_assignment();
+        test_T_assignment_noexcept();
+        test_T_assignment_sfinae();
+    }
+} // namespace T_assign
+
 namespace monostate
 {
     void test()
@@ -2478,6 +2712,7 @@ int main()
     dtor::test();
     copy_assign::test();
     move_assign::test();
+    T_assign::test();
     monostate::test();
     monostate_relops::test();
 
