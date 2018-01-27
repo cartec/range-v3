@@ -2844,6 +2844,17 @@ namespace get_index
 
     template <std::size_t I> using Idx = std::integral_constant<size_t, I>;
 
+    template <std::size_t I, class V>
+    bool ex_test(std::integral_constant<std::size_t, I>, V &&v) {
+        try {
+            TEST_IGNORE_NODISCARD ranges::get<I>(std::forward<V>(v));
+        } catch (const ranges::bad_variant_access &) {
+            return true;
+        } catch (...) { /* ... */
+        }
+        return false;
+    }
+
     void test_throws_for_all_value_categories()
     {
         using V = ranges::variant<int, long>;
@@ -2855,31 +2866,21 @@ namespace get_index
         CHECK(v1.index() == 1u);
         std::integral_constant<size_t, 0> zero;
         std::integral_constant<size_t, 1> one;
-        auto test = [](auto idx, auto &&v) {
-            using Idx = decltype(idx);
-            try {
-                TEST_IGNORE_NODISCARD ranges::get<Idx::value>(std::forward<decltype(v)>(v));
-            } catch (const ranges::bad_variant_access &) {
-                return true;
-            } catch (...) { /* ... */
-            }
-            return false;
-        };
         { // lvalue test cases
-            CHECK(test(one, v0));
-            CHECK(test(zero, v1));
+            CHECK(ex_test(one, v0));
+            CHECK(ex_test(zero, v1));
         }
         { // const lvalue test cases
-            CHECK(test(one, cv0));
-            CHECK(test(zero, cv1));
+            CHECK(ex_test(one, cv0));
+            CHECK(ex_test(zero, cv1));
         }
         { // rvalue test cases
-            CHECK(test(one, std::move(v0)));
-            CHECK(test(zero, std::move(v1)));
+            CHECK(ex_test(one, std::move(v0)));
+            CHECK(ex_test(zero, std::move(v1)));
         }
         { // const rvalue test cases
-            CHECK(test(one, std::move(cv0)));
-            CHECK(test(zero, std::move(cv1)));
+            CHECK(ex_test(one, std::move(cv0)));
+            CHECK(ex_test(zero, std::move(cv1)));
         }
     }
 
@@ -2892,6 +2893,207 @@ namespace get_index
         test_throws_for_all_value_categories();
     }
 } // namespace get_index
+
+namespace get_index_unchecked
+{
+    void test_const_lvalue_get()
+    {
+        {
+            using V = ranges::variant<int, const long>;
+            constexpr V v(42);
+            ASSERT_SAME_TYPE(decltype(ranges::get_unchecked<0>(v)), const int &);
+            STATIC_ASSERT(ranges::get_unchecked<0>(v) == 42);
+        }
+        {
+            using V = ranges::variant<int, const long>;
+            const V v(42);
+            ASSERT_NOT_NOEXCEPT(ranges::get_unchecked<0>(v));
+            ASSERT_SAME_TYPE(decltype(ranges::get_unchecked<0>(v)), const int &);
+            CHECK(ranges::get_unchecked<0>(v) == 42);
+        }
+        {
+            using V = ranges::variant<int, const long>;
+            constexpr V v(42l);
+            ASSERT_SAME_TYPE(decltype(ranges::get_unchecked<1>(v)), const long &);
+            STATIC_ASSERT(ranges::get_unchecked<1>(v) == 42);
+        }
+        {
+            using V = ranges::variant<int, const long>;
+            const V v(42l);
+            ASSERT_NOT_NOEXCEPT(ranges::get_unchecked<1>(v));
+            ASSERT_SAME_TYPE(decltype(ranges::get_unchecked<1>(v)), const long &);
+            CHECK(ranges::get_unchecked<1>(v) == 42);
+        }
+        {
+            using V = ranges::variant<int &>;
+            int x = 42;
+            const V v(x);
+            ASSERT_SAME_TYPE(decltype(ranges::get_unchecked<0>(v)), int &);
+            CHECK(&ranges::get_unchecked<0>(v) == &x);
+        }
+        {
+            using V = ranges::variant<int &&>;
+            int x = 42;
+            const V v(std::move(x));
+            ASSERT_SAME_TYPE(decltype(ranges::get_unchecked<0>(v)), int &);
+            CHECK(&ranges::get_unchecked<0>(v) == &x);
+        }
+        {
+            using V = ranges::variant<const int &&>;
+            int x = 42;
+            const V v(std::move(x));
+            ASSERT_SAME_TYPE(decltype(ranges::get_unchecked<0>(v)), const int &);
+            CHECK(&ranges::get_unchecked<0>(v) == &x);
+        }
+    }
+
+    void test_lvalue_get()
+    {
+        {
+            using V = ranges::variant<int, const long>;
+            V v(42);
+            ASSERT_NOT_NOEXCEPT(ranges::get_unchecked<0>(v));
+            ASSERT_SAME_TYPE(decltype(ranges::get_unchecked<0>(v)), int &);
+            CHECK(ranges::get_unchecked<0>(v) == 42);
+        }
+        {
+            using V = ranges::variant<int, const long>;
+            V v(42l);
+            ASSERT_SAME_TYPE(decltype(ranges::get_unchecked<1>(v)), const long &);
+            CHECK(ranges::get_unchecked<1>(v) == 42);
+        }
+        {
+            using V = ranges::variant<int &>;
+            int x = 42;
+            V v(x);
+            ASSERT_SAME_TYPE(decltype(ranges::get_unchecked<0>(v)), int &);
+            CHECK(&ranges::get_unchecked<0>(v) == &x);
+        }
+        {
+            using V = ranges::variant<const int &>;
+            int x = 42;
+            V v(x);
+            ASSERT_SAME_TYPE(decltype(ranges::get_unchecked<0>(v)), const int &);
+            CHECK(&ranges::get_unchecked<0>(v) == &x);
+        }
+        {
+            using V = ranges::variant<int &&>;
+            int x = 42;
+            V v(std::move(x));
+            ASSERT_SAME_TYPE(decltype(ranges::get_unchecked<0>(v)), int &);
+            CHECK(&ranges::get_unchecked<0>(v) == &x);
+        }
+        {
+            using V = ranges::variant<const int &&>;
+            int x = 42;
+            V v(std::move(x));
+            ASSERT_SAME_TYPE(decltype(ranges::get_unchecked<0>(v)), const int &);
+            CHECK(&ranges::get_unchecked<0>(v) == &x);
+        }
+    }
+
+    void test_rvalue_get()
+    {
+        {
+            using V = ranges::variant<int, const long>;
+            V v(42);
+            ASSERT_NOT_NOEXCEPT(ranges::get_unchecked<0>(std::move(v)));
+            ASSERT_SAME_TYPE(decltype(ranges::get_unchecked<0>(std::move(v))), int &&);
+            CHECK(ranges::get_unchecked<0>(std::move(v)) == 42);
+        }
+        {
+            using V = ranges::variant<int, const long>;
+            V v(42l);
+            ASSERT_SAME_TYPE(decltype(ranges::get_unchecked<1>(std::move(v))), const long &&);
+            CHECK(ranges::get_unchecked<1>(std::move(v)) == 42);
+        }
+        {
+            using V = ranges::variant<int &>;
+            int x = 42;
+            V v(x);
+            ASSERT_SAME_TYPE(decltype(ranges::get_unchecked<0>(std::move(v))), int &);
+            CHECK(&ranges::get_unchecked<0>(std::move(v)) == &x);
+        }
+        {
+            using V = ranges::variant<const int &>;
+            int x = 42;
+            V v(x);
+            ASSERT_SAME_TYPE(decltype(ranges::get_unchecked<0>(std::move(v))), const int &);
+            CHECK(&ranges::get_unchecked<0>(std::move(v)) == &x);
+        }
+        {
+            using V = ranges::variant<int &&>;
+            int x = 42;
+            V v(std::move(x));
+            ASSERT_SAME_TYPE(decltype(ranges::get_unchecked<0>(std::move(v))), int &&);
+            int &&xref = ranges::get_unchecked<0>(std::move(v));
+            CHECK(&xref == &x);
+        }
+        {
+            using V = ranges::variant<const int &&>;
+            int x = 42;
+            V v(std::move(x));
+            ASSERT_SAME_TYPE(decltype(ranges::get_unchecked<0>(std::move(v))), const int &&);
+            const int &&xref = ranges::get_unchecked<0>(std::move(v));
+            CHECK(&xref == &x);
+        }
+    }
+
+    void test_const_rvalue_get()
+    {
+        {
+            using V = ranges::variant<int, const long>;
+            const V v(42);
+            ASSERT_NOT_NOEXCEPT(ranges::get_unchecked<0>(std::move(v)));
+            ASSERT_SAME_TYPE(decltype(ranges::get_unchecked<0>(std::move(v))), const int &&);
+            CHECK(ranges::get_unchecked<0>(std::move(v)) == 42);
+        }
+        {
+            using V = ranges::variant<int, const long>;
+            const V v(42l);
+            ASSERT_SAME_TYPE(decltype(ranges::get_unchecked<1>(std::move(v))), const long &&);
+            CHECK(ranges::get_unchecked<1>(std::move(v)) == 42);
+        }
+        {
+            using V = ranges::variant<int &>;
+            int x = 42;
+            const V v(x);
+            ASSERT_SAME_TYPE(decltype(ranges::get_unchecked<0>(std::move(v))), int &);
+            CHECK(&ranges::get_unchecked<0>(std::move(v)) == &x);
+        }
+        {
+            using V = ranges::variant<const int &>;
+            int x = 42;
+            const V v(x);
+            ASSERT_SAME_TYPE(decltype(ranges::get_unchecked<0>(std::move(v))), const int &);
+            CHECK(&ranges::get_unchecked<0>(std::move(v)) == &x);
+        }
+        {
+            using V = ranges::variant<int &&>;
+            int x = 42;
+            const V v(std::move(x));
+            ASSERT_SAME_TYPE(decltype(ranges::get_unchecked<0>(std::move(v))), int &&);
+            int &&xref = ranges::get_unchecked<0>(std::move(v));
+            CHECK(&xref == &x);
+        }
+        {
+            using V = ranges::variant<const int &&>;
+            int x = 42;
+            const V v(std::move(x));
+            ASSERT_SAME_TYPE(decltype(ranges::get_unchecked<0>(std::move(v))), const int &&);
+            const int &&xref = ranges::get_unchecked<0>(std::move(v));
+            CHECK(&xref == &x);
+        }
+    }
+
+    void test()
+    {
+        test_const_lvalue_get();
+        test_lvalue_get();
+        test_rvalue_get();
+        test_const_rvalue_get();
+    }
+} // namespace get_index_unchecked
 
 namespace monostate
 {
@@ -2960,6 +3162,7 @@ int main()
     move_assign::test();
     T_assign::test();
     get_index::test();
+    get_index_unchecked::test();
     monostate::test();
     monostate_relops::test();
 
