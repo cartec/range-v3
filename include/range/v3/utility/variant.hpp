@@ -975,15 +975,39 @@ namespace ranges
             return detail::find_unique_index<meta::list<Types...>, T>::value == v.index();
         }
 
-        template<std::size_t I, typename V,
-            CONCEPT_REQUIRES_(meta::is<uncvref_t<V>, variant>::value)>
-        constexpr auto get(V &&v)
-        RANGES_DECLTYPE_AUTO_RETURN
-        (
-            (void)(v.index() == I || (detail::throw_bad_variant_access(), true)),
+        template<std::size_t I, typename... Types,
+            CONCEPT_REQUIRES_(I < sizeof...(Types))>
+        constexpr meta::at_c<meta::list<Types...>, I> &get(variant<Types...> &v)
+        {
+            return ((void)(v.index() == I || ((void)detail::throw_bad_variant_access(), true)),
+                detail::cook(detail::variant_raw_get<I>(detail::variant_access::storage(v))));
+        }
+
+        template<std::size_t I, typename... Types,
+            CONCEPT_REQUIRES_(I < sizeof...(Types))>
+        constexpr meta::at_c<meta::list<Types...>, I> const &get(variant<Types...> const &v)
+        {
+            return ((void)(v.index() == I || ((void)detail::throw_bad_variant_access(), true)),
+                detail::cook(detail::variant_raw_get<I>(detail::variant_access::storage(v))));
+        }
+
+        template<std::size_t I, typename... Types,
+            CONCEPT_REQUIRES_(I < sizeof...(Types))>
+        constexpr meta::at_c<meta::list<Types...>, I> &&get(variant<Types...> &&v)
+        {
+            return (void)(v.index() == I || ((void)detail::throw_bad_variant_access(), true)),
                 detail::cook(detail::variant_raw_get<I>(
-                    detail::variant_access::storage(static_cast<V &&>(v))))
-        )
+                    detail::variant_access::storage(static_cast<decltype(v)>(v))));
+        }
+
+        template<std::size_t I, typename... Types,
+            CONCEPT_REQUIRES_(I < sizeof...(Types))>
+        constexpr meta::at_c<meta::list<Types...>, I> const &&get(variant<Types...> const &&v)
+        {
+            return (void)(v.index() == I || ((void)detail::throw_bad_variant_access(), true)),
+                detail::cook(detail::variant_raw_get<I>(
+                    detail::variant_access::storage(static_cast<decltype(v)>(v))));
+        }
 
         template<std::size_t I, typename V,
             CONCEPT_REQUIRES_(meta::is<uncvref_t<V>, variant>::value)>
