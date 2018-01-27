@@ -170,16 +170,14 @@ namespace ranges
             using any_reference_type = meta::strict_or<std::is_reference<Types>...>;
 
             template<typename = void>
-            [[noreturn]] RANGES_NOINLINE void throw_bad_variant_access()
+            [[noreturn]] RANGES_NOINLINE bool throw_bad_variant_access()
             {
                 throw bad_variant_access{};
             }
 
-            template<typename T, typename = void>
+            template<typename T>
             struct variant_wrapper
             {
-                CONCEPT_ASSERT(std::is_object<T>::value);
-
                 meta::_t<std::remove_const<T>> t_;
 
                 template<typename... Args,
@@ -187,19 +185,6 @@ namespace ranges
                 constexpr variant_wrapper(Args &&... args)
                     noexcept(std::is_nothrow_constructible<T, Args...>::value)
                   : t_(static_cast<Args &&>(args)...)
-                {}
-            };
-
-            template<typename T>
-            struct variant_wrapper<T, meta::if_<std::is_reference<T>>>
-            {
-                T t_;
-
-                template<typename Arg,
-                    CONCEPT_REQUIRES_(Constructible<T, Arg>())>
-                constexpr variant_wrapper(Arg &&arg)
-                    noexcept(std::is_nothrow_constructible<T, Arg>::value)
-                  : t_(static_cast<Arg &&>(arg))
                 {}
             };
 
@@ -786,20 +771,71 @@ namespace ranges
 
             struct variant_access
             {
+#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ < 5
+                template<typename... Types>
+                static constexpr variant_index_t<sizeof...(Types)> &
+                index(variant<Types...> &v) noexcept
+                {
+                    return v.index_;
+                }
+                template<typename... Types>
+                static constexpr variant_index_t<sizeof...(Types)> const &
+                index(variant<Types...> const &v) noexcept
+                {
+                    return v.index_;
+                }
+                template<typename... Types>
+                static constexpr variant_index_t<sizeof...(Types)> &&
+                index(variant<Types...> &&v) noexcept
+                {
+                    return detail::move(v.index_);
+                }
+                template<typename... Types>
+                static constexpr variant_index_t<sizeof...(Types)> const &&
+                index(variant<Types...> const &&v) noexcept
+                {
+                    return detail::move(v.index_);
+                }
+                template<typename... Types>
+                static constexpr variant_storage<Types...> &
+                storage(variant<Types...> &v) noexcept
+                {
+                    return v.storage_;
+                }
+                template<typename... Types>
+                static constexpr variant_storage<Types...> const &
+                storage(variant<Types...> const &v) noexcept
+                {
+                    return v.storage_;
+                }
+                template<typename... Types>
+                static constexpr variant_storage<Types...> &&
+                storage(variant<Types...> &&v) noexcept
+                {
+                    return detail::move(v.storage_);
+                }
+                template<typename... Types>
+                static constexpr variant_storage<Types...> const &&
+                storage(variant<Types...> const &&v) noexcept
+                {
+                    return detail::move(v.storage_);
+                }
+#else // GCC4
                 template<typename V,
                     CONCEPT_REQUIRES_(meta::is<uncvref_t<V>, variant>::value)>
-                static constexpr auto index(V &&v)
-                RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT
+                static constexpr auto index(V &&v) noexcept
+                RANGES_DECLTYPE_AUTO_RETURN
                 (
                     (static_cast<V &&>(v).index_)
                 )
                 template<typename V,
                     CONCEPT_REQUIRES_(meta::is<uncvref_t<V>, variant>::value)>
-                static constexpr auto storage(V &&v)
-                RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT
+                static constexpr auto storage(V &&v) noexcept
+                RANGES_DECLTYPE_AUTO_RETURN
                 (
                     (static_cast<V &&>(v).storage_)
                 )
+#endif // GCC4
             };
 
             template<std::size_t I, typename T>
@@ -977,47 +1013,73 @@ namespace ranges
 
         template<std::size_t I, typename... Types,
             CONCEPT_REQUIRES_(I < sizeof...(Types))>
+        constexpr meta::at_c<meta::list<Types...>, I> &get_unchecked(variant<Types...> &v)
+        {
+            return RANGES_EXPECT(v.index() == I),
+                detail::cook(detail::variant_raw_get<I>(detail::variant_access::storage(v)));
+        }
+
+        template<std::size_t I, typename... Types,
+            CONCEPT_REQUIRES_(I < sizeof...(Types))>
+        constexpr meta::at_c<meta::list<Types...>, I> const &get_unchecked(variant<Types...> const &v)
+        {
+            return RANGES_EXPECT(v.index() == I),
+                detail::cook(detail::variant_raw_get<I>(detail::variant_access::storage(v)));
+        }
+
+        template<std::size_t I, typename... Types,
+            CONCEPT_REQUIRES_(I < sizeof...(Types))>
+        constexpr meta::at_c<meta::list<Types...>, I> &&get_unchecked(variant<Types...> &&v)
+        {
+            return RANGES_EXPECT(v.index() == I),
+                detail::cook(detail::variant_raw_get<I>(
+                    detail::variant_access::storage(detail::move(v))));
+        }
+
+        template<std::size_t I, typename... Types,
+            CONCEPT_REQUIRES_(I < sizeof...(Types))>
+        constexpr meta::at_c<meta::list<Types...>, I> const &&get_unchecked(variant<Types...> const &&v)
+        {
+            return RANGES_EXPECT(v.index() == I),
+                detail::cook(detail::variant_raw_get<I>(
+                    detail::variant_access::storage(detail::move(v))));
+        }
+
+        template<std::size_t I, typename... Types,
+            CONCEPT_REQUIRES_(I < sizeof...(Types))>
         constexpr meta::at_c<meta::list<Types...>, I> &get(variant<Types...> &v)
         {
-            return ((void)(v.index() == I || ((void)detail::throw_bad_variant_access(), true)),
-                detail::cook(detail::variant_raw_get<I>(detail::variant_access::storage(v))));
+            return (void)(v.index() == I || detail::throw_bad_variant_access()),
+                detail::cook(detail::variant_raw_get<I>(
+                    detail::variant_access::storage(v)));
         }
 
         template<std::size_t I, typename... Types,
             CONCEPT_REQUIRES_(I < sizeof...(Types))>
         constexpr meta::at_c<meta::list<Types...>, I> const &get(variant<Types...> const &v)
         {
-            return ((void)(v.index() == I || ((void)detail::throw_bad_variant_access(), true)),
-                detail::cook(detail::variant_raw_get<I>(detail::variant_access::storage(v))));
+            return (void)(v.index() == I || detail::throw_bad_variant_access()),
+                detail::cook(detail::variant_raw_get<I>(
+                    detail::variant_access::storage(v)));
         }
 
         template<std::size_t I, typename... Types,
             CONCEPT_REQUIRES_(I < sizeof...(Types))>
         constexpr meta::at_c<meta::list<Types...>, I> &&get(variant<Types...> &&v)
         {
-            return (void)(v.index() == I || ((void)detail::throw_bad_variant_access(), true)),
+            return (void)(v.index() == I || detail::throw_bad_variant_access()),
                 detail::cook(detail::variant_raw_get<I>(
-                    detail::variant_access::storage(static_cast<decltype(v)>(v))));
+                    detail::variant_access::storage(detail::move(v))));
         }
 
         template<std::size_t I, typename... Types,
             CONCEPT_REQUIRES_(I < sizeof...(Types))>
         constexpr meta::at_c<meta::list<Types...>, I> const &&get(variant<Types...> const &&v)
         {
-            return (void)(v.index() == I || ((void)detail::throw_bad_variant_access(), true)),
+            return (void)(v.index() == I || detail::throw_bad_variant_access()),
                 detail::cook(detail::variant_raw_get<I>(
-                    detail::variant_access::storage(static_cast<decltype(v)>(v))));
+                    detail::variant_access::storage(detail::move(v))));
         }
-
-        template<std::size_t I, typename V,
-            CONCEPT_REQUIRES_(meta::is<uncvref_t<V>, variant>::value)>
-        constexpr auto get_unchecked(V &&v)
-        RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT
-        (
-            RANGES_EXPECT(v.index() == I),
-            detail::cook(detail::variant_raw_get<I>(
-                detail::variant_access::storage(static_cast<V &&>(v))))
-        )
 
         template<typename> struct variant_size;
         template<typename T> struct variant_size<T const> : variant_size<T> {};
