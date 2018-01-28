@@ -1013,23 +1013,28 @@ namespace ranges
 
         template<std::size_t I, typename... Types,
             CONCEPT_REQUIRES_(I < sizeof...(Types))>
-        constexpr meta::at_c<meta::list<Types...>, I> &get_unchecked(variant<Types...> &v)
+        constexpr meta::at_c<meta::list<Types...>, I> &
+        get_unchecked(variant<Types...> &v) noexcept
         {
             return RANGES_EXPECT(v.index() == I),
-                detail::cook(detail::variant_raw_get<I>(detail::variant_access::storage(v)));
+                detail::cook(detail::variant_raw_get<I>(
+                    detail::variant_access::storage(v)));
         }
 
         template<std::size_t I, typename... Types,
             CONCEPT_REQUIRES_(I < sizeof...(Types))>
-        constexpr meta::at_c<meta::list<Types...>, I> const &get_unchecked(variant<Types...> const &v)
+        constexpr meta::at_c<meta::list<Types...>, I> const &
+        get_unchecked(variant<Types...> const &v) noexcept
         {
             return RANGES_EXPECT(v.index() == I),
-                detail::cook(detail::variant_raw_get<I>(detail::variant_access::storage(v)));
+                detail::cook(detail::variant_raw_get<I>(
+                    detail::variant_access::storage(v)));
         }
 
         template<std::size_t I, typename... Types,
             CONCEPT_REQUIRES_(I < sizeof...(Types))>
-        constexpr meta::at_c<meta::list<Types...>, I> &&get_unchecked(variant<Types...> &&v)
+        constexpr meta::at_c<meta::list<Types...>, I> &&
+        get_unchecked(variant<Types...> &&v) noexcept
         {
             return RANGES_EXPECT(v.index() == I),
                 detail::cook(detail::variant_raw_get<I>(
@@ -1038,7 +1043,8 @@ namespace ranges
 
         template<std::size_t I, typename... Types,
             CONCEPT_REQUIRES_(I < sizeof...(Types))>
-        constexpr meta::at_c<meta::list<Types...>, I> const &&get_unchecked(variant<Types...> const &&v)
+        constexpr meta::at_c<meta::list<Types...>, I> const &&
+        get_unchecked(variant<Types...> const &&v) noexcept
         {
             return RANGES_EXPECT(v.index() == I),
                 detail::cook(detail::variant_raw_get<I>(
@@ -1079,6 +1085,78 @@ namespace ranges
             return (void)(v.index() == I || detail::throw_bad_variant_access()),
                 detail::cook(detail::variant_raw_get<I>(
                     detail::variant_access::storage(detail::move(v))));
+        }
+
+        template<typename T, typename... Types,
+            std::size_t I = detail::find_unique_index<meta::list<Types...>, T>::value>
+        constexpr T &get_unchecked(variant<Types...> &v) noexcept
+        {
+            static_assert(I != std::size_t(-1),
+                "T must appear exactly once in Types...");
+            return get_unchecked<I>(v);
+        }
+
+        template<typename T, typename... Types,
+            std::size_t I = detail::find_unique_index<meta::list<Types...>, T>::value>
+        constexpr T const &get_unchecked(variant<Types...> const &v) noexcept
+        {
+            static_assert(I != std::size_t(-1),
+                "T must appear exactly once in Types...");
+            return get_unchecked<I>(v);
+        }
+
+        template<typename T, typename... Types,
+            std::size_t I = detail::find_unique_index<meta::list<Types...>, T>::value>
+        constexpr T &&get_unchecked(variant<Types...> &&v) noexcept
+        {
+            static_assert(I != std::size_t(-1),
+                "T must appear exactly once in Types...");
+            return get_unchecked<I>(detail::move(v));
+        }
+
+        template<typename T, typename... Types,
+            std::size_t I = detail::find_unique_index<meta::list<Types...>, T>::value>
+        constexpr T const &&get_unchecked(variant<Types...> const &&v) noexcept
+        {
+            static_assert(I != std::size_t(-1),
+                "T must appear exactly once in Types...");
+            return get_unchecked<I>(detail::move(v));
+        }
+
+        template<typename T, typename... Types,
+            std::size_t I = detail::find_unique_index<meta::list<Types...>, T>::value>
+        constexpr T &get(variant<Types...> &v)
+        {
+            static_assert(I != std::size_t(-1),
+                "T must appear exactly once in Types...");
+            return get<I>(v);
+        }
+
+        template<typename T, typename... Types,
+            std::size_t I = detail::find_unique_index<meta::list<Types...>, T>::value>
+        constexpr T const &get(variant<Types...> const &v)
+        {
+            static_assert(I != std::size_t(-1),
+                "T must appear exactly once in Types...");
+            return get<I>(v);
+        }
+
+        template<typename T, typename... Types,
+            std::size_t I = detail::find_unique_index<meta::list<Types...>, T>::value>
+        constexpr T &&get(variant<Types...> &&v)
+        {
+            static_assert(I != std::size_t(-1),
+                "T must appear exactly once in Types...");
+            return get<I>(detail::move(v));
+        }
+
+        template<typename T, typename... Types,
+            std::size_t I = detail::find_unique_index<meta::list<Types...>, T>::value>
+        constexpr T const &&get(variant<Types...> const &&v)
+        {
+            static_assert(I != std::size_t(-1),
+                "T must appear exactly once in Types...");
+            return get<I>(detail::move(v));
         }
 
         template<typename> struct variant_size;
