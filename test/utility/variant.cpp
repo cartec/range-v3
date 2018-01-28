@@ -62,7 +62,8 @@ struct MakeEmptyT
 {
     static int alive;
     MakeEmptyT() { ++alive; }
-    MakeEmptyT(MakeEmptyT const&) {
+    MakeEmptyT(MakeEmptyT const&)
+    {
         ++alive;
         // Don't throw from the copy constructor since variant's assignment
         // operator performs a copy before committing to the assignment.
@@ -102,6 +103,13 @@ void makeEmpty(Variant &v)
         CHECK(v.valueless_by_exception());
     }
 }
+
+struct NoCtors
+{
+    NoCtors() = delete;
+    NoCtors(NoCtors const&) = delete;
+    NoCtors& operator=(NoCtors const&) = delete;
+};
 
 namespace bad_access
 {
@@ -3805,6 +3813,61 @@ namespace get_if_type
     }
 } // namespace get_if_type
 
+namespace index
+{
+    void test()
+    {
+        {
+            using V = ranges::variant<int, NoCtors>;
+            constexpr V v;
+            STATIC_ASSERT(v.index() == 0);
+        }
+        {
+            using V = ranges::variant<int, long>;
+            constexpr V v(ranges::in_place_index<1>);
+            STATIC_ASSERT(v.index() == 1);
+        }
+        {
+            using V = ranges::variant<int, std::string>;
+            V v("abc");
+            CHECK(v.index() == 1u);
+            v = 42;
+            CHECK(v.index() == 0u);
+        }
+        {
+            using V = ranges::variant<int, MakeEmptyT>;
+            V v;
+            CHECK(v.index() == 0u);
+            makeEmpty(v);
+            CHECK(v.index() == ranges::variant_npos);
+        }
+    }
+} // namespace index
+
+namespace valueless_by_exception
+{
+    void test()
+    {
+        {
+            using V = ranges::variant<int, NoCtors>;
+            constexpr V v;
+            STATIC_ASSERT(!v.valueless_by_exception());
+        }
+        {
+            using V = ranges::variant<int, long, std::string>;
+            const V v("abc");
+            CHECK(!v.valueless_by_exception());
+        }
+        {
+            using V = ranges::variant<int, MakeEmptyT>;
+            V v;
+            CHECK(!v.valueless_by_exception());
+            makeEmpty(v);
+            CHECK(v.valueless_by_exception());
+        }
+    }
+} // namespace valueless_by_exception
+
 namespace monostate
 {
     void test()
@@ -3856,29 +3919,41 @@ namespace monostate_relops
 int main()
 {
     bad_access::test();
-    alternative::test();
-    size::test();
-    holds_alternative::test();
-    default_ctor::test();
-    copy_ctor::test();
-    move_ctor::test();
-    in_place_index_ctor::test();
-    in_place_index_il_ctor::test();
-    in_place_type_ctor::test();
-    in_place_type_il_ctor::test();
-    converting_ctor::test();
-    dtor::test();
-    copy_assign::test();
-    move_assign::test();
-    T_assign::test();
+    get_if_index::test();
+    get_if_type::test();
     get_index::test();
     get_index_unchecked::test();
     get_type::test();
     get_type_unchecked::test();
-    get_if_index::test();
-    get_if_type::test();
+    //enabled_hash::test();
+    //hash::test();
+    alternative::test();
+    size::test();
     monostate::test();
     monostate_relops::test();
+    //relops::test();
+    // npos test is compile-only
+    copy_assign::test();
+    move_assign::test();
+    T_assign::test();
+    copy_ctor::test();
+    default_ctor::test();
+    in_place_index_ctor::test();
+    in_place_index_il_ctor::test();
+    in_place_type_ctor::test();
+    in_place_type_il_ctor::test();
+    move_ctor::test();
+    converting_ctor::test();
+    dtor::test();
+    //emplace_index::test();
+    //emplace_index_il::test();
+    //emplace_type::test();
+    //emplace_type_il::test();
+    index::test();
+    valueless_by_exception::test();
+    //swap::test();
+
+    holds_alternative::test();
 
 #if 0
     // Simple variant and access.
