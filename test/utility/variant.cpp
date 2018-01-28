@@ -3593,6 +3593,218 @@ namespace get_type_unchecked
     }
 } // namespace get_type_unchecked
 
+namespace get_if_index
+{
+    void test_const_get_if()
+    {
+        {
+            using V = ranges::variant<int>;
+            constexpr const V *v = nullptr;
+            STATIC_ASSERT(ranges::get_if<0>(v) == nullptr);
+        }
+        {
+            using V = ranges::variant<int, const long>;
+            static constexpr V v(42);
+            ASSERT_NOEXCEPT(ranges::get_if<0>(&v));
+            ASSERT_SAME_TYPE(decltype(ranges::get_if<0>(&v)), const int *);
+            STATIC_ASSERT(*ranges::get_if<0>(&v) == 42);
+            STATIC_ASSERT(ranges::get_if<1>(&v) == nullptr);
+        }
+        {
+            using V = ranges::variant<int, const long>;
+            static constexpr V v(42l);
+            ASSERT_SAME_TYPE(decltype(ranges::get_if<1>(&v)), const long *);
+            STATIC_ASSERT(*ranges::get_if<1>(&v) == 42);
+            STATIC_ASSERT(ranges::get_if<0>(&v) == nullptr);
+        }
+        {
+            using V = ranges::variant<int &>;
+            int x = 42;
+            const V v(x);
+            ASSERT_SAME_TYPE(decltype(ranges::get_if<0>(&v)), int *);
+            CHECK(ranges::get_if<0>(&v) == &x);
+        }
+        {
+            using V = ranges::variant<int &&>;
+            int x = 42;
+            const V v(std::move(x));
+            ASSERT_SAME_TYPE(decltype(ranges::get_if<0>(&v)), int *);
+            CHECK(ranges::get_if<0>(&v) == &x);
+        }
+        {
+            using V = ranges::variant<const int &&>;
+            int x = 42;
+            const V v(std::move(x));
+            ASSERT_SAME_TYPE(decltype(ranges::get_if<0>(&v)), const int *);
+            CHECK(ranges::get_if<0>(&v) == &x);
+        }
+    }
+
+    void test_get_if()
+    {
+        {
+            using V = ranges::variant<int>;
+            V *v = nullptr;
+            CHECK(ranges::get_if<0>(v) == nullptr);
+        }
+        {
+            using V = ranges::variant<int, long>;
+            V v(42);
+            ASSERT_NOEXCEPT(ranges::get_if<0>(&v));
+            ASSERT_SAME_TYPE(decltype(ranges::get_if<0>(&v)), int *);
+            CHECK(*ranges::get_if<0>(&v) == 42);
+            CHECK(ranges::get_if<1>(&v) == nullptr);
+        }
+        {
+            using V = ranges::variant<int, const long>;
+            V v(42l);
+            ASSERT_SAME_TYPE(decltype(ranges::get_if<1>(&v)), const long *);
+            CHECK(*ranges::get_if<1>(&v) == 42);
+            CHECK(ranges::get_if<0>(&v) == nullptr);
+        }
+        {
+            using V = ranges::variant<int &>;
+            int x = 42;
+            V v(x);
+            ASSERT_SAME_TYPE(decltype(ranges::get_if<0>(&v)), int *);
+            CHECK(ranges::get_if<0>(&v) == &x);
+        }
+        {
+            using V = ranges::variant<const int &>;
+            int x = 42;
+            V v(x);
+            ASSERT_SAME_TYPE(decltype(ranges::get_if<0>(&v)), const int *);
+            CHECK(ranges::get_if<0>(&v) == &x);
+        }
+        {
+            using V = ranges::variant<int &&>;
+            int x = 42;
+            V v(std::move(x));
+            ASSERT_SAME_TYPE(decltype(ranges::get_if<0>(&v)), int *);
+            CHECK(ranges::get_if<0>(&v) == &x);
+        }
+        {
+            using V = ranges::variant<const int &&>;
+            int x = 42;
+            V v(std::move(x));
+            ASSERT_SAME_TYPE(decltype(ranges::get_if<0>(&v)), const int *);
+            CHECK(ranges::get_if<0>(&v) == &x);
+        }
+    }
+
+    void test()
+    {
+        test_const_get_if();
+        test_get_if();
+    }
+} // namespace get_if_index
+
+namespace get_if_type
+{
+    void test_const_get_if()
+    {
+        {
+            using V = ranges::variant<int>;
+            constexpr const V *v = nullptr;
+            STATIC_ASSERT(ranges::get_if<int>(v) == nullptr);
+        }
+        {
+            using V = ranges::variant<int, const long>;
+            static constexpr V v(42);
+            ASSERT_NOEXCEPT(ranges::get_if<int>(&v));
+            ASSERT_SAME_TYPE(decltype(ranges::get_if<int>(&v)), const int *);
+            STATIC_ASSERT(*ranges::get_if<int>(&v) == 42);
+            STATIC_ASSERT(ranges::get_if<const long>(&v) == nullptr);
+        }
+        {
+            using V = ranges::variant<int, const long>;
+            static constexpr V v(42l);
+            ASSERT_SAME_TYPE(decltype(ranges::get_if<const long>(&v)), const long *);
+            STATIC_ASSERT(*ranges::get_if<const long>(&v) == 42);
+            STATIC_ASSERT(ranges::get_if<int>(&v) == nullptr);
+        }
+        {
+            using V = ranges::variant<int &>;
+            int x = 42;
+            const V v(x);
+            ASSERT_SAME_TYPE(decltype(ranges::get_if<int &>(&v)), int *);
+            CHECK(ranges::get_if<int &>(&v) == &x);
+        }
+        {
+            using V = ranges::variant<int &&>;
+            int x = 42;
+            const V v(std::move(x));
+            ASSERT_SAME_TYPE(decltype(ranges::get_if<int &&>(&v)), int *);
+            CHECK(ranges::get_if<int &&>(&v) == &x);
+        }
+        {
+            using V = ranges::variant<const int &&>;
+            int x = 42;
+            const V v(std::move(x));
+            ASSERT_SAME_TYPE(decltype(ranges::get_if<const int &&>(&v)), const int *);
+            CHECK(ranges::get_if<const int &&>(&v) == &x);
+        }
+    }
+
+    void test_get_if()
+    {
+        {
+            using V = ranges::variant<int>;
+            V *v = nullptr;
+            CHECK(ranges::get_if<int>(v) == nullptr);
+        }
+        {
+            using V = ranges::variant<int, const long>;
+            V v(42);
+            ASSERT_NOEXCEPT(ranges::get_if<int>(&v));
+            ASSERT_SAME_TYPE(decltype(ranges::get_if<int>(&v)), int *);
+            CHECK(*ranges::get_if<int>(&v) == 42);
+            CHECK(ranges::get_if<const long>(&v) == nullptr);
+        }
+        {
+            using V = ranges::variant<int, const long>;
+            V v(42l);
+            ASSERT_SAME_TYPE(decltype(ranges::get_if<const long>(&v)), const long *);
+            CHECK(*ranges::get_if<const long>(&v) == 42);
+            CHECK(ranges::get_if<int>(&v) == nullptr);
+        }
+        {
+            using V = ranges::variant<int &>;
+            int x = 42;
+            V v(x);
+            ASSERT_SAME_TYPE(decltype(ranges::get_if<int &>(&v)), int *);
+            CHECK(ranges::get_if<int &>(&v) == &x);
+        }
+        {
+            using V = ranges::variant<const int &>;
+            int x = 42;
+            V v(x);
+            ASSERT_SAME_TYPE(decltype(ranges::get_if<const int &>(&v)), const int *);
+            CHECK(ranges::get_if<const int &>(&v) == &x);
+        }
+        {
+            using V = ranges::variant<int &&>;
+            int x = 42;
+            V v(std::move(x));
+            ASSERT_SAME_TYPE(decltype(ranges::get_if<int &&>(&v)), int *);
+            CHECK(ranges::get_if<int &&>(&v) == &x);
+        }
+        {
+            using V = ranges::variant<const int &&>;
+            int x = 42;
+            V v(std::move(x));
+            ASSERT_SAME_TYPE(decltype(ranges::get_if<const int &&>(&v)), const int *);
+            CHECK(ranges::get_if<const int &&>(&v) == &x);
+        }
+    }
+
+    void test()
+    {
+        test_const_get_if();
+        test_get_if();
+    }
+} // namespace get_if_type
+
 namespace monostate
 {
     void test()
@@ -3663,6 +3875,8 @@ int main()
     get_index_unchecked::test();
     get_type::test();
     get_type_unchecked::test();
+    get_if_index::test();
+    get_if_type::test();
     monostate::test();
     monostate_relops::test();
 

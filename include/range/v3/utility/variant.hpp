@@ -1159,6 +1159,44 @@ namespace ranges
             return get<I>(detail::move(v));
         }
 
+        template<std::size_t I, typename... Types,
+            CONCEPT_REQUIRES_(I < sizeof...(Types))>
+        constexpr meta::_t<std::add_pointer<meta::at_c<meta::list<Types...>, I>>>
+        get_if(variant<Types...> *v) noexcept
+        {
+            return v && v->index() == I
+                ? detail::addressof(detail::cook(detail::variant_raw_get<I>(
+                    detail::variant_access::storage(*v))))
+                : nullptr;
+        }
+
+        template<std::size_t I, typename... Types,
+            CONCEPT_REQUIRES_(I < sizeof...(Types))>
+        constexpr meta::_t<std::add_pointer<meta::at_c<meta::list<Types...>, I> const>>
+        get_if(variant<Types...> const *v) noexcept
+        {
+            return v && v->index() == I
+                ? detail::addressof(detail::cook(detail::variant_raw_get<I>(
+                    detail::variant_access::storage(*v))))
+                : nullptr;
+        }
+
+        template<typename T, typename... Types,
+            std::size_t I = detail::find_unique_index<meta::list<Types...>, T>::value,
+            CONCEPT_REQUIRES_(I != std::size_t(-1))>
+        constexpr meta::_t<std::add_pointer<T>> get_if(variant<Types...> *v) noexcept
+        {
+            return ranges::get_if<I>(v);
+        }
+
+        template<typename T, typename... Types,
+            std::size_t I = detail::find_unique_index<meta::list<Types...>, T>::value,
+            CONCEPT_REQUIRES_(I != std::size_t(-1))>
+        constexpr meta::_t<std::add_pointer<T const>> get_if(variant<Types...> const *v) noexcept
+        {
+            return ranges::get_if<I>(v);
+        }
+
         template<typename> struct variant_size;
         template<typename T> struct variant_size<T const> : variant_size<T> {};
         template<typename T> struct variant_size<T volatile> : variant_size<T> {};
