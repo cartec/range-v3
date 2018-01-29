@@ -3868,6 +3868,390 @@ namespace valueless_by_exception
     }
 } // namespace valueless_by_exception
 
+template <class Var, std::size_t I, class... Args,
+    class = decltype(
+        std::declval<Var>().template emplace<I>(std::declval<Args>()...))>
+constexpr bool test_emplace_exists_imp(int)
+{
+    return true;
+}
+template <class, std::size_t, class...>
+constexpr bool test_emplace_exists_imp(long)
+{
+    return false;
+}
+template <class Var, std::size_t I, class... Args>
+constexpr bool emplace_exists()
+{
+    return test_emplace_exists_imp<Var, I, Args...>(0);
+}
+
+template <class Var, class T, class... Args,
+    class = decltype(
+        std::declval<Var>().template emplace<T>(std::declval<Args>()...))>
+constexpr bool test_emplace_exists_imp(int)
+{
+    return true;
+}
+template <class, class, class...>
+constexpr bool test_emplace_exists_imp(long)
+{
+    return false;
+}
+template <class Var, class T, class... Args>
+constexpr bool emplace_exists()
+{
+    return test_emplace_exists_imp<Var, T, Args...>(0);
+}
+
+namespace emplace_index
+{
+    void test_emplace_sfinae()
+    {
+        {
+            using V = ranges::variant<int, void *, const void *, NoCtors>;
+            STATIC_ASSERT(emplace_exists<V, 0>());
+            STATIC_ASSERT(emplace_exists<V, 0, int>());
+            static_assert(!emplace_exists<V, 0, decltype(nullptr)>(), "cannot construct");
+            STATIC_ASSERT(emplace_exists<V, 1, decltype(nullptr)>());
+            STATIC_ASSERT(emplace_exists<V, 1, int *>());
+            STATIC_ASSERT(!emplace_exists<V, 1, const int *>());
+            static_assert(!emplace_exists<V, 1, int>(), "cannot construct");
+            STATIC_ASSERT(emplace_exists<V, 2, const int *>());
+            STATIC_ASSERT(emplace_exists<V, 2, int *>());
+            static_assert(!emplace_exists<V, 3>(), "cannot construct");
+        }
+        {
+            using V = ranges::variant<int, int &, const int &, int &&, NoCtors>;
+            STATIC_ASSERT(emplace_exists<V, 0>());
+            STATIC_ASSERT(emplace_exists<V, 0, int>());
+            STATIC_ASSERT(emplace_exists<V, 0, long long>());
+            static_assert(!emplace_exists<V, 0, int, int>(), "too many args");
+            STATIC_ASSERT(emplace_exists<V, 1, int &>());
+            static_assert(!emplace_exists<V, 1>(), "cannot default construct ref");
+            static_assert(!emplace_exists<V, 1, const int &>(), "cannot bind ref");
+            static_assert(!emplace_exists<V, 1, int &&>(), "cannot bind ref");
+            STATIC_ASSERT(emplace_exists<V, 2, int &>());
+            STATIC_ASSERT(emplace_exists<V, 2, const int &>());
+            STATIC_ASSERT(emplace_exists<V, 2, int &&>());
+            static_assert(!emplace_exists<V, 2, void *>(),
+                "not constructible from void*");
+            STATIC_ASSERT(emplace_exists<V, 3, int>());
+            static_assert(!emplace_exists<V, 3, int &>(), "cannot bind ref");
+            static_assert(!emplace_exists<V, 3, const int &>(), "cannot bind ref");
+            static_assert(!emplace_exists<V, 3, const int &&>(), "cannot bind ref");
+            static_assert(!emplace_exists<V, 4>(), "no ctors");
+        }
+    }
+
+    void test_basic()
+    {
+        {
+            using V = ranges::variant<int>;
+            V v(42);
+            auto& ref1 = v.emplace<0>();
+            STATIC_ASSERT(std::is_same<int&, decltype(ref1)>::value);
+            CHECK(ranges::get<0>(v) == 0);
+            CHECK(&ref1 == &ranges::get<0>(v));
+            auto& ref2 = v.emplace<0>(42);
+            STATIC_ASSERT(std::is_same<int&, decltype(ref2)>::value);
+            CHECK(ranges::get<0>(v) == 42);
+            CHECK(&ref2 == &ranges::get<0>(v));
+        }
+        {
+            using V =
+                ranges::variant<int, long, const void *, NoCtors, std::string>;
+            const int x = 100;
+            V v(ranges::in_place_index<0>, -1);
+            // default emplace a value
+            auto& ref1 = v.emplace<1>();
+            STATIC_ASSERT(std::is_same<long&, decltype(ref1)>::value);
+            CHECK(ranges::get<1>(v) == 0);
+            CHECK(&ref1 == &ranges::get<1>(v));
+            auto& ref2 = v.emplace<2>(&x);
+            STATIC_ASSERT(std::is_same<const void*&, decltype(ref2)>::value);
+            CHECK(ranges::get<2>(v) == &x);
+            CHECK(&ref2 == &ranges::get<2>(v));
+            // emplace with multiple args
+            auto& ref3 = v.emplace<4>(3u, 'a');
+            STATIC_ASSERT(std::is_same<std::string&, decltype(ref3)>::value);
+            CHECK(ranges::get<4>(v) == "aaa");
+            CHECK(&ref3 == &ranges::get<4>(v));
+        }
+        {
+            using V = ranges::variant<int, long, const int &, int &&, NoCtors,
+                std::string>;
+            const int x = 100;
+            int y = 42;
+            int z = 43;
+            V v(ranges::in_place_index<0>, -1);
+            // default emplace a value
+            auto& ref1 = v.emplace<1>();
+            STATIC_ASSERT(std::is_same<long&, decltype(ref1)>::value);
+            CHECK(ranges::get<1>(v) == 0);
+            CHECK(&ref1 == &ranges::get<1>(v));
+            // emplace a reference
+            auto& ref2 = v.emplace<2>(x);
+            STATIC_ASSERT(std::is_same<const int&, decltype(ref2)>::value);
+            CHECK(&ranges::get<2>(v) == &x);
+            CHECK(&ref2 == &ranges::get<2>(v));
+            // emplace an rvalue reference
+            auto& ref3 = v.emplace<3>(std::move(y));
+            STATIC_ASSERT(std::is_same<int&, decltype(ref3)>::value);
+            CHECK(&ranges::get<3>(v) == &y);
+            CHECK(&ref3 == &ranges::get<3>(v));
+            // re-emplace a new reference over the active member
+            auto& ref4 = v.emplace<3>(std::move(z));
+            STATIC_ASSERT(std::is_same<int&, decltype(ref4)>::value);
+            CHECK(&ranges::get<3>(v) == &z);
+            CHECK(&ref4 == &ranges::get<3>(v));
+            // emplace with multiple args
+            auto& ref5 = v.emplace<5>(3u, 'a');
+            STATIC_ASSERT(std::is_same<std::string&, decltype(ref5)>::value);
+            CHECK(ranges::get<5>(v) == "aaa");
+            CHECK(&ref5 == &ranges::get<5>(v));
+        }
+    }
+
+    void test()
+    {
+        test_basic();
+        test_emplace_sfinae();
+    }
+} // namespace emplace_index
+
+namespace emplace_index_il
+{
+    struct InitList
+    {
+        std::size_t size;
+        constexpr InitList(std::initializer_list<int> il) : size(il.size()) {}
+    };
+
+    struct InitListArg
+    {
+        std::size_t size;
+        int value;
+        constexpr InitListArg(std::initializer_list<int> il, int v)
+          : size(il.size()), value(v)
+        {}
+    };
+
+    void test_emplace_sfinae()
+    {
+        using V =
+            ranges::variant<int, NoCtors, InitList, InitListArg, long, long>;
+        using IL = std::initializer_list<int>;
+        static_assert(!emplace_exists<V, 1, IL>(), "no such constructor");
+        STATIC_ASSERT(emplace_exists<V, 2, IL>());
+        static_assert(!emplace_exists<V, 2, int>(), "args don't match");
+        static_assert(!emplace_exists<V, 2, IL, int>(), "too many args");
+        STATIC_ASSERT(emplace_exists<V, 3, IL, int>());
+        static_assert(!emplace_exists<V, 3, int>(), "args don't match");
+        static_assert(!emplace_exists<V, 3, IL>(), "too few args");
+        static_assert(!emplace_exists<V, 3, IL, int, int>(), "too many args");
+    }
+
+    void test_basic()
+    {
+        using V = ranges::variant<int, InitList, InitListArg, NoCtors>;
+        V v;
+        auto& ref1 = v.emplace<1>({1, 2, 3});
+        STATIC_ASSERT(std::is_same<InitList&, decltype(ref1)>::value);
+        CHECK(ranges::get<1>(v).size == 3u);
+        CHECK(&ref1 == &ranges::get<1>(v));
+        auto& ref2 = v.emplace<2>({1, 2, 3, 4}, 42);
+        STATIC_ASSERT(std::is_same<InitListArg&, decltype(ref2)>::value);
+        CHECK(ranges::get<2>(v).size == 4u);
+        CHECK(ranges::get<2>(v).value == 42);
+        CHECK(&ref2 == &ranges::get<2>(v));
+        auto& ref3 = v.emplace<1>({1});
+        STATIC_ASSERT(std::is_same<InitList&, decltype(ref3)>::value);
+        CHECK(ranges::get<1>(v).size == 1u);
+        CHECK(&ref3 == &ranges::get<1>(v));
+    }
+
+    void test()
+    {
+        test_basic();
+        test_emplace_sfinae();
+    }
+} // namespace emplace_index_il
+
+namespace emplace_type
+{
+    void test_emplace_sfinae()
+    {
+        {
+            using V = ranges::variant<int, void *, const void *, NoCtors>;
+            STATIC_ASSERT(emplace_exists<V, int>());
+            STATIC_ASSERT(emplace_exists<V, int, int>());
+            static_assert(!emplace_exists<V, int, decltype(nullptr)>(),
+                "cannot construct");
+            STATIC_ASSERT(emplace_exists<V, void *, decltype(nullptr)>());
+            static_assert(!emplace_exists<V, void *, int>(), "cannot construct");
+            STATIC_ASSERT(emplace_exists<V, void *, int *>());
+            STATIC_ASSERT(!emplace_exists<V, void *, const int *>());
+            STATIC_ASSERT(emplace_exists<V, const void *, const int *>());
+            STATIC_ASSERT(emplace_exists<V, const void *, int *>());
+            static_assert(!emplace_exists<V, NoCtors>(), "cannot construct");
+        }
+        using V = ranges::variant<int, int &, const int &, int &&, long, long, NoCtors>;
+        STATIC_ASSERT(emplace_exists<V, int>());
+        STATIC_ASSERT(emplace_exists<V, int, int>());
+        STATIC_ASSERT(emplace_exists<V, int, long long>());
+        static_assert(!emplace_exists<V, int, int, int>(), "too many args");
+        STATIC_ASSERT(emplace_exists<V, int &, int &>());
+        static_assert(!emplace_exists<V, int &>(), "cannot default construct ref");
+        static_assert(!emplace_exists<V, int &, const int &>(), "cannot bind ref");
+        static_assert(!emplace_exists<V, int &, int &&>(), "cannot bind ref");
+        STATIC_ASSERT(emplace_exists<V, const int &, int &>());
+        STATIC_ASSERT(emplace_exists<V, const int &, const int &>());
+        STATIC_ASSERT(emplace_exists<V, const int &, int &&>());
+        static_assert(!emplace_exists<V, const int &, void *>(),
+            "not constructible from void*");
+        STATIC_ASSERT(emplace_exists<V, int &&, int>());
+        static_assert(!emplace_exists<V, int &&, int &>(), "cannot bind ref");
+        static_assert(!emplace_exists<V, int &&, const int &>(), "cannot bind ref");
+        static_assert(!emplace_exists<V, int &&, const int &&>(), "cannot bind ref");
+        static_assert(!emplace_exists<V, long, long>(), "ambiguous");
+        static_assert(!emplace_exists<V, NoCtors>(), "cannot construct void");
+    }
+
+    void test_basic()
+    {
+        {
+            using V = ranges::variant<int>;
+            V v(42);
+            auto& ref1 = v.emplace<int>();
+            STATIC_ASSERT(std::is_same<int&, decltype(ref1)>::value);
+            CHECK(ranges::get<0>(v) == 0);
+            CHECK(&ref1 == &ranges::get<0>(v));
+            auto& ref2 = v.emplace<int>(42);
+            STATIC_ASSERT(std::is_same<int&, decltype(ref2)>::value);
+            CHECK(ranges::get<0>(v) == 42);
+            CHECK(&ref2 == &ranges::get<0>(v));
+        }
+        {
+            using V =
+                ranges::variant<int, long, const void *, NoCtors, std::string>;
+            const int x = 100;
+            V v(ranges::in_place_type<int>, -1);
+            // default emplace a value
+            auto& ref1 = v.emplace<long>();
+            STATIC_ASSERT(std::is_same<long&, decltype(ref1)>::value);
+            CHECK(ranges::get<1>(v) == 0);
+            CHECK(&ref1 == &ranges::get<1>(v));
+            auto& ref2 = v.emplace<const void *>(&x);
+            STATIC_ASSERT(std::is_same<const void *&, decltype(ref2)>::value);
+            CHECK(ranges::get<2>(v) == &x);
+            CHECK(&ref2 == &ranges::get<2>(v));
+            // emplace with multiple args
+            auto& ref3 = v.emplace<std::string>(3u, 'a');
+            STATIC_ASSERT(std::is_same<std::string&, decltype(ref3)>::value);
+            CHECK(ranges::get<4>(v) == "aaa");
+            CHECK(&ref3 == &ranges::get<4>(v));
+        }
+        {
+            using V = ranges::variant<int, long, const int &, int &&, NoCtors,
+                std::string>;
+            const int x = 100;
+            int y = 42;
+            int z = 43;
+            V v(ranges::in_place_index<0>, -1);
+            // default emplace a value
+            auto& ref1 = v.emplace<long>();
+            STATIC_ASSERT(std::is_same<long&, decltype(ref1)>::value);
+            CHECK(ranges::get<long>(v) == 0);
+            CHECK(&ref1 == &ranges::get<long>(v));
+            // emplace a reference
+            auto& ref2 = v.emplace<const int &>(x);
+            STATIC_ASSERT(std::is_same<const int&, decltype(ref2)>::value);
+            CHECK(&ranges::get<const int &>(v) == &x);
+            CHECK(&ref2 == &ranges::get<const int &>(v));
+            // emplace an rvalue reference
+            auto& ref3 = v.emplace<int &&>(std::move(y));
+            STATIC_ASSERT(std::is_same<int &, decltype(ref3)>::value);
+            CHECK(&ranges::get<int &&>(v) == &y);
+            CHECK(&ref3 == &ranges::get<int &&>(v));
+            // re-emplace a new reference over the active member
+            auto& ref4 = v.emplace<int &&>(std::move(z));
+            STATIC_ASSERT(std::is_same<int &, decltype(ref4)>::value);
+            CHECK(&ranges::get<int &&>(v) == &z);
+            CHECK(&ref4 == &ranges::get<int &&>(v));
+            // emplace with multiple args
+            auto& ref5 = v.emplace<std::string>(3u, 'a');
+            STATIC_ASSERT(std::is_same<std::string&, decltype(ref5)>::value);
+            CHECK(ranges::get<std::string>(v) == "aaa");
+            CHECK(&ref5 == &ranges::get<std::string>(v));
+        }
+    }
+
+    void test()
+    {
+        test_basic();
+        test_emplace_sfinae();
+    }
+} // namespace emplace_type
+
+namespace emplace_type_il
+{
+    struct InitList
+    {
+        std::size_t size;
+        constexpr InitList(std::initializer_list<int> il) : size(il.size()) {}
+    };
+
+    struct InitListArg
+    {
+        std::size_t size;
+        int value;
+        constexpr InitListArg(std::initializer_list<int> il, int v)
+          : size(il.size()), value(v)
+        {}
+    };
+
+    void test_emplace_sfinae()
+    {
+        using V =
+            ranges::variant<int, NoCtors, InitList, InitListArg, long, long>;
+        using IL = std::initializer_list<int>;
+        STATIC_ASSERT(emplace_exists<V, InitList, IL>());
+        static_assert(!emplace_exists<V, InitList, int>(), "args don't match");
+        static_assert(!emplace_exists<V, InitList, IL, int>(), "too many args");
+        STATIC_ASSERT(emplace_exists<V, InitListArg, IL, int>());
+        static_assert(!emplace_exists<V, InitListArg, int>(), "args don't match");
+        static_assert(!emplace_exists<V, InitListArg, IL>(), "too few args");
+        static_assert(!emplace_exists<V, InitListArg, IL, int, int>(),
+                                    "too many args");
+    }
+
+    void test_basic()
+    {
+        using V = ranges::variant<int, InitList, InitListArg, NoCtors>;
+        V v;
+        auto& ref1 = v.emplace<InitList>({1, 2, 3});
+        STATIC_ASSERT(std::is_same<InitList&,decltype(ref1)>::value);
+        CHECK(ranges::get<InitList>(v).size == 3u);
+        CHECK(&ref1 == &ranges::get<InitList>(v));
+        auto& ref2 = v.emplace<InitListArg>({1, 2, 3, 4}, 42);
+        STATIC_ASSERT(std::is_same<InitListArg&,decltype(ref2)>::value);
+        CHECK(ranges::get<InitListArg>(v).size == 4u);
+        CHECK(ranges::get<InitListArg>(v).value == 42);
+        CHECK(&ref2 == &ranges::get<InitListArg>(v));
+        auto& ref3 = v.emplace<InitList>({1});
+        STATIC_ASSERT(std::is_same<InitList&,decltype(ref3)>::value);
+        CHECK(ranges::get<InitList>(v).size == 1u);
+        CHECK(&ref3 == &ranges::get<InitList>(v));
+    }
+
+    void test()
+    {
+        test_basic();
+        test_emplace_sfinae();
+    }
+} // namespace emplace_type_il
+
 namespace monostate
 {
     void test()
@@ -3925,6 +4309,7 @@ int main()
     get_index_unchecked::test();
     get_type::test();
     get_type_unchecked::test();
+    holds_alternative::test();
     //enabled_hash::test();
     //hash::test();
     alternative::test();
@@ -3945,15 +4330,14 @@ int main()
     move_ctor::test();
     converting_ctor::test();
     dtor::test();
-    //emplace_index::test();
-    //emplace_index_il::test();
-    //emplace_type::test();
-    //emplace_type_il::test();
+    emplace_index::test();
+    emplace_index_il::test();
+    emplace_type::test();
+    emplace_type_il::test();
     index::test();
     valueless_by_exception::test();
     //swap::test();
-
-    holds_alternative::test();
+    //visit::test();
 
 #if 0
     // Simple variant and access.

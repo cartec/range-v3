@@ -892,16 +892,14 @@ namespace ranges
 
             template<std::size_t I, typename U, typename T>
             void assign_(std::true_type, T &&t)
+                noexcept(std::is_nothrow_constructible<U, T>::value)
             {
-                using W = detail::variant_wrapper<U>;
-                this->reset_();
-                auto &target = detail::variant_raw_get<I>(storage_);
-                CONCEPT_ASSERT(Same<uncvref_t<decltype(target)>, W>());
-                ::new (detail::addressof(target)) W(static_cast<T &&>(t));
-                index_ = I + 1;
+                emplace_<I, U>(static_cast<T &&>(t));
             }
             template<std::size_t I, typename U, typename T>
             void assign_(std::false_type, T &&t)
+                noexcept(std::is_nothrow_constructible<U, T>::value &&
+                    std::is_nothrow_move_constructible<U>::value)
             {
                 using W = detail::variant_wrapper<U>;
                 W tmp(static_cast<T &&>(t));
@@ -910,6 +908,21 @@ namespace ranges
                 CONCEPT_ASSERT(Same<uncvref_t<decltype(target)>, W>());
                 ::new (detail::addressof(target)) W(std::move(tmp));
                 index_ = I + 1;
+            }
+
+            template<std::size_t I, typename T, typename... Args>
+            T &emplace_(Args &&... args)
+                noexcept(std::is_nothrow_constructible<T, Args...>::value)
+            {
+                CONCEPT_ASSERT(Same<T, meta::at_c<meta::list<Types...>, I>>());
+                CONCEPT_ASSERT(Constructible<T, Args...>());
+                using W = detail::variant_wrapper<T>;
+                this->reset_();
+                auto &target = detail::variant_raw_get<I>(storage_);
+                CONCEPT_ASSERT(Same<uncvref_t<decltype(target)>, W>());
+                ::new (detail::addressof(target)) W(static_cast<Args &&>(args)...);
+                index_ = I + 1;
+                return detail::cook(target);
             }
         public:
             template<typename First = meta::at_c<meta::list<Types...>, 0>,
@@ -941,10 +954,10 @@ namespace ranges
 
             template<std::size_t I, typename E, typename... Args,
                 typename T = meta::at_c<meta::list<Types...>, I>,
-                CONCEPT_REQUIRES_(Constructible<T, std::initializer_list<E>, Args...>())>
+                CONCEPT_REQUIRES_(Constructible<T, std::initializer_list<E> &, Args...>())>
             explicit constexpr variant(in_place_index_t<I>, std::initializer_list<E> &&il, Args &&... args)
-                noexcept(std::is_nothrow_constructible<T, std::initializer_list<E>, Args...>::value)
-              : base_t{meta::size_t<I>{}, detail::move(il), static_cast<Args &&>(args)...}
+                noexcept(std::is_nothrow_constructible<T, std::initializer_list<E> &, Args...>::value)
+              : base_t{meta::size_t<I>{}, il, static_cast<Args &&>(args)...}
             {}
 
             template<typename T, typename... Args,
@@ -958,12 +971,12 @@ namespace ranges
             template<typename T, typename E, typename... Args,
                 std::size_t I = detail::find_unique_index<meta::list<Types...>, T>::value,
                 CONCEPT_REQUIRES_(I != std::size_t(-1) &&
-                    Constructible<T, std::initializer_list<E>, Args...>())>
+                    Constructible<T, std::initializer_list<E> &, Args...>())>
             explicit constexpr variant(
                 in_place_type_t<T>, std::initializer_list<E> &&il, Args &&... args)
                 noexcept(std::is_nothrow_constructible<
-                    T, std::initializer_list<E>, Args...>::value)
-              : base_t{meta::size_t<I>{}, detail::move(il), static_cast<Args &&>(args)...}
+                    T, std::initializer_list<E> &, Args...>::value)
+              : base_t{meta::size_t<I>{}, il, static_cast<Args &&>(args)...}
             {}
 
             template<typename T,
@@ -975,8 +988,7 @@ namespace ranges
                 noexcept(std::is_nothrow_constructible<U, T>::value &&
                     std::is_nothrow_assignable<U &, T>::value)
             {
-                auto const i = index_;
-                if (i == I + 1)
+                if (index_ == I + 1)
                     detail::cook(detail::variant_raw_get<I>(storage_)) = static_cast<T &&>(t);
                 else
                 {
@@ -986,6 +998,43 @@ namespace ranges
                     assign_<I, U>(meta::bool_<construct_in_place>{}, static_cast<T &&>(t));
                 }
                 return *this;
+            }
+
+            template<std::size_t I, typename... Args,
+                typename T = meta::at_c<meta::list<Types...>, I>,
+                CONCEPT_REQUIRES_(Constructible<T, Args...>())>
+            T &emplace(Args &&... args)
+                noexcept(std::is_nothrow_constructible<T, Args...>::value)
+            {
+                return emplace_<I, T>(static_cast<Args &&>(args)...);
+            }
+
+            template<std::size_t I, typename E, typename... Args,
+                typename T = meta::at_c<meta::list<Types...>, I>,
+                CONCEPT_REQUIRES_(Constructible<T, std::initializer_list<E> &, Args...>())>
+            T &emplace(std::initializer_list<E> il, Args &&... args)
+                noexcept(std::is_nothrow_constructible<T, std::initializer_list<E> &, Args...>::value)
+            {
+                return emplace_<I, T>(il, static_cast<Args &&>(args)...);
+            }
+
+            template<typename T, typename... Args,
+                 std::size_t I = detail::find_unique_index<meta::list<Types...>, T>::value,
+                CONCEPT_REQUIRES_(I != std::size_t(-1) && Constructible<T, Args...>())>
+            T &emplace(Args &&... args)
+                noexcept(std::is_nothrow_constructible<T, Args...>::value)
+            {
+                return emplace_<I, T>(static_cast<Args &&>(args)...);
+            }
+
+            template<typename T, typename E, typename... Args,
+                 std::size_t I = detail::find_unique_index<meta::list<Types...>, T>::value,
+                CONCEPT_REQUIRES_(I != std::size_t(-1) &&
+                    Constructible<T, std::initializer_list<E> &, Args...>())>
+            T &emplace(std::initializer_list<E> il, Args &&... args)
+                noexcept(std::is_nothrow_constructible<T, std::initializer_list<E> &, Args...>::value)
+            {
+                return emplace_<I, T>(il, static_cast<Args &&>(args)...);
             }
 
             constexpr std::size_t index() const noexcept
