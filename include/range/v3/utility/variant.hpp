@@ -68,7 +68,7 @@ namespace ranges
             constexpr auto &in_place_index = static_const<in_place_index_t<I>>::value;
 
             template<typename T>
-            constexpr auto &in_place_type = static_const<in_place_type_t<I>>::value;
+            constexpr auto &in_place_type = static_const<in_place_type_t<T>>::value;
         }
 #endif
 
@@ -344,8 +344,9 @@ namespace ranges
 #endif
 
             template<typename Fn, typename Storage>
-            using variant_visit_result_t = decltype(std::declval<Fn>()(meta::size_t<0>{},
-                variant_raw_get<0>(std::declval<Storage>())));
+            using variant_raw_visit_result_t =
+                decltype(std::declval<Fn>()(meta::size_t<0>{},
+                    variant_raw_get<0>(std::declval<Storage>())));
 
             template<typename Fn, typename Storage, typename Indices>
             struct variant_raw_dispatch;
@@ -353,7 +354,7 @@ namespace ranges
             struct variant_raw_dispatch<Fn, Storage, meta::index_sequence<Is...>>
             {
                 CONCEPT_ASSERT(sizeof...(Is) == uncvref_t<Storage>::size);
-                using result_t = variant_visit_result_t<Fn, Storage>;
+                using result_t = variant_raw_visit_result_t<Fn, Storage>;
                 using fn_t = result_t(*)(Fn &&, Storage &&);
                 static constexpr result_t bad_access_target(Fn &&fn, Storage &&)
                 {
@@ -373,10 +374,11 @@ namespace ranges
 
             template<typename Fn, typename Storage, std::size_t... Is>
             constexpr typename variant_raw_dispatch<Fn, Storage, meta::index_sequence<Is...>>::fn_t
-                variant_raw_dispatch<Fn, Storage, meta::index_sequence<Is...>>::dispatch_table[sizeof...(Is) + 1];
+                variant_raw_dispatch<Fn, Storage, meta::index_sequence<Is...>>
+                    ::dispatch_table[sizeof...(Is) + 1];
 
             template<typename Fn, typename Storage>
-            constexpr variant_visit_result_t<Fn, Storage> variant_raw_visit(
+            constexpr variant_raw_visit_result_t<Fn, Storage> variant_raw_visit(
                 std::size_t index, Storage &&storage, Fn &&fn)
             {
                 using Indices = meta::make_index_sequence<uncvref_t<Storage>::size>;
@@ -1309,6 +1311,90 @@ namespace ranges
         constexpr bool operator!=(monostate, monostate) noexcept
         {
             return false;
+        }
+
+        namespace detail
+        {
+            template<typename Fn, typename... Variants>
+            using variant_visit_result_t = decltype(std::declval<Fn>()(
+                detail::cook(detail::variant_raw_get<0>(
+                    variant_access::storage(std::declval<Variants>())))...));
+
+            template<std::size_t... Is>
+            constexpr bool has_any_zero(meta::list<meta::size_t<Is>...>) noexcept
+            {
+                return meta::or_c<(Is == 0)...>::value;
+            }
+
+            template<typename Fn, typename IndexVectors, typename... Variants>
+            struct variant_dispatch;
+            template<typename Fn, typename... IndexVectors, typename... Variants>
+            struct variant_dispatch<Fn, meta::list<IndexVectors...>, Variants...>
+            {
+                using result_t = variant_visit_result_t<Fn, Variants...>;
+                using fn_t = result_t(*)(Fn &&, Variants &&...);
+                template<std::size_t... Is>
+                [[noreturn]] static result_t dispatch_target_(std::true_type,
+                    meta::list<meta::size_t<Is>...>, Fn &&, Variants &&...)
+                {
+                    CONCEPT_ASSERT(has_any_zero(meta::list<meta::size_t<Is>...>{}));
+                    throw_bad_variant_access();
+                }
+                template<std::size_t... Is>
+                static constexpr result_t dispatch_target_(std::false_type,
+                    meta::list<meta::size_t<Is>...>, Fn &&fn, Variants &&... vars)
+                {
+                    CONCEPT_ASSERT(!has_any_zero(meta::list<meta::size_t<Is>...>{}));
+                    return static_cast<Fn &&>(fn)(detail::cook(
+                        detail::variant_raw_get<Is - 1>(
+                            variant_access::storage(static_cast<Variants &&>(vars))))...);
+                }
+                template<typename Indices>
+                static constexpr result_t dispatch_target(Fn &&fn, Variants &&... vars)
+                {
+                    return dispatch_target_(meta::bool_<has_any_zero(Indices{})>{},
+                        Indices{}, static_cast<Fn &&>(fn), static_cast<Variants &&>(vars)...);
+                }
+                static constexpr fn_t table[sizeof...(IndexVectors)] = {
+                    &dispatch_target<IndexVectors>...
+                };
+            };
+
+            template<typename Fn, typename... Indices, typename... Variants>
+            constexpr typename variant_dispatch<Fn, meta::list<Indices...>, Variants...>::fn_t
+                variant_dispatch<Fn, meta::list<Indices...>, Variants...>
+                    ::table[sizeof...(Indices)];
+
+            template<typename...Variants>
+            using variant_total_alternatives = meta::fold<
+                meta::list<meta::size_t<1 + variant_size<uncvref_t<Variants>>::value>...>,
+                meta::size_t<1>,
+                meta::quote<meta::multiplies>>;
+
+            constexpr std::size_t variant_canonical_index() noexcept
+            {
+                return 0;
+            }
+            template<typename First, typename... Rest>
+            constexpr std::size_t variant_canonical_index(
+                First const &first, Rest const&... rest) noexcept
+            {
+                return variant_access::index(first) * variant_total_alternatives<Rest...>::value
+                    + variant_canonical_index(rest...);
+            }
+        } // namespace detail
+
+        template<typename Fn, typename... Variants,
+            CONCEPT_REQUIRES_(meta::strict_and<meta::is<uncvref_t<Variants>, variant>...>::value)>
+        constexpr detail::variant_visit_result_t<Fn, Variants...>
+        visit(Fn &&fn, Variants &&... vars)
+        {
+            using Sizes = meta::list<meta::as_list<meta::make_index_sequence<
+                1 + variant_size<uncvref_t<Variants>>::value>>...>;
+            using IndexVectors = meta::cartesian_product<Sizes>;
+            using Dispatch = detail::variant_dispatch<Fn, IndexVectors, Variants...>;
+            return Dispatch::table[detail::variant_canonical_index(vars...)](
+                static_cast<Fn &&>(fn), static_cast<Variants &&>(vars)...);
         }
     } // namespace v3
 } // namespace ranges

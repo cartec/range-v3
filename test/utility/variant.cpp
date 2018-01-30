@@ -4252,6 +4252,358 @@ namespace emplace_type_il
     }
 } // namespace emplace_type_il
 
+namespace visit
+{
+    // TypeID - Represent a unique identifier for a type. TypeID allows equality
+    // comparisons between different types.
+    struct TypeID {
+        friend bool operator==(TypeID const& LHS, TypeID const& RHS)
+        { return LHS.m_id == RHS.m_id; }
+        friend bool operator!=(TypeID const& LHS, TypeID const& RHS)
+        { return LHS.m_id != RHS.m_id; }
+
+        void dump() const {
+            std::printf("TypeID: %s\n", m_id);
+        }
+
+    private:
+        explicit constexpr TypeID(const char* xid) : m_id(xid) {}
+
+        TypeID(const TypeID&) = delete;
+        TypeID& operator=(TypeID const&) = delete;
+
+        const char* const m_id;
+        template <class T> friend TypeID const& makeTypeIDImp();
+    };
+
+    // makeTypeID - Return the TypeID for the specified type 'T'.
+    template <class T>
+    inline TypeID const& makeTypeIDImp() {
+        static const TypeID id(typeid(T).name());
+        return id;
+    }
+
+    template <class T>
+    struct TypeWrapper {};
+
+    template <class T>
+    inline TypeID const& makeTypeID() {
+        return makeTypeIDImp<TypeWrapper<T>>();
+    }
+
+    template <class ...Args>
+    struct ArgumentListID {};
+
+    // makeArgumentID - Create and return a unique identifier for a given set
+    // of arguments.
+    template <class ...Args>
+    inline TypeID const& makeArgumentID() {
+        return makeTypeIDImp<ArgumentListID<Args...>>();
+    }
+
+    enum CallType : unsigned
+    {
+        CT_None,
+        CT_NonConst = 1,
+        CT_Const = 2,
+        CT_LValue = 4,
+        CT_RValue = 8
+    };
+
+    constexpr CallType operator|(CallType LHS, CallType RHS)
+    {
+        return static_cast<CallType>(static_cast<unsigned>(LHS) |
+            static_cast<unsigned>(RHS));
+    }
+
+    struct ForwardingCallObject
+    {
+        template <class... Args> bool operator()(Args &&...) &
+        {
+            set_call<Args &&...>(CT_NonConst | CT_LValue);
+            return true;
+        }
+
+        template <class... Args> bool operator()(Args &&...) const &
+        {
+            set_call<Args &&...>(CT_Const | CT_LValue);
+            return true;
+        }
+
+        // Don't allow the call operator to be invoked as an rvalue.
+        template <class... Args> bool operator()(Args &&...) &&
+        {
+            set_call<Args &&...>(CT_NonConst | CT_RValue);
+            return true;
+        }
+
+        template <class... Args> bool operator()(Args &&...) const &&
+        {
+            set_call<Args &&...>(CT_Const | CT_RValue);
+            return true;
+        }
+
+        template <class... Args> static void set_call(CallType type)
+        {
+            CHECK(last_call_type == CT_None);
+            CHECK(last_call_args == nullptr);
+            last_call_type = type;
+            last_call_args = std::addressof(makeArgumentID<Args...>());
+        }
+
+        template <class... Args> static bool check_call(CallType type)
+        {
+            bool result = last_call_type == type && last_call_args &&
+                *last_call_args == makeArgumentID<Args...>();
+            last_call_type = CT_None;
+            last_call_args = nullptr;
+            return result;
+        }
+
+        static CallType last_call_type;
+        static const TypeID *last_call_args;
+    };
+
+    CallType ForwardingCallObject::last_call_type = CT_None;
+    const TypeID *ForwardingCallObject::last_call_args = nullptr;
+
+    void test_call_operator_forwarding()
+    {
+        using Fn = ForwardingCallObject;
+        Fn obj{};
+        const Fn &cobj = obj;
+        { // test call operator forwarding - no variant
+            ranges::visit(obj);
+            CHECK(Fn::check_call<>(CT_NonConst | CT_LValue));
+            ranges::visit(cobj);
+            CHECK(Fn::check_call<>(CT_Const | CT_LValue));
+            ranges::visit(std::move(obj));
+            CHECK(Fn::check_call<>(CT_NonConst | CT_RValue));
+            ranges::visit(std::move(cobj));
+            CHECK(Fn::check_call<>(CT_Const | CT_RValue));
+        }
+        { // test call operator forwarding - single variant, single arg
+            using V = ranges::variant<int>;
+            V v(42);
+            ranges::visit(obj, v);
+            CHECK(Fn::check_call<int &>(CT_NonConst | CT_LValue));
+            ranges::visit(cobj, v);
+            CHECK(Fn::check_call<int &>(CT_Const | CT_LValue));
+            ranges::visit(std::move(obj), v);
+            CHECK(Fn::check_call<int &>(CT_NonConst | CT_RValue));
+            ranges::visit(std::move(cobj), v);
+            CHECK(Fn::check_call<int &>(CT_Const | CT_RValue));
+        }
+        { // test call operator forwarding - single variant, multi arg
+            using V = ranges::variant<int, long, double>;
+            V v(42l);
+            ranges::visit(obj, v);
+            CHECK(Fn::check_call<long &>(CT_NonConst | CT_LValue));
+            ranges::visit(cobj, v);
+            CHECK(Fn::check_call<long &>(CT_Const | CT_LValue));
+            ranges::visit(std::move(obj), v);
+            CHECK(Fn::check_call<long &>(CT_NonConst | CT_RValue));
+            ranges::visit(std::move(cobj), v);
+            CHECK(Fn::check_call<long &>(CT_Const | CT_RValue));
+        }
+        { // test call operator forwarding - multi variant, multi arg
+            using V = ranges::variant<int, long, double>;
+            using V2 = ranges::variant<int *, std::string>;
+            V v(42l);
+            V2 v2("hello");
+            ranges::visit(obj, v, v2);
+            CHECK((Fn::check_call<long &, std::string &>(CT_NonConst | CT_LValue)));
+            ranges::visit(cobj, v, v2);
+            CHECK((Fn::check_call<long &, std::string &>(CT_Const | CT_LValue)));
+            ranges::visit(std::move(obj), v, v2);
+            CHECK((Fn::check_call<long &, std::string &>(CT_NonConst | CT_RValue)));
+            ranges::visit(std::move(cobj), v, v2);
+            CHECK((Fn::check_call<long &, std::string &>(CT_Const | CT_RValue)));
+        }
+    }
+
+    void test_argument_forwarding()
+    {
+        using Fn = ForwardingCallObject;
+        Fn obj{};
+        const auto Val = CT_LValue | CT_NonConst;
+        { // single argument - value type
+            using V = ranges::variant<int>;
+            V v(42);
+            const V &cv = v;
+            ranges::visit(obj, v);
+            CHECK(Fn::check_call<int &>(Val));
+            ranges::visit(obj, cv);
+            CHECK(Fn::check_call<const int &>(Val));
+            ranges::visit(obj, std::move(v));
+            CHECK(Fn::check_call<int &&>(Val));
+            ranges::visit(obj, std::move(cv));
+            CHECK(Fn::check_call<const int &&>(Val));
+        }
+        { // single argument - lvalue reference
+            using V = ranges::variant<int &>;
+            int x = 42;
+            V v(x);
+            const V &cv = v;
+            ranges::visit(obj, v);
+            CHECK(Fn::check_call<int &>(Val));
+            ranges::visit(obj, cv);
+            CHECK(Fn::check_call<int &>(Val));
+            ranges::visit(obj, std::move(v));
+            CHECK(Fn::check_call<int &>(Val));
+            ranges::visit(obj, std::move(cv));
+            CHECK(Fn::check_call<int &>(Val));
+        }
+        { // single argument - rvalue reference
+            using V = ranges::variant<int &&>;
+            int x = 42;
+            V v(std::move(x));
+            const V &cv = v;
+            ranges::visit(obj, v);
+            CHECK(Fn::check_call<int &>(Val));
+            ranges::visit(obj, cv);
+            CHECK(Fn::check_call<int &>(Val));
+            ranges::visit(obj, std::move(v));
+            CHECK(Fn::check_call<int &&>(Val));
+            ranges::visit(obj, std::move(cv));
+            CHECK(Fn::check_call<int &&>(Val));
+        }
+        { // multi argument - multi variant
+            using S = const std::string &;
+            using V = ranges::variant<int, S, long &&>;
+            const std::string str = "hello";
+            long l = 43;
+            V v1(42);
+            const V &cv1 = v1;
+            V v2(str);
+            const V &cv2 = v2;
+            V v3(std::move(l));
+            ranges::visit(obj, v1, v2, v3);
+            CHECK((Fn::check_call<int &, S, long &>(Val)));
+            ranges::visit(obj, cv1, cv2, std::move(v3));
+            CHECK((Fn::check_call<const int &, S, long &&>(Val)));
+        }
+    }
+
+    struct ReturnFirst
+    {
+        template <class T, class... Args> constexpr int operator()(T f, Args &&...) const
+        {
+            return static_cast<int>(f);
+        }
+    };
+
+    struct ReturnArity
+    {
+        template <class... Args> constexpr int operator()(Args &&...) const
+        {
+            return sizeof...(Args);
+        }
+    };
+
+    void test_constexpr()
+    {
+        constexpr ReturnFirst obj{};
+        constexpr ReturnArity aobj{};
+        {
+            using V = ranges::variant<int>;
+            constexpr V v(42);
+            STATIC_ASSERT(ranges::visit(obj, v) == 42);
+        }
+        {
+            using V = ranges::variant<short, long, char>;
+            constexpr V v(42l);
+            STATIC_ASSERT(ranges::visit(obj, v) == 42);
+        }
+        {
+            using V1 = ranges::variant<int>;
+            using V2 = ranges::variant<int, char *, long long>;
+            using V3 = ranges::variant<bool, int, int>;
+            constexpr V1 v1;
+            constexpr V2 v2(nullptr);
+            constexpr V3 v3;
+            STATIC_ASSERT(ranges::visit(aobj, v1, v2, v3) == 3);
+        }
+        {
+            using V1 = ranges::variant<int>;
+            using V2 = ranges::variant<int, char *, long long>;
+            using V3 = ranges::variant<void *, int, int>;
+            constexpr V1 v1;
+            constexpr V2 v2(nullptr);
+            constexpr V3 v3;
+            STATIC_ASSERT(ranges::visit(aobj, v1, v2, v3) == 3);
+        }
+    }
+
+    template <typename... Args>
+    bool ex_test(Args &&... args)
+    {
+        ReturnArity obj{};
+        try {
+            ranges::visit(obj, args...);
+        } catch (const ranges::bad_variant_access &) {
+            return true;
+        } catch (...) {
+        }
+        return false;
+    }
+
+    void test_exceptions()
+    {
+        {
+            using V = ranges::variant<int, MakeEmptyT>;
+            V v;
+            makeEmpty(v);
+            CHECK(ex_test(v));
+        }
+        {
+            using V = ranges::variant<int, MakeEmptyT>;
+            using V2 = ranges::variant<long, std::string, void *>;
+            V v;
+            makeEmpty(v);
+            V2 v2("hello");
+            CHECK(ex_test(v, v2));
+        }
+        {
+            using V = ranges::variant<int, MakeEmptyT>;
+            using V2 = ranges::variant<long, std::string, void *>;
+            V v;
+            makeEmpty(v);
+            V2 v2("hello");
+            CHECK(ex_test(v2, v));
+        }
+        {
+            using V = ranges::variant<int, MakeEmptyT>;
+            using V2 = ranges::variant<long, std::string, void *, MakeEmptyT>;
+            V v;
+            makeEmpty(v);
+            V2 v2;
+            makeEmpty(v2);
+            CHECK(ex_test(v, v2));
+        }
+    }
+
+    // See https://bugs.llvm.org/show_bug.cgi?id=31916
+    void test_caller_accepts_nonconst()
+    {
+        struct A {};
+        struct Visitor {
+            void operator()(A&) {}
+        };
+        ranges::variant<A> v;
+        ranges::visit(Visitor{}, v);
+    }
+
+    void test()
+    {
+        test_call_operator_forwarding();
+        test_argument_forwarding();
+        test_constexpr();
+        test_exceptions();
+        test_caller_accepts_nonconst();
+    }
+} // namespace visit
+
 namespace monostate
 {
     void test()
@@ -4337,7 +4689,7 @@ int main()
     index::test();
     valueless_by_exception::test();
     //swap::test();
-    //visit::test();
+    visit::test();
 
 #if 0
     // Simple variant and access.
