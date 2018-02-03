@@ -16,12 +16,6 @@
 #include "../simple_test.hpp"
 #include "../test_utils.hpp"
 
-// GCC 4.8 is extremely confused about && and const&& qualifiers. Luckily they
-// are rare - we'll simply break them.
-#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ < 5 && __GNUC_MINOR__ < 9
-#define GCC_4_8_WORKAROUND 1
-#endif
-
 CONCEPT_ASSERT(ranges::Constructible<ranges::reference_wrapper<int>, int&>());
 CONCEPT_ASSERT(!ranges::Constructible<ranges::reference_wrapper<int>, int&&>());
 CONCEPT_ASSERT(!ranges::Constructible<ranges::reference_wrapper<int &&>, int&>());
@@ -101,29 +95,36 @@ namespace
     constexpr int f() noexcept { return 13; }
     constexpr int g(int i) { return 2 * i + 1; }
 
+#define ASSERT_NOEXCEPT(...) static_assert(noexcept(__VA_ARGS__), "")
+#if RANGES_CXX_NOEXCEPT_FUNCTION_TYPE >= RANGES_CXX_NOEXCEPT_FUNCTION_TYPE_17
+#define ASSERT_NOEXCEPT_17(...) ASSERT_NOEXCEPT(__VA_ARGS__)
+#else
+#define ASSERT_NOEXCEPT_17(...)
+#endif
+
     void test_invoke()
     {
         CHECK(ranges::invoke(f) == 13);
-        // CHECK(noexcept(ranges::invoke(f) == 13));
+        ASSERT_NOEXCEPT_17(ranges::invoke(f) == 13);
         CHECK(ranges::invoke(g, 2) == 5);
         CHECK(ranges::invoke(h, 42) == 42);
-        CHECK(noexcept(ranges::invoke(h, 42) == 42));
+        ASSERT_NOEXCEPT(ranges::invoke(h, 42) == 42);
         {
             int i = 13;
             CHECK(&ranges::invoke(h, i) == &i);
-            CHECK(noexcept(&ranges::invoke(h, i) == &i));
+            ASSERT_NOEXCEPT(&ranges::invoke(h, i) == &i);
         }
 
         CHECK(ranges::invoke(&A::f, A{}) == 42);
-        // CHECK(noexcept(ranges::invoke(&A::f, A{}) == 42));
+        ASSERT_NOEXCEPT_17(ranges::invoke(&A::f, A{}) == 42);
         CHECK(ranges::invoke(&A::g, A{}, 2) == 4);
         {
             A a;
             const auto& ca = a;
             CHECK(ranges::invoke(&A::f, a) == 42);
-            // CHECK(noexcept(ranges::invoke(&A::f, a) == 42));
+            ASSERT_NOEXCEPT_17(ranges::invoke(&A::f, a) == 42);
             CHECK(ranges::invoke(&A::f, ca) == 42);
-            // CHECK(noexcept(ranges::invoke(&A::f, ca) == 42));
+            ASSERT_NOEXCEPT_17(ranges::invoke(&A::f, ca) == 42);
             CHECK(ranges::invoke(&A::g, a, 2) == 4);
         }
 
@@ -131,9 +132,9 @@ namespace
             A a;
             const auto& ca = a;
             CHECK(ranges::invoke(&A::f, &a) == 42);
-            // CHECK(noexcept(ranges::invoke(&A::f, &a) == 42));
+            ASSERT_NOEXCEPT_17(ranges::invoke(&A::f, &a) == 42);
             CHECK(ranges::invoke(&A::f, &ca) == 42);
-            // CHECK(noexcept(ranges::invoke(&A::f, &ca) == 42));
+            ASSERT_NOEXCEPT_17(ranges::invoke(&A::f, &ca) == 42);
             CHECK(ranges::invoke(&A::g, &a, 2) == 4);
         }
         {
@@ -144,25 +145,25 @@ namespace
         {
             auto sp = std::make_shared<A>();
             CHECK(ranges::invoke(&A::f, sp) == 42);
-            // CHECK(noexcept(ranges::invoke(&A::f, sp) == 42));
+            ASSERT_NOEXCEPT_17(ranges::invoke(&A::f, sp) == 42);
             CHECK(ranges::invoke(&A::g, sp, 2) == 4);
         }
 
         CHECK(ranges::invoke(&A::i, A{}) == 13);
-        // CHECK(noexcept(ranges::invoke(&A::i, A{}) == 13));
+        ASSERT_NOEXCEPT_17(ranges::invoke(&A::i, A{}) == 13);
         { int&& tmp = ranges::invoke(&A::i, A{}); (void)tmp; }
 
         {
             A a;
             const auto& ca = a;
             CHECK(ranges::invoke(&A::i, a) == 13);
-            // CHECK(noexcept(ranges::invoke(&A::i, a) == 13));
+            ASSERT_NOEXCEPT(ranges::invoke(&A::i, a) == 13);
             CHECK(ranges::invoke(&A::i, ca) == 13);
-            // CHECK(noexcept(ranges::invoke(&A::i, ca) == 13));
+            ASSERT_NOEXCEPT(ranges::invoke(&A::i, ca) == 13);
             CHECK(ranges::invoke(&A::i, &a) == 13);
-            // CHECK(noexcept(ranges::invoke(&A::i, &a) == 13));
+            ASSERT_NOEXCEPT(ranges::invoke(&A::i, &a) == 13);
             CHECK(ranges::invoke(&A::i, &ca) == 13);
-            // CHECK(noexcept(ranges::invoke(&A::i, &ca) == 13));
+            ASSERT_NOEXCEPT(ranges::invoke(&A::i, &ca) == 13);
 
             ranges::invoke(&A::i, a) = 0;
             CHECK(a.i == 0);
@@ -186,20 +187,29 @@ namespace
             CHECK(sp->i == 0);
         }
 
-        // {
-        //     struct B { int i = 42; constexpr int f() const { return i; } };
-        //     constexpr B b;
-        //     static_assert(b.i == 42, "");
-        //     static_assert(b.f() == 42, "");
-        //     static_assert(ranges::invoke_detail::impl(&B::i, b) == 42, "");
-        //     static_assert(ranges::invoke_detail::impl(&B::i, &b) == 42, "");
-        //     static_assert(ranges::invoke_detail::impl(&B::i, B{}) == 42, "");
-        //     static_assert(ranges::invoke_detail::impl(&B::f, b) == 42, "");
-        //     static_assert(ranges::invoke_detail::impl(&B::f, &b) == 42, "");
-        //     static_assert(ranges::invoke_detail::impl(&B::f, B{}) == 42, "");
-        // }
-    }
+        {
+            struct B { int i = 42; constexpr int f() const { return i; } };
+            static constexpr B b{};
 
+            static_assert(b.*&B::i == 42, "");
+            static_assert((b.*&B::f)() == 42, "");
+            static_assert(ranges::invoke(&B::i, b) == 42, "");
+            static_assert(ranges::invoke(&B::f, b) == 42, "");
+
+            static_assert((&b)->*&B::i == 42, "");
+            static_assert(((&b)->*&B::f)() == 42, "");
+            static_assert(ranges::invoke(&B::i, &b) == 42, "");
+            static_assert(ranges::invoke(&B::f, &b) == 42, "");
+
+            static_assert((B{}.*&B::f)() == 42, "");
+#if !defined(__GNUC__) || defined(__clang__) || __GNUC__ > 4
+            // GCC 4.9 doesn't grok these as constant expressions:
+            static_assert(B{}.*&B::i == 42, "");
+            static_assert(ranges::invoke(&B::i, B{}) == 42, "");
+            static_assert(ranges::invoke(&B::f, B{}) == 42, "");
+#endif
+        }
+    }
 } // unnamed namespace
 
 
@@ -229,11 +239,7 @@ int main()
         CHECK(last_call == k);
     }
     {
-#ifdef GCC_4_8_WORKAROUND
-        constexpr auto k = kind::lvalue;
-#else
         constexpr auto k = kind::rvalue;
-#endif
         using F = fn<k>;
         auto f = ranges::not_fn(F{});
         CHECK(std::move(f)() == true); // xvalue
@@ -244,11 +250,7 @@ int main()
     }
 
     {
-#ifdef GCC_4_8_WORKAROUND
-        constexpr auto k = kind::const_lvalue;
-#else
         constexpr auto k = kind::const_rvalue;
-#endif
         using F = fn<k>;
         auto const f = ranges::not_fn(F{});
         CHECK(std::move(f)() == true); // xvalue

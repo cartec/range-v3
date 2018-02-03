@@ -167,24 +167,13 @@ namespace ranges
         /// \cond
         namespace detail
         {
-            template<typename T = void>
-            struct any_
+            struct any
             {
-                any_() = default;
-                any_(T &&)
-                {}
-            };
-
-            template<>
-            struct any_<void>
-            {
-                any_() = default;
+                any() = default;
                 template<typename T>
-                any_(T &&)
+                constexpr any(T &&) noexcept
                 {}
             };
-
-            using any = any_<>;
 
             struct value_init
             {
