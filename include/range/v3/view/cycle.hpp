@@ -3,7 +3,7 @@
 //
 //  Copyright Eric Niebler 2013-present
 //  Copyright Gonzalo Brito Gadeschi 2015
-//  Copyright Casey Carter 2015
+//  Copyright Casey Carter 2015, 2018
 //
 //  Use, modification and distribution is subject to the
 //  Boost Software License, Version 1.0. (See accompanying
@@ -34,6 +34,7 @@
 #include <range/v3/utility/iterator.hpp>
 #include <range/v3/utility/optional.hpp>
 #include <range/v3/utility/static_const.hpp>
+#include <range/v3/utility/unreachable.hpp>
 
 namespace ranges
 {
@@ -45,15 +46,21 @@ namespace ranges
         struct cycled_view
           : view_facade<cycled_view<Rng>, infinite>
           , private detail::non_propagating_cache<
-                iterator_t<Rng>, cycled_view<Rng>, !BoundedRange<Rng>()>
+                iterator_t<Rng>, cycled_view<Rng>,
+                !(BoundedRange<Rng>() ||
+                  range_cardinality<Rng>::value == cardinality::infinite)>
         {
         private:
             CONCEPT_ASSERT(ForwardRange<Rng>());
             friend range_access;
             Rng rng_;
 
+            static constexpr bool IsInfinite =
+                range_cardinality<Rng>::value == cardinality::infinite;
+            static constexpr bool IsBounded = BoundedRange<Rng>();
             using cache_t = detail::non_propagating_cache<
-                iterator_t<Rng>, cycled_view<Rng>, !BoundedRange<Rng>()>;
+                iterator_t<Rng>, cycled_view<Rng>,
+                !(IsBounded || IsInfinite)>;
 
             template<bool IsConst>
             struct cursor
@@ -70,20 +77,26 @@ namespace ranges
 
                 iterator get_end_(std::true_type, bool = false) const
                 {
+                    CONCEPT_ASSERT(BoundedRange<Rng>());
                     return ranges::end(rng_->rng_);
                 }
                 template<bool CanBeEmpty = false>
                 iterator get_end_(std::false_type, meta::bool_<CanBeEmpty> = {}) const
                 {
+                    CONCEPT_ASSERT(!BoundedRange<Rng>());
                     auto &end_ = static_cast<cache_t&>(*rng_);
-                    RANGES_EXPECT(CanBeEmpty || end_);
-                    if(CanBeEmpty && !end_)
-                        end_ = ranges::next(it_, ranges::end(rng_->rng_));
+                    if RANGES_IF_CONSTEXPR (CanBeEmpty)
+                    {
+                        if(!end_)
+                            end_ = ranges::next(it_, ranges::end(rng_->rng_));
+                    }
+                    else
+                        RANGES_EXPECT(end_);
                     return *end_;
                 }
-                void set_end_(std::true_type) const
+                void store_end_(std::true_type) const
                 {}
-                void set_end_(std::false_type) const
+                void store_end_(std::false_type) const
                 {
                     auto &end_ = static_cast<cache_t&>(*rng_);
                     if(!end_)
@@ -96,10 +109,6 @@ namespace ranges
                 explicit cursor(cycled_view_t &rng)
                   : rng_(&rng), it_(ranges::begin(rng.rng_))
                 {}
-                constexpr bool equal(default_sentinel) const
-                {
-                    return false;
-                }
                 auto read() const
                 RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT
                 (
@@ -112,26 +121,41 @@ namespace ranges
                 }
                 void next()
                 {
-                    auto const end = ranges::end(rng_->rng_);
-                    RANGES_EXPECT(it_ != end);
-                    if(++it_ == end)
+                    if RANGES_IF_CONSTEXPR (IsInfinite && !IsBounded)
                     {
-                        this->set_end_(BoundedRange<Rng>());
-                        it_ = ranges::begin(rng_->rng_);
+                        ++it_;
+                    }
+                    else
+                    {
+                        auto const end = ranges::end(rng_->rng_);
+                        RANGES_EXPECT(it_ != end);
+                        if(++it_ == end)
+                        {
+                            store_end_(BoundedRange<Rng>());
+                            it_ = ranges::begin(rng_->rng_);
+                        }
                     }
                 }
                 CONCEPT_REQUIRES(BidirectionalRange<Rng>())
                 void prev()
                 {
-                    if(it_ == ranges::begin(rng_->rng_))
-                        it_ = this->get_end_(BoundedRange<Rng>());
+                    if RANGES_IF_CONSTEXPR (IsInfinite && !IsBounded)
+                    {
+                        RANGES_EXPECT(it_ != ranges::begin(rng_->rng_));
+                    }
+                    else
+                    {
+                        if(it_ == ranges::begin(rng_->rng_))
+                            it_ = get_end_(BoundedRange<Rng>());
+                    }
                     --it_;
                 }
                 CONCEPT_REQUIRES(RandomAccessRange<Rng>())
                 void advance(difference_type_ n)
                 {
                     auto const begin = ranges::begin(rng_->rng_);
-                    auto const end = this->get_end_(BoundedRange<Rng>(), meta::bool_<true>());
+                    // This doesn't actually want end; it wants *size*
+                    auto const end = this->get_end_(BoundedRange<Rng>(), std::true_type{});
                     auto const d = end - begin;
                     auto const off = ((it_ - begin) + n) % d;
                     it_ = begin + (off < 0 ? off + d : off);
@@ -152,6 +176,10 @@ namespace ranges
             cursor<true> begin_cursor() const
             {
                 return cursor<true>{*this};
+            }
+            constexpr unreachable end_cursor() const noexcept
+            {
+                return {};
             }
 
         public:
