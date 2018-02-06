@@ -159,9 +159,21 @@ namespace ranges
 #define RANGES_CXX_DEDUCTION_GUIDES_11 0L
 #define RANGES_CXX_DEDUCTION_GUIDES_14 0L
 #define RANGES_CXX_DEDUCTION_GUIDES_17 201606L
+#define RANGES_CXX_IF_CONSTEXPR_11 0L
+#define RANGES_CXX_IF_CONSTEXPR_14 0L
+#define RANGES_CXX_IF_CONSTEXPR_17 201606L
 
 #if defined(_MSC_VER) && !defined(__clang__)
 #if _MSC_VER >= 1900
+#if _MSC_VER >= 1912
+#ifndef RANGES_CXX_IF_CONSTEXPR
+#if _MSVC_LANG >= RANGES_CXX_STD_17
+#define RANGES_CXX_IF_CONSTEXPR RANGES_CXX_IF_CONSTEXPR_17
+#else
+#define RANGES_CXX_IF_CONSTEXPR 0L
+#endif // _MSVC_LANG
+#endif // RANGES_CXX_IF_CONSTEXPR
+#endif // _MSC_VER >= 1912
 #ifndef RANGES_CXX_VARIABLE_TEMPLATES
 #define RANGES_CXX_VARIABLE_TEMPLATES RANGES_CXX_VARIABLE_TEMPLATES_14
 #endif
@@ -379,6 +391,36 @@ namespace ranges
 #define RANGES_CXX_THREAD RANGES_CXX_FEATURE(THREAD)
 #endif
 
+#ifndef RANGES_CXX_INLINE_VARIABLES
+
+#ifdef __cpp_inline_variables
+#define RANGES_CXX_INLINE_VARIABLES __cpp_inline_variables
+#elif defined(__clang__) && \
+    (__clang_major__ == 3 && __clang_minor__ == 9) && \
+    __cplusplus > RANGES_CXX_STD_14
+#define RANGES_CXX_INLINE_VARIABLES RANGES_CXX_INLINE_VARIABLES_17
+#else
+#define RANGES_CXX_INLINE_VARIABLES RANGES_CXX_FEATURE(INLINE_VARIABLES)
+#endif  // __cpp_inline_variables
+
+#endif  // RANGES_CXX_INLINE_VARIABLES
+
+#ifndef RANGES_CXX_DEDUCTION_GUIDES
+#ifdef __cpp_deduction_guides
+#define RANGES_CXX_DEDUCTION_GUIDES __cpp_deduction_guides
+#else
+#define RANGES_CXX_DEDUCTION_GUIDES RANGES_CXX_FEATURE(DEDUCTION_GUIDES)
+#endif // __cpp_deduction_guides
+#endif // RANGES_CXX_DEDUCTION_GUIDES
+
+#ifndef RANGES_CXX_IF_CONSTEXPR
+#ifdef __cpp_if_constexpr
+#define RANGES_CXX_IF_CONSTEXPR __cpp_if_constexpr
+#else  // __cpp_if_constexpr
+#define RANGES_CXX_IF_CONSTEXPR RANGES_CXX_FEATURE(IF_CONSTEXPR)
+#endif // __cpp_if_constexpr
+#endif // RANGES_CXX_IF_CONSTEXPR
+
 // RANGES_CXX14_CONSTEXPR macro (see also BOOST_CXX14_CONSTEXPR)
 // Note: constexpr implies inline, to retain the same visibility
 // C++14 constexpr functions are inline in C++11
@@ -393,21 +435,6 @@ namespace ranges
 #else
 #define RANGES_NDEBUG_CONSTEXPR inline
 #endif
-
-#ifndef RANGES_CXX_INLINE_VARIABLES
-
-#ifdef __cpp_inline_variables // TODO: fix this if SD-6 picks another name
-#define RANGES_CXX_INLINE_VARIABLES __cpp_inline_variables
-#elif defined(__clang__) && \
-    (__clang_major__ > 3 || __clang_major__ == 3 && __clang_minor__ == 9) && \
-    __cplusplus > 201402L
-// TODO: remove once clang defines __cpp_inline_variables (or equivalent)
-#define RANGES_CXX_INLINE_VARIABLES RANGES_CXX_INLINE_VARIABLES_17
-#else
-#define RANGES_CXX_INLINE_VARIABLES RANGES_CXX_FEATURE(INLINE_VARIABLES)
-#endif  // __cpp_inline_variables
-
-#endif  // RANGES_CXX_INLINE_VARIABLES
 
 #if RANGES_CXX_INLINE_VARIABLES < RANGES_CXX_INLINE_VARIABLES_17
 #define RANGES_INLINE_VARIABLE(type, name)                              \
@@ -426,14 +453,6 @@ namespace ranges
         inline constexpr type name{};      \
     }
 #endif // RANGES_CXX_INLINE_VARIABLES
-
-#ifndef RANGES_CXX_DEDUCTION_GUIDES
-#ifdef __cpp_deduction_guides
-#define RANGES_CXX_DEDUCTION_GUIDES __cpp_deduction_guides
-#else
-#define RANGES_CXX_DEDUCTION_GUIDES RANGES_CXX_FEATURE(DEDUCTION_GUIDES)
-#endif // __cpp_deduction_guides
-#endif // RANGES_CXX_DEDUCTION_GUIDES
 
 #ifdef RANGES_FEWER_WARNINGS
 #define RANGES_DISABLE_WARNINGS                 \
@@ -460,6 +479,12 @@ namespace ranges
 #else
 #define RANGES_INTENDED_MODULAR_ARITHMETIC
 #endif
+
+#if RANGES_CXX_IF_CONSTEXPR >= RANGES_CXX_IF_CONSTEXPR_17
+#define RANGES_IF_CONSTEXPR constexpr
+#else
+#define RANGES_IF_CONSTEXPR
+#endif // RANGES_CXX_IF_CONSTEXPR
 
 namespace ranges {
     inline namespace v3 {
