@@ -122,8 +122,8 @@ matrix:
       os: linux
       addons: *clang40
 
-    # clang 5 C++11/14/1z Debug/Release-ASAN libc++, 11 Debug libstdc++
-    - env: CLANG_VERSION=5.0 BUILD_TYPE=Debug CPP=11 LIBCXX=On
+    # clang 5 C++11/14/1z Release libc++
+    - env: CLANG_VERSION=5.0 BUILD_TYPE=Release CPP=11 LIBCXX=On
       os: linux
       addons: &clang5
         apt:
@@ -135,33 +135,54 @@ matrix:
             - ubuntu-toolchain-r-test
             - llvm-toolchain-trusty-5.0
 
-    - env: CLANG_VERSION=5.0 BUILD_TYPE=Release CPP=11 ASAN=On LIBCXX=On
+    - env: CLANG_VERSION=5.0 BUILD_TYPE=Release CPP=14 LIBCXX=On
       os: linux
       addons: *clang5
 
-    - env: CLANG_VERSION=5.0 BUILD_TYPE=Debug CPP=14 LIBCXX=On
+    - env: CLANG_VERSION=5.0 BUILD_TYPE=Release CPP=1z LIBCXX=On
       os: linux
       addons: *clang5
 
-    - env: CLANG_VERSION=5.0 BUILD_TYPE=Release CPP=14 ASAN=On LIBCXX=On
+    # clang 6 C++11/14/1z Debug/Release-ASAN libc++, 11 Debug libstdc++
+    - env: CLANG_VERSION=6.0 BUILD_TYPE=Debug CPP=11 LIBCXX=On
       os: linux
-      addons: *clang5
+      addons: &clang6
+        apt:
+          packages:
+            - clang-6.0
+            - g++-7
+            - valgrind
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-trusty-6.0
 
-    - env: CLANG_VERSION=5.0 BUILD_TYPE=Debug CPP=1z LIBCXX=On HEADERS=On
+    - env: CLANG_VERSION=6.0 BUILD_TYPE=Release CPP=11 ASAN=On LIBCXX=On
       os: linux
-      addons: *clang5
+      addons: *clang6
 
-    - env: CLANG_VERSION=5.0 BUILD_TYPE=Release CPP=1z ASAN=On LIBCXX=On
+    - env: CLANG_VERSION=6.0 BUILD_TYPE=Debug CPP=14 LIBCXX=On
       os: linux
-      addons: *clang5
+      addons: *clang6
 
-    - env: CLANG_VERSION=5.0 BUILD_TYPE=Release CPP=11
+    - env: CLANG_VERSION=6.0 BUILD_TYPE=Release CPP=14 ASAN=On LIBCXX=On
       os: linux
-      addons: *clang5
+      addons: *clang6
 
-    - env: CLANG_VERSION=5.0 BUILD_TYPE=Release CPP=1z MSAN=On LIBCXX=On CLANG_MODULES=On
+    - env: CLANG_VERSION=6.0 BUILD_TYPE=Debug CPP=1z LIBCXX=On HEADERS=On
       os: linux
-      addons: *clang5
+      addons: *clang6
+
+    - env: CLANG_VERSION=6.0 BUILD_TYPE=Release CPP=1z ASAN=On LIBCXX=On
+      os: linux
+      addons: *clang6
+
+    - env: CLANG_VERSION=6.0 BUILD_TYPE=Release CPP=11
+      os: linux
+      addons: *clang6
+
+    - env: CLANG_VERSION=6.0 BUILD_TYPE=Release CPP=1z MSAN=On LIBCXX=On CLANG_MODULES=On
+      os: linux
+      addons: *clang6
 
       # gcc-4.9 C++11/C++14 Release
     - env: GCC_VERSION=4.9 BUILD_TYPE=Release CPP=11
