@@ -29,6 +29,22 @@ env:
 
 matrix:
   include:
+    # clang 3.7 C++11/14 Release libc++
+    - env: CLANG_VERSION=3.7 BUILD_TYPE=Release CPP=11 LIBCXX=On
+      os: linux
+      addons: &clang37
+        apt:
+          packages:
+            - clang-3.7
+            - g++-5
+            - valgrind
+          sources:
+            - ubuntu-toolchain-r-test
+
+    - env: CLANG_VERSION=3.7 BUILD_TYPE=Release CPP=14 LIBCXX=On HEADERS=On
+      os: linux
+      addons: *clang37
+
     # clang 6 C++11/14/1z Debug/Release-ASAN libc++, 11 Debug libstdc++
     - env: CLANG_VERSION=6.0 BUILD_TYPE=Debug CPP=11 LIBCXX=On
       os: linux
@@ -91,13 +107,6 @@ before_install:
     set -e
     if [ -n "$CLANG_VERSION" ]; then
       export CXX="clang++-${CLANG_VERSION}" CC="clang-${CLANG_VERSION}"
-      if [ $CLANG_VERSION == 3.7 ]; then
-        # Travis refuses to whitelist llvm-toolchain-trusty-3.7, so hand install:
-        wget -nv -O - http://llvm.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -
-        sudo apt-add-repository -y 'deb http://llvm.org/apt/trusty llvm-toolchain-trusty-3.7 main'
-        sudo apt-get update -qq
-        sudo apt-get install -qq -y clang-3.7
-      fi
     elif [ -n "$GCC_VERSION" ]; then
       export CXX="g++-${GCC_VERSION}" CC="gcc-${GCC_VERSION}"
     fi
