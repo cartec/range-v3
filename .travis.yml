@@ -40,7 +40,6 @@ matrix:
             - valgrind
           sources:
             - ubuntu-toolchain-r-test
-            - llvm-toolchain-trusty
 
     - env: CLANG_VERSION=3.7 BUILD_TYPE=Release CPP=14 LIBCXX=On HEADERS=On
       os: linux
