@@ -2,7 +2,7 @@
 
 set -e
 
-TRUNK_VERSION=5
+TRUNK_VERSION=6
 TASKS=2
 
 while getopts j: OPT; do
@@ -31,6 +31,7 @@ case "$VERSION" in
     3.8) VERSION=3.8.1;;
     3 | 3.9) VERSION=3.9.1;;
     4 | 4.0) VERSION=4.0.1;;
+    5 | 5.0) VERSION=5.0.1;;
 esac
 
 VERSION_ARRAY=(${VERSION//./ })
