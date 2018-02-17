@@ -15,7 +15,7 @@
 # - Paul Fultz II's FIT: https://github.com/pfultz2/Fit
 
 dist: trusty
-sudo: true
+sudo: required
 language: cpp
 script: cmake
 
@@ -35,7 +35,7 @@ matrix:
       addons: &clang37
         apt:
           packages:
-            - clang-3.7
+            #- clang-3.7
             - g++-5
             - valgrind
           sources:
@@ -51,7 +51,7 @@ matrix:
       addons: &clang6
         apt:
           packages:
-            - clang-6.0
+            #- clang-6.0
             - g++-7
             - valgrind
           sources:
@@ -107,6 +107,18 @@ before_install:
     set -e
     if [ -n "$CLANG_VERSION" ]; then
       export CXX="clang++-${CLANG_VERSION}" CC="clang-${CLANG_VERSION}"
+      if [ $CLANG_VERSION == 3.7 ]; then
+        # Travis refuses to whitelist llvm-toolchain-trusty-3.7, so hand install:
+        wget -nv -O - http://llvm.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -
+        sudo apt-add-repository -y 'deb http://llvm.org/apt/trusty llvm-toolchain-trusty-3.7 main'
+        sudo apt-get update -qq
+        sudo apt-get install -qq -y clang-3.7
+      elif [ $CLANG_VERSION == 6.0 ]; then
+        wget -nv -O - http://llvm.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -
+        sudo apt-add-repository -y 'deb http://llvm.org/apt/trusty llvm-toolchain-trusty-6.0 main'
+        sudo apt-get update -qq
+        sudo apt-get install -qq -y clang-6.0
+      fi
     elif [ -n "$GCC_VERSION" ]; then
       export CXX="g++-${GCC_VERSION}" CC="gcc-${GCC_VERSION}"
     fi
