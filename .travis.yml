@@ -56,8 +56,6 @@ matrix:
             - valgrind
           sources:
             - ubuntu-toolchain-r-test
-            - sourceline: 'deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-6.0 main'
-              key_url: 'http://apt.llvm.org/llvm-snapshot.gpg.key'
 
     - env: CLANG_VERSION=6.0 BUILD_TYPE=Release CPP=11 ASAN=On LIBCXX=On
       os: linux
