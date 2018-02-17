@@ -40,6 +40,7 @@ matrix:
             - valgrind
           sources:
             - ubuntu-toolchain-r-test
+            - llvm-toolchain-trusty
 
     - env: CLANG_VERSION=3.7 BUILD_TYPE=Release CPP=14 LIBCXX=On HEADERS=On
       os: linux
@@ -109,13 +110,13 @@ before_install:
       export CXX="clang++-${CLANG_VERSION}" CC="clang-${CLANG_VERSION}"
       if [ $CLANG_VERSION == 3.7 ]; then
         # Travis refuses to whitelist llvm-toolchain-trusty-3.7, so hand install:
-        wget -nv -O - http://llvm.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -
-        sudo apt-add-repository -y 'deb http://llvm.org/apt/trusty llvm-toolchain-trusty-3.7 main'
+        wget -nv -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+        sudo apt-add-repository -y 'deb http://apt.llvm.org/trusty llvm-toolchain-trusty-3.7 main'
         sudo apt-get update -qq
         sudo apt-get install -qq -y clang-3.7
       elif [ $CLANG_VERSION == 6.0 ]; then
-        wget -nv -O - http://llvm.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -
-        sudo apt-add-repository -y 'deb http://llvm.org/apt/trusty llvm-toolchain-trusty-6.0 main'
+        wget -nv -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+        sudo apt-add-repository -y 'deb http://apt.llvm.org/trusty llvm-toolchain-trusty-6.0 main'
         sudo apt-get update -qq
         sudo apt-get install -qq -y clang-6.0
       fi
