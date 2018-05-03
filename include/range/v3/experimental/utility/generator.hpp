@@ -39,7 +39,7 @@ namespace ranges
             using generator_size_t = std::size_t;
 
             // Type upon which to co_await to set the size of a sized_generator
-            enum struct generator_size : generator_size_t { invalid = ~generator_size_t(0) };
+            enum struct generator_size : generator_size_t { invalid = ~generator_size_t{} };
 
             template<typename Promise = void>
             struct coroutine_owner;
@@ -55,18 +55,6 @@ namespace ranges
                 RANGES_EXPECT(!coro.done());
                 coro.resume();
             }
-
-            namespace coroutine_owner_
-            {
-                struct adl_hook {};
-
-                template<typename Promise>
-                void swap(experimental::coroutine_owner<Promise> &x,
-                          experimental::coroutine_owner<Promise> &y) noexcept
-                {
-                    ranges::swap(x.base(), y.base());
-                }
-            } // namespace coroutine_owner_
         } // namespace detail
         /// \endcond
 
@@ -76,7 +64,6 @@ namespace ranges
             template<typename Promise>
             struct coroutine_owner
               : std::experimental::coroutine_handle<Promise>
-              , private detail::coroutine_owner_::adl_hook
             {
                 using base_t = std::experimental::coroutine_handle<Promise>;
 
@@ -98,6 +85,11 @@ namespace ranges
                 {
                     coroutine_owner{ranges::exchange(base(), ranges::exchange(that.base(), {}))};
                     return *this;
+                }
+
+                friend void swap(coroutine_owner &x, coroutine_owner &y) noexcept
+                {
+                    ranges::swap(x.base(), y.base());
                 }
 
                 void resume() { detail::resume(base()); }
@@ -183,7 +175,7 @@ namespace ranges
                 std::experimental::suspend_always
                 await_transform(experimental::generator_size size) noexcept
                 {
-                    // ...we need the coroutine set the size of the range first by
+                    // ...the coroutine sets the size of the range first by
                     // co_awaiting on a generator_size.
                     size_ = size;
                     return {};
