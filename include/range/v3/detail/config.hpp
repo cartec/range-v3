@@ -159,6 +159,9 @@ namespace ranges
 #define RANGES_CXX_DEDUCTION_GUIDES_11 0L
 #define RANGES_CXX_DEDUCTION_GUIDES_14 0L
 #define RANGES_CXX_DEDUCTION_GUIDES_17 201606L
+#define RANGES_CXX_IF_CONSTEXPR_11 0L
+#define RANGES_CXX_IF_CONSTEXPR_14 0L
+#define RANGES_CXX_IF_CONSTEXPR_17 201606L
 
 #if defined(_MSC_VER) && !defined(__clang__)
 #if _MSC_VER >= 1900
@@ -323,6 +326,14 @@ namespace ranges
 #endif
 #endif
 
+#ifndef RANGES_CXX_IF_CONSTEXPR
+#ifdef __cpp_if_constexpr
+#define RANGES_CXX_IF_CONSTEXPR __cpp_if_constexpr
+#else
+#define RANGES_CXX_IF_CONSTEXPR RANGES_CXX_FEATURE(IF_CONSTEXPR)
+#endif
+#endif
+
 #ifndef RANGES_CXX_RETURN_TYPE_DEDUCTION
 #ifdef __cpp_return_type_deduction
 #define RANGES_CXX_RETURN_TYPE_DEDUCTION __cpp_return_type_deduction
@@ -396,7 +407,7 @@ namespace ranges
 
 #ifndef RANGES_CXX_INLINE_VARIABLES
 
-#ifdef __cpp_inline_variables // TODO: fix this if SD-6 picks another name
+#ifdef __cpp_inline_variables
 #define RANGES_CXX_INLINE_VARIABLES __cpp_inline_variables
 #elif defined(__clang__) && \
     (__clang_major__ > 3 || __clang_major__ == 3 && __clang_minor__ == 9) && \
@@ -434,6 +445,12 @@ namespace ranges
 #define RANGES_CXX_DEDUCTION_GUIDES RANGES_CXX_FEATURE(DEDUCTION_GUIDES)
 #endif // __cpp_deduction_guides
 #endif // RANGES_CXX_DEDUCTION_GUIDES
+
+#if RANGES_CXX_IF_CONSTEXPR >= RANGES_CXX_IF_CONSTEXPR_17
+#define RANGES_CONSTEXPR_IF constexpr
+#else
+#define RANGES_CONSTEXPR_IF
+#endif
 
 #ifdef RANGES_FEWER_WARNINGS
 #define RANGES_DISABLE_WARNINGS                 \
