@@ -36,10 +36,10 @@ namespace ranges
         namespace experimental
         {
             // The type of size() for a sized_generator
-            using generator_size_t = std::size_t;
+            using generator_size_t = std::ptrdiff_t;
 
             // Type upon which to co_await to set the size of a sized_generator
-            enum struct generator_size : generator_size_t { invalid = ~generator_size_t{} };
+            enum struct generator_size : generator_size_t {};
 
             template<typename Promise = void>
             struct coroutine_owner;
@@ -133,7 +133,6 @@ namespace ranges
                 void unhandled_exception() noexcept
                 {
                     except_ = std::current_exception();
-                    RANGES_EXPECT(except_);
                 }
                 template<typename Arg,
                     CONCEPT_REQUIRES_(ConvertibleTo<Arg, Reference>() &&
@@ -177,16 +176,18 @@ namespace ranges
                 {
                     // ...the coroutine sets the size of the range first by
                     // co_awaiting on a generator_size.
+                    RANGES_EXPECT(static_cast<experimental::generator_size_t>(size) >= 0);
                     size_ = size;
                     return {};
                 }
                 experimental::generator_size_t size() const noexcept
                 {
-                    RANGES_EXPECT(size_ != experimental::generator_size::invalid);
-                    return static_cast<experimental::generator_size_t>(size_);
+                    auto const unwrapped = static_cast<experimental::generator_size_t>(size_);
+                    RANGES_EXPECT(unwrapped >= 0);
+                    return unwrapped;
                 }
             private:
-                experimental::generator_size size_ = experimental::generator_size::invalid;
+                experimental::generator_size size_{-1};
             };
         } // namespace detail
         /// \endcond
