@@ -55,6 +55,33 @@ namespace ranges
                 RANGES_EXPECT(!coro.done());
                 coro.resume();
             }
+
+            using dealloc_ptr_t = void(*)(void*, std::size_t) noexcept;
+
+            template<typename T>
+            using SuperEmpty = meta::bool_<
+                std::is_empty<T>::value && !is_final<T>::value &&
+                std::is_standard_layout<T>::value &&
+                alignof(T) <= alignof(dealloc_ptr_t)>;
+
+            template<class A>
+            struct dealloc_with_alloc
+              : A
+            {
+                dealloc_ptr_t dealloc_;
+
+                dealloc_with_alloc(A&& a) noexcept
+                  : A{std::move(a)}
+                {}
+            };
+
+            template<class I, CONCEPT_REQUIRES_(UnsignedIntegral<I>())>
+            constexpr I round_up(I value, I align) noexcept
+            {
+                // align must be a power of 2
+                RANGES_EXPECT(align != 0 && (align & (align - 1)) == 0);
+                return (value + (align - 1)) & ~(align - 1);
+            }
         } // namespace detail
         /// \endcond
 
@@ -154,7 +181,105 @@ namespace ranges
                 {
                     return ref_;
                 }
+
+                static void* operator new(std::size_t const size)
+                {
+                    std::allocator<char> a{};
+                    return operator new(size, std::allocator_arg, a);
+                }
+
+                template <typename RA, typename... Args>
+                static void *operator new(std::size_t const size, std::allocator_arg_t,
+                    RA &raw_allocator, Args &...)
+                {
+                    using Alloc = typename std::allocator_traits<RA>::template rebind_alloc<char>;
+                    auto alloc = Alloc{raw_allocator};
+
+                    char *ptr = alloc.allocate(get_padded_size<Alloc>(size));
+                    if RANGES_CONSTEXPR_IF (SuperEmpty<Alloc>())
+                    {
+                        using DWA = detail::dealloc_with_alloc<Alloc>;
+                        static_assert(std::is_standard_layout<DWA>::value, "FIXME");
+                        static_assert(alignof(DWA) == alignof(detail::dealloc_ptr_t), "FIXME");
+                        static_assert(offsetof(DWA, dealloc_) == 0, "FIXME");
+
+                        void *const dwa_addr = ptr + get_dealloc_offset(size);
+                        auto &dwa = *::new (dwa_addr) DWA{std::move(alloc)};
+                        dwa.dealloc_ = [](void *const vp, std::size_t const size) noexcept
+                        {
+                            char *const ptr = static_cast<char *>(vp);
+                            void *const dwa_addr = ptr + get_dealloc_offset(size);
+                            auto &dwa = *static_cast<DWA *>(dwa_addr);
+                            Alloc a{static_cast<Alloc &&>(dwa)};
+                            dwa.~DWA();
+                            a.deallocate(ptr, get_padded_size<Alloc>(size));
+                        };
+                    }
+                    else
+                    {
+                        ::new (ptr + get_alloc_offset<Alloc>(size)) Alloc{std::move(alloc)};
+                        void *const dptr = ptr + get_dealloc_offset(size);
+                        auto &dealloc = *reinterpret_cast<detail::dealloc_ptr_t *>(dptr);
+                        dealloc = [](void *const vp, std::size_t const size) noexcept
+                        {
+                            char *const ptr = static_cast<char *>(vp);
+                            void *const alloc_addr = ptr + get_alloc_offset<Alloc>(size);
+                            Alloc &stored_alloc = *static_cast<Alloc *>(alloc_addr);
+                            Alloc a{std::move(stored_alloc)};
+                            stored_alloc.~Alloc();
+                            a.deallocate(ptr, get_padded_size<Alloc>(size));
+                        };
+                    }
+                    return ptr;
+                }
+
+                static void operator delete(void *ptr, std::size_t size) noexcept
+                {
+                    get_dealloc_func(ptr, size)(ptr, size);
+                }
             private:
+                static constexpr std::size_t get_dealloc_offset(std::size_t size) noexcept
+                {
+                    return detail::round_up(size, alignof(detail::dealloc_ptr_t));
+                }
+
+                template<typename Alloc>
+                static constexpr std::size_t get_alloc_offset(std::size_t size) noexcept
+                {
+                    static_assert(!detail::SuperEmpty<Alloc>(), "FIXME");
+                    size = get_dealloc_offset(size);
+                    size += sizeof(detail::dealloc_ptr_t);
+                    return detail::round_up(size, alignof(Alloc));
+                }
+
+                static detail::dealloc_ptr_t get_dealloc_func(void *ptr, std::size_t size) noexcept
+                {
+                    // Magic: since detail::dealloc_with_alloc<A> is standard layout
+                    // when SuperEmpty<A> is satisfied, it is pointer-interconvertible
+                    // with its first non-static data member which has type
+                    // detail::dealloc_ptr_t. Consequently, Whether there's a
+                    // dealloc_with_alloc<A> or a dealloc_ptr_t stored at
+                    // get_dealloc_offset(size), we can read a dealloc_ptr_t.
+                    char *addr = static_cast<char *>(ptr) + get_dealloc_offset(size);
+                    return *reinterpret_cast<detail::dealloc_ptr_t *>(addr);
+                }
+
+                template<typename Alloc>
+                static constexpr std::size_t get_padded_size(std::size_t size) noexcept
+                {
+                    if RANGES_CONSTEXPR_IF (detail::SuperEmpty<Alloc>())
+                    {
+                        size = get_dealloc_offset(size);
+                        size += sizeof(detail::dealloc_with_alloc<Alloc>);
+                    }
+                    else
+                    {
+                        size += get_alloc_offset<Alloc>(size);
+                        size += sizeof(Alloc);
+                    }
+                    return size;
+                }
+
                 semiregular_t<Reference> ref_;
             };
 
@@ -188,7 +313,7 @@ namespace ranges
                     noexcept(std::is_nothrow_assignable<semiregular_t<Reference> &, Arg>::value)
                 {
                     RANGES_EXPECT(size_ >= 0); // size_ must be set before generating values
-                    return generator<Reference, Value>::yield_value(static_cast<Arg &&>(arg));
+                    return generator_promise<Reference>::yield_value(static_cast<Arg &&>(arg));
                 }
                 experimental::generator_size_t size() const noexcept
                 {
@@ -207,17 +332,18 @@ namespace ranges
             struct generator
               : view_facade<generator<Reference, Value>>
             {
-            protected:
-                using promise_type = detail::generator_promise<Reference>;
-                coroutine_owner<promise_type> coro_;
-
             public:
+                using promise_type = detail::generator_promise<Reference>;
+
                 constexpr generator() noexcept = default;
                 generator(promise_type *p) // should not be public?
                   : coro_{handle::from_promise(*p)}
                 {
                     RANGES_EXPECT(coro_);
                 }
+
+            protected:
+                coroutine_owner<promise_type> coro_;
 
             private:
                 friend range_access;
@@ -266,10 +392,9 @@ namespace ranges
             struct sized_generator
               : generator<Reference, Value>
             {
-            protected:
+            public:
                 using promise_type = detail::sized_generator_promise<Reference>;
 
-            public:
                 constexpr sized_generator() noexcept = default;
                 sized_generator(promise_type *p) // should not be public?
                   : generator<Reference, Value>{p}

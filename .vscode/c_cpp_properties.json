@@ -58,7 +58,8 @@
             ],
             "defines": [
                 "_DEBUG",
-                "UNICODE"
+                "UNICODE",
+                "__cpp_coroutines=201703"
             ],
             "intelliSenseMode": "msvc-x64",
             "browse": {

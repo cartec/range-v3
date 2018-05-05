@@ -10,7 +10,7 @@
 // Project home: https://github.com/ericniebler/range-v3
 //
 #include <range/v3/detail/config.hpp>
-#if RANGES_CXX_COROUTINES >= RANGES_CXX_COROUTINES_TS1
+
 #include <iostream>
 #include <vector>
 #include <range/v3/begin_end.hpp>
@@ -187,6 +187,40 @@ struct MoveInt
     }
 };
 
+template<typename T>
+struct LogAllocator
+{
+    using value_type = T;
+
+    T *allocate(std::size_t n)
+    {
+        void *ptr = std::malloc(n * sizeof(T));
+        std::cout << "allocate(" << n << ") = " << ptr << '\n';
+        return static_cast<T *>(ptr);
+    }
+
+    void deallocate(T *ptr, std::size_t n) noexcept
+    {
+        std::cout << "deallocate(" << ptr << ", " << n << ")\n";
+        std::free(ptr);
+    }
+};
+
+template<typename Alloc>
+ranges::experimental::sized_generator<int> ggg(std::allocator_arg_t, Alloc&, int n)
+{
+    if (n < 0) n = 0;
+    co_await static_cast<ranges::experimental::generator_size>(n);
+
+    for (int i = 0; i < n; ++i)
+        co_yield i;
+}
+
+auto foo() {
+    LogAllocator<char> a{};
+    return ggg(std::allocator_arg, a, 4);
+}
+
 int main()
 {
     using namespace ranges;
@@ -274,8 +308,10 @@ int main()
 
     std::cout << f(8) << '\n';
 
+    {
+        LogAllocator<char> a{};
+        ::check_equal(ggg(std::allocator_arg, a, 4), {0,1,2,3});
+    }
+
     return ::test_result();
 }
-#else // RANGES_CXX_COROUTINES >= RANGES_CXX_COROUTINES_TS1
-int main() {}
-#endif // RANGES_CXX_COROUTINES >= RANGES_CXX_COROUTINES_TS1
