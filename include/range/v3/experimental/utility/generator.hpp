@@ -176,18 +176,27 @@ namespace ranges
                 {
                     // ...the coroutine sets the size of the range first by
                     // co_awaiting on a generator_size.
-                    RANGES_EXPECT(static_cast<experimental::generator_size_t>(size) >= 0);
-                    size_ = size;
+                    auto const unwrapped = static_cast<experimental::generator_size_t>(size);
+                    RANGES_EXPECT(unwrapped >= 0);
+                    size_ = unwrapped;
                     return {};
+                }
+                template<typename Arg,
+                    CONCEPT_REQUIRES_(ConvertibleTo<Arg, Reference>() &&
+                        std::is_assignable<semiregular_t<Reference> &, Arg>::value)>
+                std::experimental::suspend_always yield_value(Arg &&arg)
+                    noexcept(std::is_nothrow_assignable<semiregular_t<Reference> &, Arg>::value)
+                {
+                    RANGES_EXPECT(size_ >= 0); // size_ must be set before generating values
+                    return generator<Reference, Value>::yield_value(static_cast<Arg &&>(arg));
                 }
                 experimental::generator_size_t size() const noexcept
                 {
-                    auto const unwrapped = static_cast<experimental::generator_size_t>(size_);
-                    RANGES_EXPECT(unwrapped >= 0);
-                    return unwrapped;
+                    RANGES_EXPECT(size_ >= 0);
+                    return size_;
                 }
             private:
-                experimental::generator_size size_{-1};
+                experimental::generator_size_t size_ = -1;
             };
         } // namespace detail
         /// \endcond
@@ -198,17 +207,18 @@ namespace ranges
             struct generator
               : view_facade<generator<Reference, Value>>
             {
+            protected:
                 using promise_type = detail::generator_promise<Reference>;
+                coroutine_owner<promise_type> coro_;
 
+            public:
                 constexpr generator() noexcept = default;
-                generator(promise_type *p)
+                generator(promise_type *p) // should not be public?
                   : coro_{handle::from_promise(*p)}
                 {
                     RANGES_EXPECT(coro_);
                 }
 
-            protected:
-                coroutine_owner<promise_type> coro_;
             private:
                 friend range_access;
                 using handle = std::experimental::coroutine_handle<promise_type>;
@@ -256,17 +266,19 @@ namespace ranges
             struct sized_generator
               : generator<Reference, Value>
             {
+            protected:
                 using promise_type = detail::sized_generator_promise<Reference>;
-                using handle = std::experimental::coroutine_handle<promise_type>;
 
+            public:
                 constexpr sized_generator() noexcept = default;
-                sized_generator(promise_type *p)
+                sized_generator(promise_type *p) // should not be public?
                   : generator<Reference, Value>{p}
                 {}
                 generator_size_t size() const noexcept
                 {
                     return promise().size();
                 }
+
             private:
                 using generator<Reference, Value>::coro_;
 

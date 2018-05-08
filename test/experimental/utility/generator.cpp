@@ -51,7 +51,7 @@ private:
         CONCEPT_REQUIRES_(Constraint<V>() && ranges::View<V>())>
     static generator_for<V> impl(V v)
     {
-        if /* constexpr */ (ranges::SizedRange<V>())
+        if RANGES_CONSTEXPR_IF (ranges::SizedRange<V>())
             co_await static_cast<ranges::experimental::generator_size>(ranges::distance(v));
         auto first = ranges::begin(v);
         auto const last = ranges::end(v);
@@ -151,7 +151,7 @@ meta::invoke<
     ranges::indirect_result_of_t<F &(ranges::iterator_t<V>)>>
 transform(V view, F f)
 {
-    if /* constexpr */ (ranges::SizedRange<V>())
+    if RANGES_CONSTEXPR_IF (ranges::SizedRange<V>())
         co_await static_cast<ranges::experimental::generator_size>(ranges::distance(view));
     RANGES_FOR(auto &&i, view)
         co_yield ranges::invoke(f, i);
