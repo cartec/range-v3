@@ -17,11 +17,11 @@
 
 #include <cstddef>
 #include <initializer_list>
-#include <meta/meta_fwd.hpp>
 #include <type_traits>
 #include <utility>
+#include <meta/meta_fwd.hpp>
 
-#if defined(__clang__)
+#ifdef __clang__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunknown-pragmas"
 #pragma GCC diagnostic ignored "-Wpragmas"
@@ -3468,7 +3468,7 @@ namespace meta
 #endif
 /// \endcond
 
-#if defined(__clang__)
+#ifdef __clang__
 #pragma GCC diagnostic pop
 #endif
 #endif
