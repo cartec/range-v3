@@ -2004,8 +2004,24 @@ namespace meta
         /// \par Complexity
         /// \f$ O(1) \f$.
         /// \ingroup list
+#ifdef _MSC_VER // FIXME
+        /// \cond
+        namespace detail
+        {
+            template <typename List>
+            struct empty_helper
+            {
+                using type = bool_<0 == size<List>::type::value>;
+            };
+        }
+        /// \endcond
+
+        template <typename List>
+        using empty = _t<detail::empty_helper<List>>;
+#else
         template <typename List>
         using empty = bool_<0 == size<List>::type::value>;
+#endif
 
         namespace lazy
         {
