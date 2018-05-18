@@ -653,9 +653,14 @@ namespace meta
             template <template <typename...> class C, typename... Ts>
             using defer_ = decltype(detail::try_defer_<C, Ts...>(0));
 
+#ifdef _MSC_VER // Workaround VSO#618348
+            template <typename T, template <T...> class C, T... Is>
+            id<C<Is...>> try_defer_i_(int);
+#else
             template <typename T, template <T...> class C, T... Is,
                 template <T...> class D = C>
             id<D<Is...>> try_defer_i_(int);
+#endif
             template <typename T, template <T...> class C, T... Is>
             nil_ try_defer_i_(long);
 
