@@ -83,8 +83,8 @@ namespace ranges
             void satisfy(iterator_t<Rng> &it)
             {
                 auto &out = std::get<0>(data_);
-                auto &pred = std::get<1>(data_);
-                auto &proj = std::get<2>(data_);
+                auto &pred = static_cast<Pred &>(std::get<1>(data_));
+                auto &proj = static_cast<Proj &>(std::get<2>(data_));
                 for (auto const last = ranges::end(this->base()); it != last; ++it)
                 {
                     auto &&value = *it;
@@ -102,6 +102,8 @@ namespace ranges
             struct partition_fn
             {
             private:
+                friend view_access;
+
                 template<typename Out, typename Pred, typename Proj = ident,
                     CONCEPT_REQUIRES_(WeaklyIncrementable<Out>() &&
                         CopyConstructible<Pred>() && CopyConstructible<Proj>())>
@@ -124,9 +126,12 @@ namespace ranges
 #ifndef RANGES_DOXYGEN_INVOKED
                 template<typename Rng, typename Out, typename Pred, typename Proj = ident,
                     CONCEPT_REQUIRES_(!detail::PartitionConstraint<Rng, Out, Pred, Proj>())>
-                void operator()(Rng &&rng, Out out, Pred pred, Proj proj = Proj{}) const
+                void operator()(Rng &&, Out, Pred, Proj = Proj{}) const
                 {
-                    ; // FIXME
+                    static_assert(InputRange<Rng>(),
+                        "");
+                    static_assert(detail::PartitionConstraint<Rng, Out, Pred, Proj>(),
+                        "FIXME");
                 }
 #endif
             };
