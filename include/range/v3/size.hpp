@@ -34,6 +34,10 @@ namespace ranges
             template<typename T>
             void size(T const &) = delete;
 
+#ifdef _MSC_VER // Workaround VSO#620035
+            void size();
+#endif
+
             struct fn : iter_size_fn
             {
             private:
