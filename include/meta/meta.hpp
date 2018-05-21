@@ -2259,7 +2259,11 @@ namespace meta
 
             template <typename... List, typename Fun>
             struct find_if_<list<List...>, Fun,
+#ifdef _MSC_VER // FIXME
+                            void_<integer_sequence<bool, bool(_t_v_helper<invoke<Fun, List>>::value)...>>>
+#else
                             void_<integer_sequence<bool, bool(invoke<Fun, List>::type::value)...>>>
+#endif
             {
 #if (defined(__clang__) && __clang_major__ < 6) || defined(__apple_build_version__)
                 // Explicitly specify extent to avoid https://llvm.org/bugs/show_bug.cgi?id=28385
@@ -2319,7 +2323,11 @@ namespace meta
             template <typename... List, typename Fun>
             struct reverse_find_if_<
                 list<List...>, Fun,
+#ifdef _MSC_VER // FIXME
+                void_<integer_sequence<bool, bool(_t_v_helper<invoke<Fun, List>>::value)...>>>
+#else
                 void_<integer_sequence<bool, bool(invoke<Fun, List>::type::value)...>>>
+#endif
             {
 #if (defined(__clang__) && __clang_major__ < 6) || defined(__apple_build_version__)
                 // Explicitly specify extent to avoid https://llvm.org/bugs/show_bug.cgi?id=28385
@@ -2490,7 +2498,11 @@ namespace meta
 
             template <typename... List, typename Fn>
             struct count_if_<list<List...>, Fn,
+#ifdef _MSC_VER // FIXME
+                             void_<integer_sequence<bool, bool(_t_v_helper<invoke<Fn, List>>::value)...>>>
+#else
                              void_<integer_sequence<bool, bool(invoke<Fn, List>::type::value)...>>>
+#endif
             {
 #if (defined(__clang__) && __clang_major__ < 6) || defined(__apple_build_version__)
                 // Explicitly specify extent to avoid https://llvm.org/bugs/show_bug.cgi?id=28385
