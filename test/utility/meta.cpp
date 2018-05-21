@@ -96,11 +96,11 @@ static_assert(can_invoke<meta::quote<std::pair>, int, int>::value, "");
 static_assert(!can_invoke<meta::quote<std::pair>, int, int, int>::value, "");
 #endif
 
+#ifndef _MSC_VER // FIXME
 // Sanity-check meta::lambda
 using Lambda0 = lambda<_a, _b, std::pair<_a, _b>>;
 using Lambda1 = lambda<_a, _b, std::pair<_b, _a>>;
 using Lambda2 = lambda<_a, _b, std::pair<_b, std::pair<_a, _a>>>;
-#ifndef _MSC_VER // FIXME
 using Pair0 = invoke<Lambda0, int, short>;
 using Pair1 = invoke<Lambda1, int, short>;
 using Pair2 = invoke<Lambda2, int, short>;
@@ -139,6 +139,7 @@ static_assert(std::is_same<rev<list<int, short, double>>, list<double, short, in
 
 using uncvref_fn = lambda<_a, l::_t<std::remove_cv<l::_t<std::remove_reference<_a>>>>>;
 static_assert(std::is_same<invoke<uncvref_fn, int const &>, int>::value, "");
+#endif
 
 using L = list<int, short, int, float>;
 static_assert(std::is_same<find<L, int>, list<int, short, int, float>>::value, "");
@@ -147,7 +148,6 @@ static_assert(std::is_same<find_if<L, bind_front<quote<std::is_same>, double>>, 
 static_assert(std::is_same<reverse_find<L, int>, list<int, float>>::value, "");
 static_assert(std::is_same<reverse_find_if<L, bind_front<quote<std::is_same>, int>>, list<int, float>>::value, "");
 static_assert(std::is_same<reverse_find_if<L, bind_front<quote<std::is_same>, double>>, list<>>::value, "");
-#endif
 
 struct check_integral
 {
