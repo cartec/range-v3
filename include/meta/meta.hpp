@@ -644,6 +644,35 @@ namespace meta
                 using type = std::true_type;
             };
 
+#ifdef _MSC_VER // FIXME: ALIAS_DEPENDENTEXPR?
+            template <typename, template <class...> class, typename...>
+            struct _defer_
+            {
+            };
+
+            template <template <class...> class C, typename... Ts>
+            struct _defer_<void_<C<Ts...>>, C, Ts...>
+            {
+                using type = C<Ts...>;
+            };
+
+            template <template <class...> class C, typename... Ts>
+            using defer_ = _defer_<void, C, Ts...>;
+
+            template <typename, typename T, template <T...> class, T...>
+            struct _defer_i_
+            {
+            };
+
+            template <typename T, template <T...> class C, T... Is>
+            struct _defer_i_<void_<C<Is...>>, T, C, Is...>
+            {
+                using type = C<Is...>;
+            };
+
+            template <typename T, template <T...> class C, T... Is>
+            using defer_i_ = _defer_i_<void, T, C, Is...>;
+#else
             template <template <typename...> class C, typename... Ts,
                 template <typename...> class D = C>
             id<D<Ts...>> try_defer_(int);
@@ -653,20 +682,15 @@ namespace meta
             template <template <typename...> class C, typename... Ts>
             using defer_ = decltype(detail::try_defer_<C, Ts...>(0));
 
-#ifdef _MSC_VER // Workaround VSO#618348
-            template <typename T, template <T...> class C, T... Is>
-            id<C<Is...>> try_defer_i_(int);
-#else
             template <typename T, template <T...> class C, T... Is,
                 template <T...> class D = C>
             id<D<Is...>> try_defer_i_(int);
-#endif
             template <typename T, template <T...> class C, T... Is>
             nil_ try_defer_i_(long);
 
             template <typename T, template <T...> class C, T... Is>
             using defer_i_ = decltype(detail::try_defer_i_<T, C, Is...>(0));
-
+#endif
             template <typename T>
             using _t_t = _t<_t<T>>;
         } // namespace detail
