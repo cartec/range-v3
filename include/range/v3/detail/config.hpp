@@ -465,6 +465,8 @@ namespace ranges {
 #define RANGES_BROKEN_CPO_LOOKUP 1
 #elif defined(__GNUC__) && __GNUC__ < 6 // Workaround unknown GCC bug
 #define RANGES_BROKEN_CPO_LOOKUP 1
+#elif defined(_MSC_VER) // Workaround VSO#589046, VSO#620035
+#define RANGES_BROKEN_CPO_LOOKUP 1
 #endif
 #endif
 #ifndef RANGES_BROKEN_CPO_LOOKUP
