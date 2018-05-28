@@ -207,14 +207,38 @@ namespace ranges
             }
         };
 
+#ifdef _MSC_VER // Workaround FIXME
+        /// \cond
+        namespace detail
+        {
+            template<typename Void, typename Fun, typename...Args>
+            struct _invoke_result_
+            {};
+
+            template<typename Fun, typename...Args>
+            struct _invoke_result_<
+                meta::void_<decltype(::ranges::v3::invoke(std::declval<Fun>(), std::declval<Args>()...))>,
+                Fun, Args...>
+            {
+                using type = decltype(::ranges::v3::invoke(std::declval<Fun>(), std::declval<Args>()...));
+            };
+        }
+        /// \endcond
+
         template<typename Fun, typename...Args>
-        using invoke_result_t =
-            decltype(invoke(std::declval<Fun>(), std::declval<Args>()...));
+        using invoke_result = detail::_invoke_result_<void, Fun, Args...>;
+
+        template<typename Fun, typename...Args>
+        using invoke_result_t = meta::_t<invoke_result<Fun, Args...>>;
+#else
+        template<typename Fun, typename...Args>
+        using invoke_result_t = decltype(invoke(std::declval<Fun>(), std::declval<Args>()...));
 
         template<typename Fun, typename...Args>
         struct invoke_result
           : meta::defer<invoke_result_t, Fun, Args...>
         {};
+#endif
 
         template<typename Sig>
         struct result_of
@@ -224,7 +248,6 @@ namespace ranges
         struct result_of<Fun(Args...)>
           : meta::defer<invoke_result_t, Fun, Args...>
         {};
-
     } // namespace v3
 } // namespace ranges
 
