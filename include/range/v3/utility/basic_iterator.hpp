@@ -333,6 +333,22 @@ namespace ranges
         template<typename T>
         struct basic_mixin : private box<T>
         {
+#ifdef _MSC_VER // Workaround VSO#298441
+            CONCEPT_ASSERT(SemiRegular<T>());
+
+            constexpr basic_mixin()
+                noexcept(std::is_nothrow_default_constructible<T>::value)
+              : box<T>{}
+            {}
+            explicit constexpr basic_mixin(T &&t)
+                noexcept(std::is_nothrow_move_constructible<T>::value)
+              : box<T>(detail::move(t))
+            {}
+            explicit constexpr basic_mixin(T const &t)
+                noexcept(std::is_nothrow_copy_constructible<T>::value)
+              : box<T>(t)
+            {}
+#else
             CONCEPT_REQUIRES(DefaultConstructible<T>())
             constexpr basic_mixin()
                 noexcept(std::is_nothrow_default_constructible<T>::value)
@@ -348,6 +364,7 @@ namespace ranges
                 noexcept(std::is_nothrow_copy_constructible<T>::value)
               : box<T>(t)
             {}
+#endif
         protected:
             using box<T>::get;
         };
