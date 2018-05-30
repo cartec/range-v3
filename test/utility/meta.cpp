@@ -334,9 +334,9 @@ int main()
         static_assert(!in<list<int, int, short, float>, double>::value, "");
     }
 
+#ifndef _MSC_VER // FIXME
     // lambda with variadic placeholders
     {
-#ifndef _MSC_VER // FIXME
         using X = invoke<lambda<_args, list<_args>>, int, short, double>;
         static_assert(std::is_same<X, list<int, short, double>>::value, "");
 
@@ -384,7 +384,6 @@ int main()
         static_assert(!can_invoke<lambda<_a, defer<std::pair, _a, _a>>, int, short>::value, "");
         static_assert(!can_invoke<lambda<_a, _b, _c, _args, defer<std::pair, _a, _a>>>::value, "");
 #endif
-#endif
     }
 
     // Test for meta::sort
@@ -396,6 +395,7 @@ int main()
                 L2, list<char[1], char[2], char[3], char[5], char[5], char[6], char[10]>>::value,
             "");
     }
+#endif
 
     // Check the _z user-defined literal:
     static_assert(42_z == 42, "");
