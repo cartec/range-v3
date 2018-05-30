@@ -30,6 +30,35 @@ namespace ranges
         /// \cond
         namespace detail
         {
+#ifdef _MSC_VER // Workaround FIXME
+            template<typename Derived, typename = void>
+            struct _begin_cursor_
+            {};
+            template<typename Derived>
+            struct _begin_cursor_<Derived,
+                meta::void_<decltype(range_access::begin_cursor(std::declval<Derived &>(), 42))>>
+            {
+                using type = detail::decay_t<decltype(
+                    range_access::begin_cursor(std::declval<Derived &>(), 42))>;
+            };
+
+            template<typename Derived>
+            using begin_cursor_t = meta::_t<_begin_cursor_<Derived>>;
+
+            template<typename Derived, typename = void>
+            struct _end_cursor_
+            {};
+            template<typename Derived>
+            struct _end_cursor_<Derived,
+                meta::void_<decltype(range_access::end_cursor(std::declval<Derived &>(), 42))>>
+            {
+                using type = detail::decay_t<decltype(
+                    range_access::end_cursor(std::declval<Derived &>(), 42))>;
+            };
+
+            template<typename Derived>
+            using end_cursor_t = meta::_t<_end_cursor_<Derived>>;
+#else
             template<typename Derived>
             using begin_cursor_t =
                 detail::decay_t<decltype(range_access::begin_cursor(std::declval<Derived &>(), 42))>;
@@ -37,6 +66,7 @@ namespace ranges
             template<typename Derived>
             using end_cursor_t =
                 detail::decay_t<decltype(range_access::end_cursor(std::declval<Derived &>(), 42))>;
+#endif
 
             template<typename Derived>
             using facade_iterator_t = basic_iterator<begin_cursor_t<Derived>>;

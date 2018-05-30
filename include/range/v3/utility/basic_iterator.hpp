@@ -35,9 +35,23 @@ namespace ranges
         /// \cond
         namespace detail
         {
+#ifdef _MSC_VER // Workaround FIXME
+            template<typename, typename = void>
+            struct _cursor_reference_
+            {};
+            template<typename Cur>
+            struct _cursor_reference_<Cur, meta::void_<
+                decltype(range_access::read(std::declval<Cur const &>()))>>
+            {
+                using type = decltype(range_access::read(std::declval<Cur const &>()));
+            };
+            template<typename Cur>
+            using cursor_reference_t = meta::_t<_cursor_reference_<Cur>>;
+#else
             template<typename Cur>
             using cursor_reference_t =
                 decltype(range_access::read(std::declval<Cur const &>()));
+#endif
 
             // Compute the rvalue reference type of a cursor
             template<typename Cur>
@@ -47,9 +61,23 @@ namespace ranges
             auto cursor_move(Cur const &cur, long) ->
                 aux::move_t<cursor_reference_t<Cur>>;
 
+#ifdef _MSC_VER // Workaround FIXME
+            template<typename, typename = void>
+            struct _cursor_rvalue_reference_
+            {};
+            template<typename Cur>
+            struct _cursor_rvalue_reference_<Cur, meta::void_<
+                decltype(detail::cursor_move(std::declval<Cur const &>(), 42))>>
+            {
+                using type = decltype(detail::cursor_move(std::declval<Cur const &>(), 42));
+            };
+            template<typename Cur>
+            using cursor_rvalue_reference_t = meta::_t<_cursor_rvalue_reference_<Cur>>;
+#else
             template<typename Cur>
             using cursor_rvalue_reference_t =
                 decltype(detail::cursor_move(std::declval<Cur const &>(), 42));
+#endif
 
             // Define conversion operators from the proxy reference type
             // to the common reference types, so that basic_iterator can model Readable
@@ -290,9 +318,23 @@ namespace ranges
                 using difference_type = range_access::cursor_difference_t<Cur>;
             };
 
+#ifdef _MSC_VER // Workaround FIXME
+            template<typename, typename = void>
+            struct _cursor_arrow_
+            {};
+            template<typename Cur>
+            struct _cursor_arrow_<Cur, meta::void_<
+                decltype(range_access::arrow(std::declval<Cur const &>()))>>
+            {
+                using type = decltype(range_access::arrow(std::declval<Cur const &>()));
+            };
+            template<typename Cur>
+            using cursor_arrow_t = meta::_t<_cursor_arrow_<Cur>>;
+#else
             template<typename Cur>
             using cursor_arrow_t =
                 decltype(range_access::arrow(std::declval<Cur const &>()));
+#endif
 
             template<typename Cur>
             struct iterator_associated_types_base<Cur, true>

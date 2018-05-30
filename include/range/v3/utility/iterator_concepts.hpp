@@ -118,8 +118,20 @@ namespace ranges
             meta::_t<upgrade_iterator_category<typename T::iterator_category>>
             iterator_category_helper(T *);
 
-            template<class T>
+#ifdef _MSC_VER // Workaround FIXME
+            template<typename, typename = void> struct _iterator_category_ {};
+            template<typename T>
+            struct _iterator_category_<T, meta::void_<
+                decltype(detail::iterator_category_helper(_nullptr_v<T>()))>>
+            {
+                using type = decltype(detail::iterator_category_helper(_nullptr_v<T>()));
+            };
+            template<typename T>
+            using iterator_category_ = meta::_t<_iterator_category_<T>>;
+#else
+            template<typename T>
             using iterator_category_ = decltype(detail::iterator_category_helper(_nullptr_v<T>()));
+#endif
         }
         /// \endcond
 
@@ -140,11 +152,38 @@ namespace ranges
             struct Readable
             {
             private:
+#ifdef _MSC_VER // Workaround FIXME
+                template<typename, typename = void> struct _reference_t_ {};
+                template<typename I>
+                struct _reference_t_<I, meta::void_<
+                    decltype(*std::declval<I &>()),
+                    decltype(*std::declval<I &>()) &>>
+                {
+                    using type = decltype(*std::declval<I &>());
+                };
+
+                template<typename I>
+                using reference_t_ = meta::_t<_reference_t_<I>>;
+
+                template<typename, typename = void> struct _rvalue_reference_t_ {};
+                template<typename I>
+                struct _rvalue_reference_t_<I, meta::void_<
+                    reference_t_<I>,
+                    decltype(iter_move(std::declval<I &>())),
+                    decltype(iter_move(std::declval<I &>())) &>>
+                {
+                    using type = decltype(iter_move(std::declval<I &>()));
+                };
+
+                template<typename I>
+                using rvalue_reference_t_ = meta::_t<_rvalue_reference_t_<I>>;
+#else
                 template<typename I,
                     typename = reference_t<I>,
                     typename R = decltype(iter_move(std::declval<I &>())),
                     typename = R&>
                 using rvalue_reference_t_ = R;
+#endif
             public:
                 // Associated types
                 template<typename I>
@@ -469,8 +508,20 @@ namespace ranges
             template<typename I>
             struct exclusively_writable_<I, true>
             {
+#ifdef _MSC_VER // Workaround FIXME
+                template<typename, typename, typename = void> struct _assignable_res_t {};
+                template<typename T, typename U>
+                struct _assignable_res_t<T, U, meta::void_<
+                    decltype(std::declval<T>() = std::declval<U>())>>
+                {
+                    using type = decltype(std::declval<T>() = std::declval<U>());
+                };
+                template<typename T, typename U>
+                using assignable_res_t = meta::_t<_assignable_res_t<T, U>>;
+#else
                 template<typename T, typename U>
                 using assignable_res_t = decltype(std::declval<T>() = std::declval<U>());
+#endif
 
                 template<typename T>
                 using invoke =
