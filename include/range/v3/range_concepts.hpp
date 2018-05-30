@@ -74,11 +74,31 @@ namespace ranges
             struct Range
             {
                 // Associated types
+#ifdef _MSC_VER // Workaround FIXME
+                template<typename, typename = void> struct _iterator_t_ {};
+                template<typename T>
+                struct _iterator_t_<T, meta::void_<decltype(ranges::begin(std::declval<T &>()))>>
+                {
+                    using type = decltype(ranges::begin(std::declval<T &>()));
+                };
+                template<typename T>
+                using iterator_t = meta::_t<_iterator_t_<T>>;
+
+                template<typename, typename = void> struct _sentinel_t_ {};
+                template<typename T>
+                struct _sentinel_t_<T, meta::void_<decltype(ranges::end(std::declval<T &>()))>>
+                {
+                    using type = decltype(ranges::end(std::declval<T &>()));
+                };
+                template<typename T>
+                using sentinel_t = meta::_t<_sentinel_t_<T>>;
+#else
                 template<typename T>
                 using iterator_t = decltype(begin(std::declval<T &>()));
 
                 template<typename T>
                 using sentinel_t = decltype(end(std::declval<T &>()));
+#endif
 
                 template<typename T>
                 using difference_t = concepts::WeaklyIncrementable::difference_t<iterator_t<T>>;
@@ -159,8 +179,21 @@ namespace ranges
             struct ContiguousRange
               : refines<RandomAccessRange>
             {
+#ifdef _MSC_VER // Workaround FIXME
+            private:
+                template<typename, typename = void> struct _data_reference_t_ {};
+                template<typename Rng>
+                struct _data_reference_t_<Rng, meta::void_<decltype(*data(std::declval<Rng&>()))>>
+                {
+                    using type = decltype(*data(std::declval<Rng&>()));
+                };
+            public:
+                template<typename Rng>
+                using data_reference_t = meta::_t<_data_reference_t_<Rng>>;
+#else
                 template<typename Rng>
                 using data_reference_t = decltype(*data(std::declval<Rng&>()));
+#endif
 
                 template<typename Rng>
                 using element_t = meta::_t<std::remove_reference<data_reference_t<Rng>>>;
@@ -188,8 +221,21 @@ namespace ranges
             struct SizedRange
               : refines<Range>
             {
+#ifdef _MSC_VER // Workaround FIXME
+            private:
+                template<typename, typename = void> struct _size_t_ {};
+                template<typename Rng>
+                struct _size_t_<Rng, meta::void_<decltype(size(std::declval<Rng&>()))>>
+                {
+                    using type = decltype(size(std::declval<Rng&>()));
+                };
+            public:
+                template<typename T>
+                using size_t = meta::_t<_size_t_<T>>;
+#else
                 template<typename T>
                 using size_t = decltype(size(std::declval<T&>()));
+#endif
 
                 template<typename T>
                 auto requires_(T &t) -> decltype(
