@@ -271,6 +271,21 @@ namespace ranges
                 };
             };
 
+#ifdef _MSC_VER // Workaround VSO#206790
+            template<typename... Ts>
+            struct _variant_data_helper_
+            {
+                using type = meta::as_list<meta::make_index_sequence<sizeof...(Ts)>>;
+            };
+
+            template<typename... Ts>
+            using variant_data =
+                meta::_t<variant_data_<
+                    meta::transform<
+                        meta::list<Ts...>,
+                        meta::_t<_variant_data_helper_<Ts...>>,
+                        meta::quote<indexed_datum>>>>;
+#else
             template<typename... Ts>
             using variant_data =
                 meta::_t<variant_data_<
@@ -278,6 +293,7 @@ namespace ranges
                         meta::list<Ts...>,
                         meta::as_list<meta::make_index_sequence<sizeof...(Ts)>>,
                         meta::quote<indexed_datum>>>>;
+#endif
 
             inline std::size_t variant_move_copy_(std::size_t, variant_nil, variant_nil)
             {
