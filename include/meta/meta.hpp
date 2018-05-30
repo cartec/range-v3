@@ -1049,17 +1049,34 @@ namespace meta
             struct on_
             {
             };
+#ifdef _MSC_VER // Workaround FIXME
+            template<typename, typename, typename>
+            struct _on_ {};
+            template<typename F, typename... Gs, typename... Ts>
+            struct _on_<F, list<Gs...>, list<Ts...>>
+            {
+                using type = invoke<F, invoke<compose<Gs...>, Ts>...>;
+            };
+
+            template <typename F, typename... Gs>
+            struct on_<F, Gs...>
+            {
+                template <typename... Ts>
+                using invoke = meta::_t<_on_<F, list<Gs...>, list<Ts...>>>;
+            };
+#else
             template <typename F, typename... Gs>
             struct on_<F, Gs...>
             {
                 template <typename... Ts>
                 using invoke = invoke<F, invoke<compose<Gs...>, Ts>...>;
             };
+#endif
         }
         /// \endcond
 
         /// Use as `on<F, Gs...>`. Creates an Callable that applies Callable \c F to the
-        /// result of applying Callable `compose<Gs...>` to all the arguments.
+        /// result of applying Callable `compose<Gs...>` to each of the arguments.
         /// \ingroup composition
         template <typename... Fs>
         using on = detail::on_<Fs...>;
