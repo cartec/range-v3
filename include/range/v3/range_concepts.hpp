@@ -447,10 +447,17 @@ namespace ranges
             //  - It's derived from view_base
             template<typename T>
             struct view_predicate_
+#ifdef _MSC_VER // Workaround FIXME ALIAS_DEPENDENT
+              : meta::if_<
+                    meta::is_trait<enable_view<T>>,
+                    enable_view<T>,
+                    meta::bool_<view_like<T>() || DerivedFrom<T, view_base>()>>::type
+#else
               : meta::_t<meta::if_<
                     meta::is_trait<enable_view<T>>,
                     enable_view<T>,
                     meta::bool_<view_like<T>() || DerivedFrom<T, view_base>()>>>
+#endif
             {};
 
             template<typename T>
