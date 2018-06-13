@@ -214,8 +214,8 @@ namespace ranges
                     concepts::valid_expr(
                         ((void)(*o = static_cast<T &&>(t)), 42),
                         ((void)(*static_cast<Out &&>(o) = static_cast<T &&>(t)), 42),
-#ifdef _MSC_VER // FIXME: avoid VSO#624335
-                        true
+#ifdef RANGES_WORKAROUND_MSVC_624335
+                        true // "Workaround" is a bit optimistic.
 #else
                         ((void)(const_cast<reference_t<Out> const &&>(*o) = static_cast<T &&>(t)), 42),
                         ((void)(const_cast<reference_t<Out> const &&>(*static_cast<Out &&>(o)) = static_cast<T &&>(t)), 42)

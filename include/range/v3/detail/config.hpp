@@ -194,6 +194,8 @@ namespace ranges
 #define RANGES_DIAGNOSTIC_IGNORE_RANGE_LOOP_ANALYSIS
 #define RANGES_DIAGNOSTIC_IGNORE_DEPRECATED_DECLARATIONS RANGES_DIAGNOSTIC_IGNORE(4996)
 
+//#define RANGES_WORKAROUND_MSVC_624335 1
+
 #else // ^^^ defined(_MSC_VER) ^^^ / vvv !defined(_MSC_VER) vvv
 // Generic configuration using SD-6 feature test macros with fallback to __cplusplus
 #define RANGES_CXX_VER __cplusplus
