@@ -86,7 +86,7 @@ namespace ranges
             template<typename T, std::size_t N>
             void swap(T (&)[N], T (&)[N]) = delete;
 
-#ifdef _MSC_VER // Workaround VSO#620035
+#ifdef RANGES_WORKAROUND_MSVC_620035
             void swap();
 #endif
 
@@ -217,7 +217,7 @@ namespace ranges
             template<typename T>
             void iter_swap(T, T) = delete;
 
-#ifdef _MSC_VER // Workaround VSO#620035
+#ifdef RANGES_WORKAROUND_MSVC_620035
             void iter_swap();
 #endif
 

@@ -853,7 +853,7 @@ namespace meta
             using invoke = _t<detail::defer_<C, Ts...>>;
         };
 
-#ifdef _MSC_VER // Workaround VSO#214588
+#ifdef META_WORKAROUND_MSVC_214588
         /// \cond
         namespace detail
         {
@@ -874,7 +874,7 @@ namespace meta
         {
             // Indirection through defer_i here needed to avoid Core issue 1430
             // http://open-std.org/jtc1/sc22/wg21/docs/cwg_active.html#1430
-#ifdef _MSC_VER // Workaround VSO#214588
+#ifdef META_WORKAROUND_MSVC_214588
             template <typename... Ts>
             using invoke = _t<detail::defer_i_<T, C, detail::_t_v_helper<Ts>::value...>>;
 #else
@@ -1280,7 +1280,7 @@ namespace meta
         /// \e without
         /// doing short-circuiting.
         /// \ingroup logical
-#ifdef _MSC_VER // Workaround VSO#FIXME (SFINAE_ALIAS_DEPENDENTEXPR)
+#ifdef META_WORKAROUND_MSVC_214588
         template <typename... Bools>
         using strict_and = and_c<detail::_t_v_helper<Bools>::value...>;
 #else
@@ -1306,7 +1306,7 @@ namespace meta
         /// \e without
         /// doing short-circuiting.
         /// \ingroup logical
-#ifdef _MSC_VER // Workaround VSO#FIXME (SFINAE_ALIAS_DEPENDENTEXPR)
+#ifdef META_WORKAROUND_MSVC_214588
         template <typename... Bools>
         using strict_or = or_c<detail::_t_v_helper<Bools>::value...>;
 #else
@@ -2276,7 +2276,7 @@ namespace meta
 
             template <typename... List, typename Fun>
             struct find_if_<list<List...>, Fun,
-#ifdef _MSC_VER // FIXME
+#ifdef META_WORKAROUND_MSVC_214588
                             void_<integer_sequence<bool, bool(_t_v_helper<invoke<Fun, List>>::value)...>>>
 #else
                             void_<integer_sequence<bool, bool(invoke<Fun, List>::type::value)...>>>
@@ -2340,7 +2340,7 @@ namespace meta
             template <typename... List, typename Fun>
             struct reverse_find_if_<
                 list<List...>, Fun,
-#ifdef _MSC_VER // FIXME
+#ifdef META_WORKAROUND_MSVC_214588
                 void_<integer_sequence<bool, bool(_t_v_helper<invoke<Fun, List>>::value)...>>>
 #else
                 void_<integer_sequence<bool, bool(invoke<Fun, List>::type::value)...>>>
@@ -2515,7 +2515,7 @@ namespace meta
 
             template <typename... List, typename Fn>
             struct count_if_<list<List...>, Fn,
-#ifdef _MSC_VER // FIXME
+#ifdef META_WORKAROUND_MSVC_214588
                              void_<integer_sequence<bool, bool(_t_v_helper<invoke<Fn, List>>::value)...>>>
 #else
                              void_<integer_sequence<bool, bool(invoke<Fn, List>::type::value)...>>>
