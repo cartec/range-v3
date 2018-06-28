@@ -61,12 +61,12 @@ namespace ranges
         template<typename T>
         T const * any_cast(any const *) noexcept;
 
-#if defined(_MSC_VER) && !defined(RANGES_DOXYGEN_INVOKED) // Workaround VSO#589046
+#if defined(RANGES_WORKAROUND_MSVC_589046) && !defined(RANGES_DOXYGEN_INVOKED)
         namespace _any_ { struct adl_hook {}; }
 #endif
 
         struct any
-#if defined(_MSC_VER) && !defined(RANGES_DOXYGEN_INVOKED) // Workaround VSO#589046
+#if defined(RANGES_WORKAROUND_MSVC_589046) && !defined(RANGES_DOXYGEN_INVOKED)
           : private _any_::adl_hook
 #endif
         {
@@ -161,7 +161,7 @@ namespace ranges
                 ptr_.swap(that.ptr_);
             }
 
-#if !defined(_MSC_VER) || defined(RANGES_DOXYGEN_INVOKED) // Workaround VSO#589046
+#if !defined(RANGES_WORKAROUND_MSVC_589046) || defined(RANGES_DOXYGEN_INVOKED)
             friend void swap(any &x, any &y) noexcept
             {
                 x.swap(y);
@@ -169,7 +169,7 @@ namespace ranges
 #endif
         };
 
-#if defined(_MSC_VER) && !defined(RANGES_DOXYGEN_INVOKED) // Workaround VSO#589046
+#if defined(RANGES_WORKAROUND_MSVC_589046) && !defined(RANGES_DOXYGEN_INVOKED)
         namespace _any_
         {
             void swap(any &x, any &y) noexcept

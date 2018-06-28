@@ -187,7 +187,13 @@ namespace ranges
 #define RANGES_DIAGNOSTIC_IGNORE_RANGE_LOOP_ANALYSIS
 #define RANGES_DIAGNOSTIC_IGNORE_DEPRECATED_DECLARATIONS RANGES_DIAGNOSTIC_IGNORE(4996)
 
-//#define RANGES_WORKAROUND_MSVC_624335 1
+#define RANGES_WORKAROUND_MSVC_206790 1
+#define RANGES_WORKAROUND_MSVC_589046 1
+#define RANGES_WORKAROUND_MSVC_620035 1
+//#define RANGES_WORKAROUND_MSVC_624335 1 // Fixed for 15.8p3
+
+#ifndef ALIAS_BRANCH // Workarounds for bugs fixed on the aliases branch
+#endif
 
 #else // ^^^ defined(_MSC_VER) ^^^ / vvv !defined(_MSC_VER) vvv
 // Generic configuration using SD-6 feature test macros with fallback to __cplusplus
@@ -460,7 +466,7 @@ namespace ranges {
 #define RANGES_BROKEN_CPO_LOOKUP 1
 #elif defined(__GNUC__) && __GNUC__ < 6 // Workaround unknown GCC bug
 #define RANGES_BROKEN_CPO_LOOKUP 1
-#elif defined(_MSC_VER) // Workaround VSO#589046, VSO#620035
+#elif defined(RANGES_WORKAROUND_MSVC_589046) || defined(RANGES_WORKAROUND_MSVC_620035)
 #define RANGES_BROKEN_CPO_LOOKUP 1
 #endif
 #endif

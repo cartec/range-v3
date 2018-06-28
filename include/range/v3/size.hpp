@@ -34,7 +34,7 @@ namespace ranges
             template<typename T>
             void size(T const &) = delete;
 
-#ifdef _MSC_VER // Workaround VSO#620035
+#ifdef RANGES_WORKAROUND_MSVC_620035
             void size();
 #endif
 

@@ -271,7 +271,7 @@ namespace ranges
                 };
             };
 
-#ifdef _MSC_VER // Workaround VSO#206790
+#ifdef RANGES_WORKAROUND_MSVC_206790
             template<typename... Ts>
             struct _variant_data_helper_
             {

@@ -41,7 +41,7 @@ namespace ranges
             template<typename T>
             void begin(T const &) = delete;
 
-#ifdef _MSC_VER // Workaround VSO#620035
+#ifdef RANGES_WORKAROUND_MSVC_620035
             void begin();
 #endif
 
@@ -135,7 +135,7 @@ namespace ranges
             template<typename T>
             void end(T const &) = delete;
 
-#ifdef _MSC_VER // Workaround VSO#620035
+#ifdef RANGES_WORKAROUND_MSVC_620035
             void end();
 #endif
 
