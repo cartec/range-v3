@@ -220,7 +220,7 @@ namespace ranges
                         data_ + Offset, Count == dynamic_extent ? size() - Offset : Count};
             }
             template<index_type Offset>
-            constexpr span<T, N >= Offset ? N - Offset : dynamic_extent> subspan() const noexcept
+            constexpr span<T, (N >= Offset ? N - Offset : dynamic_extent)> subspan() const noexcept
             {
                 static_assert(Offset >= 0,
                     "Offset of first element to extract cannot be negative.");
