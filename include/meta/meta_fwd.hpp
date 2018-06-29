@@ -19,7 +19,7 @@
 
 #define META_CXX_STD_14 201402L
 
-#if defined(_MSC_VER)
+#ifdef _MSC_VER
 #define META_CXX_VER _MSVC_LANG
 #define META_HAS_MAKE_INTEGER_SEQ 1
 #ifndef ALIAS_BRANCH // Workarounds for bugs fixed on the aliases branch
