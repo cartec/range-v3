@@ -375,7 +375,7 @@ namespace ranges
         template<typename T>
         struct basic_mixin : private box<T>
         {
-#ifdef _MSC_VER // Workaround VSO#298441
+#ifdef RANGES_WORKAROUND_MSVC_298441
             CONCEPT_ASSERT(SemiRegular<T>());
 
             constexpr basic_mixin()
