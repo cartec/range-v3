@@ -336,7 +336,13 @@ namespace ranges
         template<typename Rng,
             CONCEPT_REQUIRES_(ContiguousRange<Rng>() &&
                 range_cardinality<Rng>::value >= cardinality{})>
+#if 1 // Workaround unnumbered CWG issue: [temp.deduct.guide]/3 says:
+      // "Two deduction guide declarations in the same translation unit for the
+      //  same class template shall not have equivalent parameter-declaration-clauses."
+        span(Rng &&rng, int = 42) ->
+#else
         span(Rng &&rng) ->
+#endif
             span<concepts::ContiguousRange::element_t<Rng>,
                 static_cast<detail::span_index_t>(range_cardinality<Rng>::value)>;
 #endif
