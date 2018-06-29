@@ -72,7 +72,7 @@ namespace ranges
             template<typename T, typename U>
             using _builtin_common_t = meta::_t<_builtin_common<T, U>>;
 
-#ifdef _MSC_VER // Workaround VSO#620164 && FIXME
+#ifdef RANGES_WORKAROUND_MSVC_620164
             template<typename, typename, typename = void> struct _cond_res_ {};
             template<typename T, typename U>
             struct _cond_res_<T, U,
