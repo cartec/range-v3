@@ -207,7 +207,7 @@ namespace ranges
             }
         };
 
-#ifdef _MSC_VER // Workaround FIXME
+#ifdef RANGES_WORKAROUND_MSVC_FIXME
         /// \cond
         namespace detail
         {

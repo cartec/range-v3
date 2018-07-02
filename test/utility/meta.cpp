@@ -96,7 +96,7 @@ static_assert(can_invoke<meta::quote<std::pair>, int, int>::value, "");
 static_assert(!can_invoke<meta::quote<std::pair>, int, int, int>::value, "");
 #endif
 
-#ifndef _MSC_VER // FIXME
+#ifndef META_WORKAROUND_MSVC_FIXME
 // Sanity-check meta::lambda
 using Lambda0 = lambda<_a, _b, std::pair<_a, _b>>;
 using Lambda1 = lambda<_a, _b, std::pair<_b, _a>>;
@@ -126,7 +126,7 @@ static_assert(
     "");
 
 static_assert(can_invoke<lambda<_a, lazy::if_<std::is_integral<_a>, _a>>, int>::value, "");
-#ifndef _MSC_VER // FIXME
+#ifndef META_WORKAROUND_MSVC_FIXME
 // I'm guessing this failure is due to GCC #64970
 // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=64970
 #if !defined(__GNUC__) || defined(__clang__) || __GNUC__ >= 5
@@ -159,7 +159,7 @@ struct check_integral
     }
 };
 
-#ifndef _MSC_VER // FIXME
+#ifndef META_WORKAROUND_MSVC_FIXME
 // Test for meta::let
 template<typename T, typename List>
 using find_index_ = let<
@@ -312,7 +312,7 @@ int main()
         static_assert(meta::count_if<l, lambda<_c, std::is_same<_c, double>>>{} == 0, "");
     }
 
-#ifndef _MSC_VER // FIXME
+#ifndef META_WORKAROUND_MSVC_FIXME
     // pathological lambda test
     {
         using X = invoke<lambda<_a, lambda_test<_a>>, int>;
@@ -334,7 +334,7 @@ int main()
         static_assert(!in<list<int, int, short, float>, double>::value, "");
     }
 
-#ifndef _MSC_VER // FIXME
+#ifndef META_WORKAROUND_MSVC_FIXME
     // lambda with variadic placeholders
     {
         using X = invoke<lambda<_args, list<_args>>, int, short, double>;
