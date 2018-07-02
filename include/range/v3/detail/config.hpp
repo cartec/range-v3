@@ -200,7 +200,8 @@ namespace ranges
 #define RANGES_WORKAROUND_MSVC_589046
 #define RANGES_WORKAROUND_MSVC_620035
 //#define RANGES_WORKAROUND_MSVC_620164
-//#define RANGES_WORKAROUND_MSVC_624335 1 // Fixed for 15.8p3
+//#define RANGES_WORKAROUND_MSVC_624335 // Fixed for 15.8p3
+#define RANGES_WORKAROUND_MSVC_FIXME // FIXME: Unclassified bugs
 
 #ifndef ALIAS_BRANCH // Workarounds for bugs fixed on the aliases branch
 #endif

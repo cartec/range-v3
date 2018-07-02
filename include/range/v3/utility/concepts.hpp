@@ -105,7 +105,7 @@ namespace ranges
                 std::false_type;
 
 #if (defined(__GNUC__) && !defined(__clang__) && __GNUC__ == 5 && __GNUC_MINOR__ < 5) || \
-    defined(_MSC_VER) // Workaround FIXME
+    defined(RANGES_WORKAROUND_MSVC_FIXME)
             template<typename T>
             T gcc_bugs_bugs_bugs(T);
 

@@ -644,7 +644,7 @@ namespace meta
                 using type = std::true_type;
             };
 
-#ifdef _MSC_VER // FIXME: ALIAS_DEPENDENTEXPR?
+#ifdef META_WORKAROUND_MSVC_FIXME // ALIAS_DEPENDENTEXPR?
             template <typename, template <class...> class, typename...>
             struct _defer_
             {
@@ -853,7 +853,7 @@ namespace meta
             using invoke = _t<detail::defer_<C, Ts...>>;
         };
 
-#ifdef META_WORKAROUND_MSVC_214588
+#if defined(META_WORKAROUND_MSVC_214588) || defined(META_WORKAROUND_MSVC_FIXME)
         /// \cond
         namespace detail
         {
@@ -1049,7 +1049,7 @@ namespace meta
             struct on_
             {
             };
-#ifdef _MSC_VER // Workaround FIXME
+#ifdef META_WORKAROUND_MSVC_FIXME
             template<typename, typename, typename>
             struct _on_ {};
             template<typename F, typename... Gs, typename... Ts>
@@ -1221,7 +1221,7 @@ namespace meta
 
         /// Logically negate the Boolean parameter
         /// \ingroup logical
-#ifdef _MSC_VER // Workaround VSO#FIXME (SFINAE_ALIAS_DEPENDENTEXPR)
+#ifdef META_WORKAROUND_MSVC_FIXME // SFINAE_ALIAS_DEPENDENTEXPR?
         /// \cond
         namespace detail
         {
@@ -1242,7 +1242,7 @@ namespace meta
 
         /// Logically negate the integral constant-wrapped Boolean parameter.
         /// \ingroup logical
-#ifdef _MSC_VER // Workaround VSO#FIXME (SFINAE_ALIAS_DEPENDENTEXPR)
+#ifdef META_WORKAROUND_MSVC_FIXME // SFINAE_ALIAS_DEPENDENTEXPR?
         /// \cond
         namespace detail
         {
@@ -1264,7 +1264,7 @@ namespace meta
 /// Logically and together all the Boolean parameters
 /// \ingroup logical
 #if (defined(__GNUC__) && !defined(__clang__) && __GNUC__ == 5 && __GNUC_MINOR__ == 1) || \
-    defined(_MSC_VER)
+    (defined(_MSC_VER) && !defined(ALIAS_BRANCH))
         // Alternative formulation of and_c to workaround
         // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=66405
         template <bool... Bools>
@@ -1507,7 +1507,7 @@ namespace meta
         /// An integral constant wrapper that is the size of the \c meta::list
         /// \p List.
         /// \ingroup list
-#ifdef _MSC_VER // Workaround VSO#FIXME (SFINAE_ALIAS_DEPENDENTEXPR)
+#ifdef META_WORKAROUND_MSVC_FIXME
         /// \cond
         namespace detail
         {
@@ -2045,7 +2045,7 @@ namespace meta
         /// \par Complexity
         /// \f$ O(1) \f$.
         /// \ingroup list
-#ifdef _MSC_VER // FIXME
+#ifdef META_WORKAROUND_MSVC_FIXME
         /// \cond
         namespace detail
         {
@@ -2276,7 +2276,7 @@ namespace meta
 
             template <typename... List, typename Fun>
             struct find_if_<list<List...>, Fun,
-#ifdef META_WORKAROUND_MSVC_214588
+#if defined(META_WORKAROUND_MSVC_214588) || defined (META_WORKAROUND_MSVC_FIXME)
                             void_<integer_sequence<bool, bool(_t_v_helper<invoke<Fun, List>>::value)...>>>
 #else
                             void_<integer_sequence<bool, bool(invoke<Fun, List>::type::value)...>>>
@@ -2340,7 +2340,7 @@ namespace meta
             template <typename... List, typename Fun>
             struct reverse_find_if_<
                 list<List...>, Fun,
-#ifdef META_WORKAROUND_MSVC_214588
+#if defined(META_WORKAROUND_MSVC_214588) || defined (META_WORKAROUND_MSVC_FIXME)
                 void_<integer_sequence<bool, bool(_t_v_helper<invoke<Fun, List>>::value)...>>>
 #else
                 void_<integer_sequence<bool, bool(invoke<Fun, List>::type::value)...>>>
@@ -2515,7 +2515,7 @@ namespace meta
 
             template <typename... List, typename Fn>
             struct count_if_<list<List...>, Fn,
-#ifdef META_WORKAROUND_MSVC_214588
+#if defined(META_WORKAROUND_MSVC_214588) || defined (META_WORKAROUND_MSVC_FIXME)
                              void_<integer_sequence<bool, bool(_t_v_helper<invoke<Fn, List>>::value)...>>>
 #else
                              void_<integer_sequence<bool, bool(invoke<Fn, List>::type::value)...>>>

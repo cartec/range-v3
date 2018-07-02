@@ -22,6 +22,7 @@
 #ifdef _MSC_VER
 #define META_CXX_VER _MSVC_LANG
 #define META_HAS_MAKE_INTEGER_SEQ 1
+#define META_WORKAROUND_MSVC_FIXME 1 // FIXME: Categorize these bugs
 #ifndef ALIAS_BRANCH // Workarounds for bugs fixed on the aliases branch
 #define META_WORKAROUND_MSVC_214588 1
 #endif

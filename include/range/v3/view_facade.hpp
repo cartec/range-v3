@@ -30,7 +30,7 @@ namespace ranges
         /// \cond
         namespace detail
         {
-#ifdef _MSC_VER // Workaround FIXME
+#ifdef RANGES_WORKAROUND_MSVC_FIXME
             template<typename Derived, typename = void>
             struct _begin_cursor_
             {};
