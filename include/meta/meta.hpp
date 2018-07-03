@@ -1049,7 +1049,7 @@ namespace meta
             struct on_
             {
             };
-#ifdef META_WORKAROUND_MSVC_FIXME
+#if defined(_MSC_VER) && !defined(ALIAS_BRANCH)
             template<typename, typename, typename>
             struct _on_ {};
             template<typename F, typename... Gs, typename... Ts>
@@ -1221,7 +1221,7 @@ namespace meta
 
         /// Logically negate the Boolean parameter
         /// \ingroup logical
-#ifdef META_WORKAROUND_MSVC_FIXME // SFINAE_ALIAS_DEPENDENTEXPR?
+#if defined(_MSC_VER) && !defined(ALIAS_BRANCH)
         /// \cond
         namespace detail
         {
@@ -1242,7 +1242,7 @@ namespace meta
 
         /// Logically negate the integral constant-wrapped Boolean parameter.
         /// \ingroup logical
-#ifdef META_WORKAROUND_MSVC_FIXME // SFINAE_ALIAS_DEPENDENTEXPR?
+#if defined(_MSC_VER) && !defined(ALIAS_BRANCH)
         /// \cond
         namespace detail
         {
@@ -1507,7 +1507,7 @@ namespace meta
         /// An integral constant wrapper that is the size of the \c meta::list
         /// \p List.
         /// \ingroup list
-#ifdef META_WORKAROUND_MSVC_FIXME
+#if defined(_MSC_VER) && !defined(ALIAS_BRANCH)
         /// \cond
         namespace detail
         {
@@ -2045,7 +2045,7 @@ namespace meta
         /// \par Complexity
         /// \f$ O(1) \f$.
         /// \ingroup list
-#ifdef META_WORKAROUND_MSVC_FIXME
+#if defined(_MSC_VER) && !defined(ALIAS_BRANCH)
         /// \cond
         namespace detail
         {
