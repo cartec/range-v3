@@ -19,16 +19,17 @@
 
 #define META_CXX_STD_14 201402L
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && defined(_MSVC_LANG) && _MSVC_LANG > __cplusplus
 #define META_CXX_VER _MSVC_LANG
-#define META_HAS_MAKE_INTEGER_SEQ 1
-#define META_WORKAROUND_MSVC_FIXME 1 // FIXME: Categorize these bugs
-#ifndef ALIAS_BRANCH // Workarounds for bugs fixed on the aliases branch
-#define META_WORKAROUND_MSVC_214588 1
-#endif
 #else
 #define META_CXX_VER __cplusplus
 #endif
+
+#ifdef _MSC_VER
+#define META_HAS_MAKE_INTEGER_SEQ 1
+#define META_WORKAROUND_MSVC_FIXME 1 // FIXME: Categorize these bugs
+// #define META_WORKAROUND_MSVC_214588 1 // Fixed in 15.9
+#endif // _MSC_VER
 
 #ifndef META_CXX_VARIABLE_TEMPLATES
 #ifdef __cpp_variable_templates
