@@ -118,7 +118,7 @@ namespace ranges
             meta::_t<upgrade_iterator_category<typename T::iterator_category>>
             iterator_category_helper(T *);
 
-#ifdef RANGES_WORKAROUND_MSVC_FIXME
+#ifdef RANGES_WORKAROUND_MSVC_UNCLASSIFIED
             template<typename, typename = void> struct _iterator_category_ {};
             template<typename T>
             struct _iterator_category_<T, meta::void_<
@@ -152,7 +152,7 @@ namespace ranges
             struct Readable
             {
             private:
-#ifdef RANGES_WORKAROUND_MSVC_FIXME
+#ifdef RANGES_WORKAROUND_MSVC_UNCLASSIFIED
                 template<typename, typename = void> struct _reference_t_ {};
                 template<typename I>
                 struct _reference_t_<I, meta::void_<
@@ -512,7 +512,7 @@ namespace ranges
             template<typename I>
             struct exclusively_writable_<I, true>
             {
-#ifdef RANGES_WORKAROUND_MSVC_FIXME
+#ifdef RANGES_WORKAROUND_MSVC_UNCLASSIFIED
                 template<typename, typename, typename = void> struct _assignable_res_t {};
                 template<typename T, typename U>
                 struct _assignable_res_t<T, U, meta::void_<
