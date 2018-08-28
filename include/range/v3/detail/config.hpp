@@ -158,6 +158,7 @@ namespace ranges
 //#define RANGES_WORKAROUND_MSVC_UNCLASSIFIED // Fixed for 15.9
 #define RANGES_WORKAROUND_MSVC_UNFILED1
 #define RANGES_WORKAROUND_MSVC_UNFILED2
+#define RANGES_WORKAROUND_MSVC_UNFILED3
 
 #elif defined(__GNUC__) || defined(__clang__)
 #define RANGES_PRAGMA(X) _Pragma(#X)
