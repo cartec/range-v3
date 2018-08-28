@@ -447,11 +447,11 @@ namespace ranges
             //  - It's derived from view_base
             template<typename T>
             struct view_predicate_
-#ifdef RANGES_WORKAROUND_MSVC_UNCLASSIFIED // ALIAS_DEPENDENTEXPR?
+#ifdef RANGES_WORKAROUND_MSVC_UNFILED3
               : meta::if_<
                     meta::is_trait<enable_view<T>>,
                     enable_view<T>,
-                    meta::bool_<view_like<T>() || DerivedFrom<T, view_base>()>>::type
+                    meta::or_<view_like<T>, DerivedFrom<T, view_base>>>::type
 #else
               : meta::_t<meta::if_<
                     meta::is_trait<enable_view<T>>,
