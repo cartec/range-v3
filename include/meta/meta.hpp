@@ -1049,29 +1049,12 @@ namespace meta
             struct on_
             {
             };
-#if defined(_MSC_VER) && !defined(ALIAS_BRANCH)
-            template<typename, typename, typename>
-            struct _on_ {};
-            template<typename F, typename... Gs, typename... Ts>
-            struct _on_<F, list<Gs...>, list<Ts...>>
-            {
-                using type = invoke<F, invoke<compose<Gs...>, Ts>...>;
-            };
-
-            template <typename F, typename... Gs>
-            struct on_<F, Gs...>
-            {
-                template <typename... Ts>
-                using invoke = meta::_t<_on_<F, list<Gs...>, list<Ts...>>>;
-            };
-#else
             template <typename F, typename... Gs>
             struct on_<F, Gs...>
             {
                 template <typename... Ts>
                 using invoke = invoke<F, invoke<compose<Gs...>, Ts>...>;
             };
-#endif
         }
         /// \endcond
 
@@ -1221,50 +1204,17 @@ namespace meta
 
         /// Logically negate the Boolean parameter
         /// \ingroup logical
-#if defined(_MSC_VER) && !defined(ALIAS_BRANCH)
-        /// \cond
-        namespace detail
-        {
-            template <bool Bool>
-            struct not_c_helper
-            {
-                static const bool value = !Bool;
-            };
-        } // namespace detail
-        /// \endcond
-
-        template <bool Bool>
-        using not_c = bool_<detail::not_c_helper<Bool>::value>;
-#else
         template <bool Bool_>
         using not_c = bool_<!Bool_>;
-#endif
 
         /// Logically negate the integral constant-wrapped Boolean parameter.
         /// \ingroup logical
-#if defined(_MSC_VER) && !defined(ALIAS_BRANCH)
-        /// \cond
-        namespace detail
-        {
-            template <typename Bool>
-            struct not_helper
-            {
-                using type = not_c<Bool::type::value>;
-            };
-        } // namespace detail
-        /// \endcond
-
-        template <typename Bool>
-        using not_ = _t<detail::not_helper<Bool>>;
-#else
         template <typename Bool_>
         using not_ = not_c<Bool_::type::value>;
-#endif
 
 /// Logically and together all the Boolean parameters
 /// \ingroup logical
-#if (defined(__GNUC__) && !defined(__clang__) && __GNUC__ == 5 && __GNUC_MINOR__ == 1) || \
-    (defined(_MSC_VER) && !defined(ALIAS_BRANCH))
+#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ == 5 && __GNUC_MINOR__ == 1
         // Alternative formulation of and_c to workaround
         // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=66405
         template <bool... Bools>
@@ -1507,24 +1457,8 @@ namespace meta
         /// An integral constant wrapper that is the size of the \c meta::list
         /// \p List.
         /// \ingroup list
-#if defined(_MSC_VER) && !defined(ALIAS_BRANCH)
-        /// \cond
-        namespace detail
-        {
-            template <typename List>
-            struct size_helper
-            {
-                static const auto value = List::size();
-            };
-        } // namespace detail
-        /// \endcond
-
-        template <typename List>
-        using size = meta::size_t<detail::size_helper<List>::value>;
-#else
         template <typename List>
         using size = meta::size_t<List::size()>;
-#endif
 
         namespace lazy
         {
@@ -2045,24 +1979,8 @@ namespace meta
         /// \par Complexity
         /// \f$ O(1) \f$.
         /// \ingroup list
-#if defined(_MSC_VER) && !defined(ALIAS_BRANCH)
-        /// \cond
-        namespace detail
-        {
-            template <typename List>
-            struct empty_helper
-            {
-                using type = bool_<0 == size<List>::type::value>;
-            };
-        }
-        /// \endcond
-
-        template <typename List>
-        using empty = _t<detail::empty_helper<List>>;
-#else
         template <typename List>
         using empty = bool_<0 == size<List>::type::value>;
-#endif
 
         namespace lazy
         {
