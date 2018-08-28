@@ -207,7 +207,7 @@ namespace ranges
             }
         };
 
-#ifdef RANGES_WORKAROUND_MSVC_FIXME
+#ifdef RANGES_WORKAROUND_MSVC_UNCLASSIFIED
         /// \cond
         namespace detail
         {

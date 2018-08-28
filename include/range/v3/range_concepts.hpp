@@ -74,7 +74,7 @@ namespace ranges
             struct Range
             {
                 // Associated types
-#ifdef RANGES_WORKAROUND_MSVC_FIXME
+#ifdef RANGES_WORKAROUND_MSVC_UNCLASSIFIED
                 template<typename, typename = void> struct _iterator_t_ {};
                 template<typename T>
                 struct _iterator_t_<T, meta::void_<decltype(ranges::begin(std::declval<T &>()))>>
@@ -179,7 +179,7 @@ namespace ranges
             struct ContiguousRange
               : refines<RandomAccessRange>
             {
-#ifdef RANGES_WORKAROUND_MSVC_FIXME
+#ifdef RANGES_WORKAROUND_MSVC_UNCLASSIFIED
             private:
                 template<typename, typename = void> struct _data_reference_t_ {};
                 template<typename Rng>
@@ -221,7 +221,7 @@ namespace ranges
             struct SizedRange
               : refines<Range>
             {
-#ifdef RANGES_WORKAROUND_MSVC_FIXME
+#ifdef RANGES_WORKAROUND_MSVC_UNCLASSIFIED
             private:
                 template<typename, typename = void> struct _size_t_ {};
                 template<typename Rng>
@@ -447,7 +447,7 @@ namespace ranges
             //  - It's derived from view_base
             template<typename T>
             struct view_predicate_
-#ifdef RANGES_WORKAROUND_MSVC_FIXME // ALIAS_DEPENDENTEXPR?
+#ifdef RANGES_WORKAROUND_MSVC_UNCLASSIFIED // ALIAS_DEPENDENTEXPR?
               : meta::if_<
                     meta::is_trait<enable_view<T>>,
                     enable_view<T>,

@@ -30,7 +30,7 @@ namespace ranges
         /// \cond
         namespace detail
         {
-#ifdef RANGES_WORKAROUND_MSVC_FIXME
+#ifdef RANGES_WORKAROUND_MSVC_UNCLASSIFIED
             template<typename Derived, typename = void>
             struct _begin_cursor_
             {};

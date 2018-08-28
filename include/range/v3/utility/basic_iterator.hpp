@@ -35,7 +35,7 @@ namespace ranges
         /// \cond
         namespace detail
         {
-#ifdef RANGES_WORKAROUND_MSVC_FIXME
+#ifdef RANGES_WORKAROUND_MSVC_UNCLASSIFIED
             template<typename, typename = void>
             struct _cursor_reference_
             {};
@@ -61,7 +61,7 @@ namespace ranges
             auto cursor_move(Cur const &cur, long) ->
                 aux::move_t<cursor_reference_t<Cur>>;
 
-#ifdef RANGES_WORKAROUND_MSVC_FIXME
+#ifdef RANGES_WORKAROUND_MSVC_UNCLASSIFIED
             template<typename, typename = void>
             struct _cursor_rvalue_reference_
             {};
@@ -318,7 +318,7 @@ namespace ranges
                 using difference_type = range_access::cursor_difference_t<Cur>;
             };
 
-#ifdef RANGES_WORKAROUND_MSVC_FIXME
+#ifdef RANGES_WORKAROUND_MSVC_UNCLASSIFIED
             template<typename, typename = void>
             struct _cursor_arrow_
             {};
