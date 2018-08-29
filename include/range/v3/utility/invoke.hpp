@@ -207,7 +207,7 @@ namespace ranges
             }
         };
 
-#ifdef RANGES_WORKAROUND_MSVC_UNCLASSIFIED
+#ifdef RANGES_WORKAROUND_MSVC_UNFILED4
         /// \cond
         namespace detail
         {
@@ -217,10 +217,10 @@ namespace ranges
 
             template<typename Fun, typename...Args>
             struct _invoke_result_<
-                meta::void_<decltype(::ranges::v3::invoke(std::declval<Fun>(), std::declval<Args>()...))>,
+                meta::void_<decltype(invoke(std::declval<Fun>(), std::declval<Args>()...))>,
                 Fun, Args...>
             {
-                using type = decltype(::ranges::v3::invoke(std::declval<Fun>(), std::declval<Args>()...));
+                using type = decltype(invoke(std::declval<Fun>(), std::declval<Args>()...));
             };
         }
         /// \endcond
@@ -230,7 +230,7 @@ namespace ranges
 
         template<typename Fun, typename...Args>
         using invoke_result_t = meta::_t<invoke_result<Fun, Args...>>;
-#else
+#else // RANGES_WORKAROUND_MSVC_UNFILED4
         template<typename Fun, typename...Args>
         using invoke_result_t = decltype(invoke(std::declval<Fun>(), std::declval<Args>()...));
 
@@ -238,7 +238,7 @@ namespace ranges
         struct invoke_result
           : meta::defer<invoke_result_t, Fun, Args...>
         {};
-#endif
+#endif // RANGES_WORKAROUND_MSVC_UNFILED4
 
         template<typename Sig>
         struct result_of
