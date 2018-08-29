@@ -125,7 +125,7 @@ namespace ranges
             };
 
             // The One Proxy Reference type to rule them all. basic_iterator uses this
-            // as the return type of operator* when the cursor type has a set() member
+            // as the return type of operator* when the cursor type has a write() member
             // function of the correct signature (i.e., if it can accept a value_type &&).
             template<typename Cur, bool Readable = (bool) ReadableCursor<Cur>()>
             struct basic_proxy_reference
@@ -177,6 +177,7 @@ namespace ranges
                 explicit basic_proxy_reference(Cur &cur) noexcept
                   : cur_(&cur)
                 {}
+#if 0
                 CONCEPT_REQUIRES(ReadableCursor<Cur>())
                 RANGES_CXX14_CONSTEXPR
                 basic_proxy_reference &operator=(basic_proxy_reference && that)
@@ -196,6 +197,7 @@ namespace ranges
                 {
                     return *this = that;
                 }
+#endif
                 CONCEPT_REQUIRES(ReadableCursor<Cur>())
                 RANGES_CXX14_CONSTEXPR
                 basic_proxy_reference const &operator=(basic_proxy_reference const &that) const
@@ -203,6 +205,7 @@ namespace ranges
                     this->write_(that.read_());
                     return *this;
                 }
+#if 0
                 template<typename OtherCur,
                     CONCEPT_REQUIRES_(ReadableCursor<OtherCur>() &&
                         WritableCursor<Cur, cursor_reference_t<OtherCur>>())>
@@ -228,6 +231,7 @@ namespace ranges
                 {
                     return *this = that;
                 }
+#endif
                 template<typename OtherCur,
                     CONCEPT_REQUIRES_(ReadableCursor<OtherCur>() &&
                         WritableCursor<Cur, cursor_reference_t<OtherCur>>())>
@@ -237,6 +241,7 @@ namespace ranges
                     this->write_(that.read_());
                     return *this;
                 }
+#if 0
                 template<typename T,
                     CONCEPT_REQUIRES_(WritableCursor<Cur, T>())>
                 RANGES_CXX14_CONSTEXPR
@@ -245,6 +250,7 @@ namespace ranges
                     this->write_((T &&) t);
                     return *this;
                 }
+#endif
                 template<typename T,
                     CONCEPT_REQUIRES_(WritableCursor<Cur, T &&>())>
                 RANGES_CXX14_CONSTEXPR
