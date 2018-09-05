@@ -155,7 +155,7 @@ namespace ranges
                 ++ranges::get<0>(data_);
                 return *this;
             }
-#ifdef RANGES_WORKAROUND_MSVC_UNFILED1
+#ifdef RANGES_WORKAROUND_MSVC_677925
             template<typename I2 = I, CONCEPT_REQUIRES_(!ForwardIterator<I2>())>
             auto operator++(int)
             RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT
@@ -169,7 +169,7 @@ namespace ranges
             (
                 ranges::get<0>(data_)++
             )
-#endif // RANGES_WORKAROUND_MSVC_UNFILED1
+#endif // RANGES_WORKAROUND_MSVC_677925
             CONCEPT_REQUIRES(ForwardIterator<I>())
             common_iterator operator++(int)
             {
