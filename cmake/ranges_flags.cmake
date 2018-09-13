@@ -24,6 +24,11 @@ else()
   ranges_append_flag(RANGES_HAS_CXXSTD "-std=c++${RANGES_CXX_STD}")
 endif()
 
+# Enable MSVC strict mode
+if (RANGES_CXX_COMPILER_MSVC)
+  ranges_append_flag(RANGES_HAS_PERMISSIVEMINUS "-permissive-")
+endif()
+
 # Enable "normal" warnings and make them errors:
 if (RANGES_CXX_COMPILER_CLANGCL OR RANGES_CXX_COMPILER_MSVC)
   ranges_append_flag(RANGES_HAS_W3 -W3)
