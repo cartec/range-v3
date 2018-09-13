@@ -644,7 +644,7 @@ namespace meta
                 using type = std::true_type;
             };
 
-#ifdef META_WORKAROUND_MSVC_FIXME // ALIAS_DEPENDENTEXPR?
+#ifdef META_WORKAROUND_MSVC_UNCLASSIFIED // ALIAS_DEPENDENTEXPR?
             template <typename, template <class...> class, typename...>
             struct _defer_
             {
@@ -672,7 +672,7 @@ namespace meta
 
             template <typename T, template <T...> class C, T... Is>
             using defer_i_ = _defer_i_<void, T, C, Is...>;
-#else
+#else // ^^^ workaround ^^^ / vvv no workaround vvv
             template <template <typename...> class C, typename... Ts,
                 template <typename...> class D = C>
             id<D<Ts...>> try_defer_(int);
@@ -690,7 +690,7 @@ namespace meta
 
             template <typename T, template <T...> class C, T... Is>
             using defer_i_ = decltype(detail::try_defer_i_<T, C, Is...>(0));
-#endif
+#endif // META_WORKAROUND_MSVC_UNCLASSIFIED
             template <typename T>
             using _t_t = _t<_t<T>>;
         } // namespace detail
@@ -853,7 +853,7 @@ namespace meta
             using invoke = _t<detail::defer_<C, Ts...>>;
         };
 
-#if defined(META_WORKAROUND_MSVC_214588) || defined(META_WORKAROUND_MSVC_FIXME)
+#if defined(META_WORKAROUND_MSVC_214588) || defined(META_WORKAROUND_MSVC_UNCLASSIFIED)
         /// \cond
         namespace detail
         {
@@ -864,7 +864,7 @@ namespace meta
             };
         }
         /// \endcond
-#endif
+#endif // META_WORKAROUND_MSVC_214588 or META_WORKAROUND_MSVC_UNCLASSIFIED
 
         /// Turn a class template or alias template \p C taking literals of type \p T
         /// into a Callable.
@@ -877,10 +877,10 @@ namespace meta
 #ifdef META_WORKAROUND_MSVC_214588
             template <typename... Ts>
             using invoke = _t<detail::defer_i_<T, C, detail::_t_v_helper<Ts>::value...>>;
-#else
+#else // ^^^ workaround ^^^ / vvv no workaround vvv
             template <typename... Ts>
             using invoke = _t<detail::defer_i_<T, C, Ts::type::value...>>;
-#endif
+#endif // META_WORKAROUND_MSVC_214588
         };
 
 #if defined(__GNUC__) && !defined(__clang__) && __GNUC__ == 4 && __GNUC_MINOR__ <= 8 && !defined(META_DOXYGEN_INVOKED)
@@ -2194,11 +2194,11 @@ namespace meta
 
             template <typename... List, typename Fun>
             struct find_if_<list<List...>, Fun,
-#if defined(META_WORKAROUND_MSVC_214588) || defined (META_WORKAROUND_MSVC_FIXME)
+#if defined(META_WORKAROUND_MSVC_214588) || defined (META_WORKAROUND_MSVC_UNCLASSIFIED)
                             void_<integer_sequence<bool, bool(_t_v_helper<invoke<Fun, List>>::value)...>>>
-#else
+#else // ^^^ workaround ^^^ / vvv no workaround vvv
                             void_<integer_sequence<bool, bool(invoke<Fun, List>::type::value)...>>>
-#endif
+#endif // META_WORKAROUND_MSVC_214588 || META_WORKAROUND_MSVC_UNCLASSIFIED
             {
 #if (defined(__clang__) && __clang_major__ < 6) || defined(__apple_build_version__)
                 // Explicitly specify extent to avoid https://llvm.org/bugs/show_bug.cgi?id=28385
@@ -2258,11 +2258,11 @@ namespace meta
             template <typename... List, typename Fun>
             struct reverse_find_if_<
                 list<List...>, Fun,
-#if defined(META_WORKAROUND_MSVC_214588) || defined (META_WORKAROUND_MSVC_FIXME)
+#if defined(META_WORKAROUND_MSVC_214588) || defined (META_WORKAROUND_MSVC_UNCLASSIFIED)
                 void_<integer_sequence<bool, bool(_t_v_helper<invoke<Fun, List>>::value)...>>>
-#else
+#else // ^^^ workaround ^^^ / vvv no workaround vvv
                 void_<integer_sequence<bool, bool(invoke<Fun, List>::type::value)...>>>
-#endif
+#endif // META_WORKAROUND_MSVC_214588 or META_WORKAROUND_MSVC_UNCLASSIFIED
             {
 #if (defined(__clang__) && __clang_major__ < 6) || defined(__apple_build_version__)
                 // Explicitly specify extent to avoid https://llvm.org/bugs/show_bug.cgi?id=28385
@@ -2433,11 +2433,11 @@ namespace meta
 
             template <typename... List, typename Fn>
             struct count_if_<list<List...>, Fn,
-#if defined(META_WORKAROUND_MSVC_214588) || defined (META_WORKAROUND_MSVC_FIXME)
+#if defined(META_WORKAROUND_MSVC_214588) || defined (META_WORKAROUND_MSVC_UNCLASSIFIED)
                              void_<integer_sequence<bool, bool(_t_v_helper<invoke<Fn, List>>::value)...>>>
-#else
+#else // ^^^ workaround ^^^ / vvv no workaround vvv
                              void_<integer_sequence<bool, bool(invoke<Fn, List>::type::value)...>>>
-#endif
+#endif // META_WORKAROUND_MSVC_214588 or META_WORKAROUND_MSVC_UNCLASSIFIED
             {
 #if (defined(__clang__) && __clang_major__ < 6) || defined(__apple_build_version__)
                 // Explicitly specify extent to avoid https://llvm.org/bugs/show_bug.cgi?id=28385

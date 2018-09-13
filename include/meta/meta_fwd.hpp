@@ -27,7 +27,7 @@
 
 #ifdef _MSC_VER
 #define META_HAS_MAKE_INTEGER_SEQ 1
-#define META_WORKAROUND_MSVC_FIXME 1 // FIXME: Categorize these bugs
+#define META_WORKAROUND_MSVC_UNCLASSIFIED 1 // FIXME: Categorize these bugs
 // #define META_WORKAROUND_MSVC_214588 1 // Fixed in 15.9
 #endif // _MSC_VER
 

@@ -96,7 +96,7 @@ static_assert(can_invoke<meta::quote<std::pair>, int, int>::value, "");
 static_assert(!can_invoke<meta::quote<std::pair>, int, int, int>::value, "");
 #endif
 
-#ifndef META_WORKAROUND_MSVC_FIXME
+#ifndef META_WORKAROUND_MSVC_UNCLASSIFIED
 // Sanity-check meta::lambda
 using Lambda0 = lambda<_a, _b, std::pair<_a, _b>>;
 using Lambda1 = lambda<_a, _b, std::pair<_b, _a>>;
@@ -107,7 +107,7 @@ using Pair2 = invoke<Lambda2, int, short>;
 static_assert(std::is_same<Pair0, std::pair<int, short>>::value, "");
 static_assert(std::is_same<Pair1, std::pair<short, int>>::value, "");
 static_assert(std::is_same<Pair2, std::pair<short, std::pair<int, int>>>::value, "");
-#endif
+#endif // META_WORKAROUND_MSVC_UNCLASSIFIED
 
 // Not saying you should do it this way, but it's a good test.
 namespace l = meta::lazy;
@@ -126,7 +126,7 @@ static_assert(
     "");
 
 static_assert(can_invoke<lambda<_a, lazy::if_<std::is_integral<_a>, _a>>, int>::value, "");
-#ifndef META_WORKAROUND_MSVC_FIXME
+#ifndef META_WORKAROUND_MSVC_UNCLASSIFIED
 // I'm guessing this failure is due to GCC #64970
 // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=64970
 #if !defined(__GNUC__) || defined(__clang__) || __GNUC__ >= 5
@@ -139,7 +139,7 @@ static_assert(std::is_same<rev<list<int, short, double>>, list<double, short, in
 
 using uncvref_fn = lambda<_a, l::_t<std::remove_cv<l::_t<std::remove_reference<_a>>>>>;
 static_assert(std::is_same<invoke<uncvref_fn, int const &>, int>::value, "");
-#endif
+#endif // META_WORKAROUND_MSVC_UNCLASSIFIED
 
 using L = list<int, short, int, float>;
 static_assert(std::is_same<find<L, int>, list<int, short, int, float>>::value, "");
@@ -159,7 +159,7 @@ struct check_integral
     }
 };
 
-#ifndef META_WORKAROUND_MSVC_FIXME
+#ifndef META_WORKAROUND_MSVC_UNCLASSIFIED
 // Test for meta::let
 template<typename T, typename List>
 using find_index_ = let<
@@ -224,7 +224,7 @@ static_assert(factorial<meta::size_t<1>>::value == 1, "");
 static_assert(factorial<meta::size_t<2>>::value == 2, "");
 static_assert(factorial<meta::size_t<3>>::value == 6, "");
 static_assert(factorial<meta::size_t<4>>::value == 24, "");
-#endif
+#endif // META_WORKAROUND_MSVC_UNCLASSIFIED
 
 int main()
 {
@@ -312,13 +312,13 @@ int main()
         static_assert(meta::count_if<l, lambda<_c, std::is_same<_c, double>>>{} == 0, "");
     }
 
-#ifndef META_WORKAROUND_MSVC_FIXME
+#ifndef META_WORKAROUND_MSVC_UNCLASSIFIED
     // pathological lambda test
     {
         using X = invoke<lambda<_a, lambda_test<_a>>, int>;
         static_assert(std::is_same<X, lambda_test<_a>>::value, "");
     }
-#endif
+#endif // META_WORKAROUND_MSVC_UNCLASSIFIED
 
     // meta::unique
     {
@@ -334,7 +334,7 @@ int main()
         static_assert(!in<list<int, int, short, float>, double>::value, "");
     }
 
-#ifndef META_WORKAROUND_MSVC_FIXME
+#ifndef META_WORKAROUND_MSVC_UNCLASSIFIED
     // lambda with variadic placeholders
     {
         using X = invoke<lambda<_args, list<_args>>, int, short, double>;
@@ -395,7 +395,7 @@ int main()
                 L2, list<char[1], char[2], char[3], char[5], char[5], char[6], char[10]>>::value,
             "");
     }
-#endif
+#endif // META_WORKAROUND_MSVC_UNCLASSIFIED
 
     // Check the _z user-defined literal:
     static_assert(42_z == 42, "");
