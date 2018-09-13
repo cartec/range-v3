@@ -152,38 +152,11 @@ namespace ranges
             struct Readable
             {
             private:
-#ifdef RANGES_WORKAROUND_MSVC_UNCLASSIFIED
-                template<typename, typename = void> struct _reference_t_ {};
-                template<typename I>
-                struct _reference_t_<I, meta::void_<
-                    decltype(*std::declval<I &>()),
-                    decltype(*std::declval<I &>()) &>>
-                {
-                    using type = decltype(*std::declval<I &>());
-                };
-
-                template<typename I>
-                using reference_t_ = meta::_t<_reference_t_<I>>;
-
-                template<typename, typename = void> struct _rvalue_reference_t_ {};
-                template<typename I>
-                struct _rvalue_reference_t_<I, meta::void_<
-                    reference_t_<I>,
-                    decltype(iter_move(std::declval<I &>())),
-                    decltype(iter_move(std::declval<I &>())) &>>
-                {
-                    using type = decltype(iter_move(std::declval<I &>()));
-                };
-
-                template<typename I>
-                using rvalue_reference_t_ = meta::_t<_rvalue_reference_t_<I>>;
-#else
                 template<typename I,
                     typename = reference_t<I>,
                     typename R = decltype(iter_move(std::declval<I &>())),
                     typename = R&>
                 using rvalue_reference_t_ = R;
-#endif
             public:
                 // Associated types
                 template<typename I>
