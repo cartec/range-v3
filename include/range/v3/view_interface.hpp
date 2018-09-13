@@ -116,10 +116,12 @@ namespace ranges
             {
                 return ranges::empty(derived());
             }
+#ifndef RANGES_WORKAROUND_MSVC_683168 // "Workaround"
             template<typename D = Derived, CONCEPT_REQUIRES_(Same<D, Derived>()),
                 typename = decltype(ranges::empty(std::declval<D const &>()))>
             constexpr explicit operator bool() const
                 noexcept(noexcept(ranges::empty(std::declval<D const &>())))
+#endif
             {
                 return !ranges::empty(derived());
             }
