@@ -72,25 +72,8 @@ namespace ranges
             template<typename T, typename U>
             using _builtin_common_t = meta::_t<_builtin_common<T, U>>;
 
-#ifdef RANGES_WORKAROUND_MSVC_620164
-            template<typename, typename, typename = void> struct _cond_res_ {};
-            template<typename T, typename U>
-            struct _cond_res_<T, U,
-                meta::void_<decltype(true ? std::declval<T>() : std::declval<U>())>>
-            {
-                using type = decltype(true ? std::declval<T>() : std::declval<U>());
-            };
-            template<typename T>
-            struct _cond_res_<T &, T &, void>
-            {
-                using type = T &;
-            };
-            template<typename T, typename U>
-            using _cond_res = meta::_t<_cond_res_<T, U>>;
-#else
             template<typename T, typename U>
             using _cond_res = decltype(true ? std::declval<T>() : std::declval<U>());
-#endif
 
             template<typename T, typename U, typename R = _builtin_common_t<T &, U &>>
             using _rref_res =
