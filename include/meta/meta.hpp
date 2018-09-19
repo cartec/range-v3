@@ -2970,8 +2970,11 @@ namespace meta
 
             template <typename As, typename Ts>
             using substitutions =
+#ifdef META_WORKAROUND_MSVC_UNFILED1
+                invoke<if_c<(size<Ts>::value + 2 >= size<As>::value), quote<substitutions_>>, As, Ts>;
+#else // ^^^ workaround ^^^ / vvv no workaround vvv
                 invoke<if_c<(size<Ts>{} + 2 >= size<As>{}), quote<substitutions_>>, As, Ts>;
-
+#endif //  META_WORKAROUND_MSVC_UNFILED1
             template <typename T>
             struct is_vararg_ : std::false_type
             {
