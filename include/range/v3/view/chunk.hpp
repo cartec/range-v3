@@ -364,14 +364,14 @@ namespace ranges
             CONCEPT_REQUIRES(SizedRange<Rng const>())
             RANGES_CXX14_CONSTEXPR
             range_size_type_t<Rng> size() const
-                noexcept(noexcept(ranges::distance(std::declval<Rng const &>())))
+                RANGES_NOEXCEPT(noexcept(ranges::distance(std::declval<Rng const &>())))
             {
                 return size_(ranges::distance(base()));
             }
             CONCEPT_REQUIRES(SizedRange<Rng>())
             RANGES_CXX14_CONSTEXPR
             range_size_type_t<Rng> size()
-                noexcept(noexcept(ranges::distance(std::declval<Rng &>())))
+                RANGES_NOEXCEPT(noexcept(ranges::distance(std::declval<Rng &>())))
             {
                 return size_(ranges::distance(base()));
             }

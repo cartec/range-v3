@@ -62,7 +62,7 @@ namespace test {
             ranges::fill_n(elems_, N, u);
         }
         RANGES_CXX14_CONSTEXPR
-        void swap(array& a) noexcept(ranges::is_nothrow_swappable<T>::value)
+        void swap(array& a) RANGES_NOEXCEPT((ranges::is_nothrow_swappable<T>::value))
         {
             ranges::swap_ranges(elems_, elems_ + N, a.elems_);
         }
@@ -239,7 +239,7 @@ namespace test {
     template<class T, size_t N>
     RANGES_CXX14_CONSTEXPR
     auto swap(array<T, N>& x, array<T, N>& y)
-    noexcept(ranges::is_nothrow_swappable<T>::value)
+    RANGES_NOEXCEPT((ranges::is_nothrow_swappable<T>::value))
     -> typename std::enable_if<ranges::is_swappable<T>::value, void>::type
     {
         x.swap(y);

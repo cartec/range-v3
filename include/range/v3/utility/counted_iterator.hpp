@@ -123,14 +123,14 @@ namespace ranges
             }
 
             reference_t<I> operator*()
-                noexcept(noexcept(reference_t<I>(*current_)))
+                RANGES_NOEXCEPT(noexcept(reference_t<I>(*current_)))
             {
                 RANGES_EXPECT(cnt_ > 0);
                 return *current_;
             }
             template<typename I2 = I, CONCEPT_REQUIRES_(Readable<I const>())>
             reference_t<I2> operator*() const
-                noexcept(noexcept(reference_t<I>(*current_)))
+                RANGES_NOEXCEPT(noexcept(reference_t<I>(*current_)))
             {
                 RANGES_EXPECT(cnt_ > 0);
                 return *current_;

@@ -147,7 +147,7 @@ namespace ranges
                     CONCEPT_REQUIRES_(ConvertibleTo<Arg, Reference>() &&
                         std::is_assignable<semiregular_t<Reference> &, Arg>::value)>
                 std::experimental::suspend_always yield_value(Arg &&arg)
-                    noexcept(std::is_nothrow_assignable<semiregular_t<Reference> &, Arg>::value)
+                    RANGES_NOEXCEPT((std::is_nothrow_assignable<semiregular_t<Reference> &, Arg>::value))
                 {
                     ref_ = std::forward<Arg>(arg);
                     return {};

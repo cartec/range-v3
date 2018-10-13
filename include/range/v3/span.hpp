@@ -151,7 +151,7 @@ namespace ranges
                 CONCEPT_REQUIRES_(CompatibleRange<Rng>()),
                 CONCEPT_REQUIRES_(DynamicConversion<Rng>())>
             constexpr span(Rng &&rng)
-                noexcept(noexcept(ranges::data(rng), ranges::size(rng)))
+                RANGES_NOEXCEPT(noexcept(ranges::data(rng), ranges::size(rng)))
               : span{ranges::data(rng), detail::narrow_cast<index_type>(ranges::size(rng))}
             {}
 
@@ -163,7 +163,7 @@ namespace ranges
                 CONCEPT_REQUIRES_(CompatibleRange<Rng>()),
                 CONCEPT_REQUIRES_(StaticConversion<Rng>())>
             constexpr span(Rng &&rng)
-                noexcept(noexcept(ranges::data(rng)))
+                RANGES_NOEXCEPT(noexcept(ranges::data(rng)))
               : span{ranges::data(rng), N}
             {}
 
@@ -366,7 +366,7 @@ namespace ranges
                 range_cardinality<Rng>::value < cardinality{})>
         constexpr span<concepts::ContiguousRange::element_t<Rng>>
         make_span(Rng &&rng)
-            noexcept(noexcept(ranges::data(rng), ranges::size(rng)))
+            RANGES_NOEXCEPT(noexcept(ranges::data(rng), ranges::size(rng)))
         {
             return {ranges::data(rng),
                 detail::narrow_cast<detail::span_index_t>(ranges::size(rng))};
@@ -377,7 +377,7 @@ namespace ranges
         constexpr span<concepts::ContiguousRange::element_t<Rng>,
             static_cast<detail::span_index_t>(range_cardinality<Rng>::value)>
         make_span(Rng &&rng)
-            noexcept(noexcept(ranges::data(rng)))
+            RANGES_NOEXCEPT(noexcept(ranges::data(rng)))
         {
             return {ranges::data(rng), range_cardinality<Rng>::value};
         }

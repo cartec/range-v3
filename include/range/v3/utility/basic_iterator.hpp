@@ -40,17 +40,17 @@ namespace ranges
         {
             CONCEPT_REQUIRES(DefaultConstructible<T>())
             constexpr basic_mixin()
-                noexcept(std::is_nothrow_default_constructible<T>::value)
+                RANGES_NOEXCEPT((std::is_nothrow_default_constructible<T>::value))
               : box<T>{}
             {}
             CONCEPT_REQUIRES(MoveConstructible<T>())
             explicit constexpr basic_mixin(T &&t)
-                noexcept(std::is_nothrow_move_constructible<T>::value)
+                RANGES_NOEXCEPT((std::is_nothrow_move_constructible<T>::value))
               : box<T>(detail::move(t))
             {}
             CONCEPT_REQUIRES(CopyConstructible<T>())
             explicit constexpr basic_mixin(T const &t)
-                noexcept(std::is_nothrow_copy_constructible<T>::value)
+                RANGES_NOEXCEPT((std::is_nothrow_copy_constructible<T>::value))
               : box<T>(t)
             {}
         protected:
@@ -83,7 +83,7 @@ namespace ranges
             struct proxy_reference_conversion
             {
                 operator Head() const
-                    noexcept(noexcept(Head(Head(std::declval<Derived const &>().read_()))))
+                    RANGES_NOEXCEPT(noexcept(Head(Head(std::declval<Derived const &>().read_()))))
                 {
                     return Head(static_cast<Derived const *>(this)->read_());
                 }
@@ -151,7 +151,7 @@ namespace ranges
                     "type trait.");
                 RANGES_CXX14_CONSTEXPR
                 reference_t_ read_() const
-                    noexcept(noexcept(reference_t_(range_access::read(std::declval<Cur const &>()))))
+                    RANGES_NOEXCEPT(noexcept(reference_t_(range_access::read(std::declval<Cur const &>()))))
                 {
                     return range_access::read(*cur_);
                 }
@@ -407,7 +407,7 @@ namespace ranges
                     !detail::HasCursorNext<Cur>() && detail::WritableCursor<Cur, T>())>
             RANGES_CXX14_CONSTEXPR
             basic_iterator &operator=(T && t)
-            noexcept(noexcept(std::declval<Cur &>().write(static_cast<T &&>(t))))
+            RANGES_NOEXCEPT(noexcept(std::declval<Cur &>().write(static_cast<T &&>(t))))
             {
                 pos().write(static_cast<T &&>(t));
                 return *this;
@@ -418,7 +418,7 @@ namespace ranges
                     !detail::HasCursorNext<Cur>() && detail::WritableCursor<Cur const, T>())>
             RANGES_CXX14_CONSTEXPR
             basic_iterator const &operator=(T && t) const
-            noexcept(noexcept(std::declval<Cur const &>().write(static_cast<T &&>(t))))
+            RANGES_NOEXCEPT(noexcept(std::declval<Cur const &>().write(static_cast<T &&>(t))))
             {
                 pos().write(static_cast<T &&>(t));
                 return *this;
@@ -427,21 +427,21 @@ namespace ranges
             CONCEPT_REQUIRES(detail::ReadableCursor<Cur>() &&
                 !detail::is_writable_cursor<Cur>())
             constexpr const_reference_t operator*() const
-            noexcept(noexcept(range_access::read(std::declval<Cur const &>())))
+            RANGES_NOEXCEPT(noexcept(range_access::read(std::declval<Cur const &>())))
             {
                 return range_access::read(pos());
             }
             CONCEPT_REQUIRES(detail::HasCursorNext<Cur>() &&
                 detail::is_writable_cursor<Cur>())
             RANGES_CXX14_CONSTEXPR reference_t operator*()
-            noexcept(noexcept(reference_t{std::declval<Cur &>()}))
+            RANGES_NOEXCEPT(noexcept(reference_t{std::declval<Cur &>()}))
             {
                 return reference_t{pos()};
             }
             CONCEPT_REQUIRES(detail::HasCursorNext<Cur>() &&
                 detail::is_writable_cursor<Cur const>())
             constexpr const_reference_t operator*() const
-            noexcept(noexcept(const_reference_t{std::declval<Cur const &>()}))
+            RANGES_NOEXCEPT(noexcept(const_reference_t{std::declval<Cur const &>()}))
             {
                 return const_reference_t{pos()};
             }
@@ -455,7 +455,7 @@ namespace ranges
             template<typename C = Cur,
                 CONCEPT_REQUIRES_(detail::HasCursorArrow<C>())>
             constexpr auto operator->() const
-            noexcept(noexcept(range_access::arrow(std::declval<C const &>())))
+            RANGES_NOEXCEPT(noexcept(range_access::arrow(std::declval<C const &>())))
                 -> detail::cursor_arrow_t<C>
             {
                 return range_access::arrow(pos());
@@ -470,7 +470,7 @@ namespace ranges
                         uncvref_t<const_reference_t>>())>
             constexpr meta::_t<std::add_pointer<const_reference_t>>
             operator->() const
-            noexcept(noexcept(*std::declval<basic_iterator const &>()))
+            RANGES_NOEXCEPT(noexcept(*std::declval<basic_iterator const &>()))
             {
                 return std::addressof(**this);
             }
@@ -694,7 +694,7 @@ namespace ranges
             template<typename Cur>
             RANGES_CXX14_CONSTEXPR
             Cur operator()(basic_iterator<Cur> && it) const
-                noexcept(std::is_nothrow_move_constructible<Cur>::value)
+                RANGES_NOEXCEPT((std::is_nothrow_move_constructible<Cur>::value))
             {
                 return range_access::pos(std::move(it));
             }

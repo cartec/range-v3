@@ -284,7 +284,7 @@ namespace ranges
         public:
             CONCEPT_REQUIRES(DefaultConstructible<FD>())
             constexpr logical_negate_()
-                noexcept(std::is_nothrow_default_constructible<FD>::value)
+                RANGES_NOEXCEPT((std::is_nothrow_default_constructible<FD>::value))
             {}
             template<typename T,
                 typename U = meta::if_c<!Same<detail::decay_t<T>, logical_negate_>(), T>,
@@ -553,14 +553,14 @@ namespace ranges
             // Rvalue reference
             template<typename ...Its>
             auto operator()(move_tag, Its ...its)
-                noexcept(noexcept(aux::move(invoke(std::declval<Fn &>(), *its...)))) ->
+                RANGES_NOEXCEPT(noexcept(aux::move(invoke(std::declval<Fn &>(), *its...)))) ->
                 aux::move_t<decltype(invoke(std::declval<Fn &>(), *its...))>
             {
                 return aux::move(invoke(get(), *its...));
             }
             template<typename ...Its>
             auto operator()(move_tag, Its ...its) const
-                noexcept(noexcept(aux::move(invoke(std::declval<Fn const &>(), *its...)))) ->
+                RANGES_NOEXCEPT(noexcept(aux::move(invoke(std::declval<Fn const &>(), *its...)))) ->
                 aux::move_t<decltype(invoke(std::declval<Fn const &>(), *its...))>
             {
                 return aux::move(invoke(get(), *its...));

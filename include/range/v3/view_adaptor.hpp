@@ -123,7 +123,7 @@ namespace ranges
             template<typename I, CONCEPT_REQUIRES_(Iterator<I>())>
             static reference_t<I> read(I const &it,
                 detail::adaptor_base_current_mem_fn = {})
-                noexcept(noexcept(reference_t<I>(*it)))
+                RANGES_NOEXCEPT(noexcept(reference_t<I>(*it)))
             {
                 return *it;
             }
@@ -208,7 +208,7 @@ namespace ranges
             template<typename A = Adapt, typename R = decltype(
                 std::declval<A const &>().read(std::declval<BaseIter const &>()))>
             R read() const
-                noexcept(noexcept(
+                RANGES_NOEXCEPT(noexcept(
                     std::declval<A const &>().read(std::declval<BaseIter const &>())))
             {
                 using V = range_access::cursor_value_t<adaptor_cursor>;
@@ -310,7 +310,7 @@ namespace ranges
                 std::declval<A const&>().iter_move(
                     std::declval<BaseIter const&>()))>
             X iter_move_(int) const
-                noexcept(noexcept(std::declval<A const &>().iter_move(
+                RANGES_NOEXCEPT(noexcept(std::declval<A const &>().iter_move(
                     std::declval<BaseIter const &>())))
             {
                 using V = range_access::cursor_value_t<adaptor_cursor>;
@@ -333,7 +333,7 @@ namespace ranges
                     std::declval<BaseIter const &>(), detail::adaptor_base_current_mem_fn{})),
                 typename X = rvalue_reference_t<BaseIter>>
             X iter_move_(long) const
-                noexcept(noexcept(X(ranges::iter_move(std::declval<BaseIter const &>()))))
+                RANGES_NOEXCEPT(noexcept(X(ranges::iter_move(std::declval<BaseIter const &>()))))
             {
                 return ranges::iter_move(first());
             }
@@ -343,7 +343,7 @@ namespace ranges
                 typename R = decltype(std::declval<A const &>().read(std::declval<BaseIter const &>())),
                 typename X = aux::move_t<R>>
             X iter_move_(detail::any) const
-                noexcept(noexcept(X(static_cast<X &&>(
+                RANGES_NOEXCEPT(noexcept(X(static_cast<X &&>(
                     std::declval<A const &>().read(std::declval<BaseIter const &>())))))
             {
                 using V = range_access::cursor_value_t<adaptor_cursor>;
@@ -356,7 +356,7 @@ namespace ranges
             }
             // Gives users a way to override the default iter_move function in their adaptors.
             auto move() const
-                noexcept(noexcept(std::declval<const adaptor_cursor &>().iter_move_(42))) ->
+                RANGES_NOEXCEPT(noexcept(std::declval<const adaptor_cursor &>().iter_move_(42))) ->
                 decltype(std::declval<const adaptor_cursor &>().iter_move_(42))
             {
                 return iter_move_(42);
@@ -403,7 +403,7 @@ namespace ranges
 
             template<typename D>
             static RANGES_CXX14_CONSTEXPR adaptor_cursor_t<D> begin_cursor_(D &d)
-                noexcept(noexcept(adaptor_cursor_t<D>{
+                RANGES_NOEXCEPT(noexcept(adaptor_cursor_t<D>{
                     std::declval<detail::begin_adaptor_t<D> &>().begin(d),
                     range_access::begin_adaptor(d, 42)}))
             {
@@ -427,7 +427,7 @@ namespace ranges
 
             template<typename D>
             static RANGES_CXX14_CONSTEXPR adaptor_sentinel_t<D> end_cursor_(D &d)
-                noexcept(noexcept(adaptor_sentinel_t<D>{
+                RANGES_NOEXCEPT(noexcept(adaptor_sentinel_t<D>{
                     std::declval<detail::end_adaptor_t<D> &>().end(d),
                     range_access::end_adaptor(d, 42)}))
             {

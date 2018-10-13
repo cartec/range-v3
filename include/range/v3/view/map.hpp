@@ -41,7 +41,7 @@ namespace ranges
                 CONCEPT_REQUIRES_(MoveConstructible<T>())>
             RANGES_CXX14_CONSTEXPR T
             get_first_second_helper(T& t, std::false_type)
-                noexcept(std::is_nothrow_move_constructible<T>::value)
+                RANGES_NOEXCEPT((std::is_nothrow_move_constructible<T>::value))
             {
                 return std::move(t);
             }

@@ -96,7 +96,7 @@ namespace ranges
                     template<typename... Args,
                         CONCEPT_REQUIRES_(Constructible<T, Args...>())>
                     constexpr explicit optional_storage(in_place_t, Args &&... args)
-                        noexcept(std::is_nothrow_constructible<T, Args...>::value)
+                        RANGES_NOEXCEPT((std::is_nothrow_constructible<T, Args...>::value))
                       : data_(static_cast<Args &&>(args)...), engaged_{true}
                     {}
 
@@ -134,7 +134,7 @@ namespace ranges
                     template<typename... Args,
                         CONCEPT_REQUIRES_(Constructible<T, Args...>())>
                     constexpr explicit optional_storage(in_place_t, Args &&... args)
-                        noexcept(std::is_nothrow_constructible<T, Args...>::value)
+                        RANGES_NOEXCEPT((std::is_nothrow_constructible<T, Args...>::value))
                       : data_(static_cast<Args &&>(args)...), engaged_{true}
                     {}
                     optional_storage(optional_storage const &) = default;
@@ -189,8 +189,8 @@ namespace ranges
                     }
                     CONCEPT_REQUIRES(MoveConstructible<T>() && Swappable<T &>())
                     RANGES_CXX14_CONSTEXPR void swap(optional_base &that)
-                        noexcept(std::is_nothrow_move_constructible<T>::value &&
-                            is_nothrow_swappable<T>::value)
+                        RANGES_NOEXCEPT((std::is_nothrow_move_constructible<T>::value &&
+                            is_nothrow_swappable<T>::value))
                     {
                         constexpr bool can_swap_trivially =
                             !adl_swap_detail::is_adl_swappable_<T>::value &&
@@ -203,7 +203,7 @@ namespace ranges
                     template<typename... Args,
                         CONCEPT_REQUIRES_(Constructible<T, Args...>())>
                     T &construct_from(Args &&... args)
-                        noexcept(std::is_nothrow_constructible<T, Args...>::value)
+                        RANGES_NOEXCEPT((std::is_nothrow_constructible<T, Args...>::value))
                     {
                         RANGES_EXPECT(!engaged_);
                         auto const address = static_cast<void *>(std::addressof(data_));
@@ -213,11 +213,11 @@ namespace ranges
                     }
                     template<typename U>
                     RANGES_CXX14_CONSTEXPR void assign_from(U &&that)
-                        noexcept(
+                        RANGES_NOEXCEPT((
                             std::is_nothrow_constructible<T,
                                 decltype(*static_cast<U &&>(that))>::value &&
                             std::is_nothrow_assignable<T &,
-                                decltype(*static_cast<U &&>(that))>::value)
+                                decltype(*static_cast<U &&>(that))>::value))
                     {
                         if (!that.has_value())
                             reset();
@@ -240,8 +240,8 @@ namespace ranges
                     }
                     RANGES_CXX14_CONSTEXPR
                     void swap_(std::false_type, optional_base &that)
-                        noexcept(std::is_nothrow_move_constructible<T>::value &&
-                            is_nothrow_swappable<T>::value)
+                        RANGES_NOEXCEPT((std::is_nothrow_move_constructible<T>::value &&
+                            is_nothrow_swappable<T>::value))
                     {
                         if (that.engaged_ == engaged_)
                         {
@@ -288,7 +288,7 @@ namespace ranges
                     }
                     CONCEPT_REQUIRES(Swappable<T &>())
                     RANGES_CXX14_CONSTEXPR void swap(optional_base &that)
-                        noexcept(is_nothrow_swappable<T &>::value)
+                        RANGES_NOEXCEPT((is_nothrow_swappable<T &>::value))
                     {
                         if (ptr_ && that.ptr_)
                             ranges::swap(*ptr_, *that.ptr_);
@@ -322,7 +322,7 @@ namespace ranges
                 {
                     optional_copy() = default;
                     optional_copy(optional_copy const &that)
-                        noexcept(std::is_nothrow_copy_constructible<T>::value)
+                        RANGES_NOEXCEPT((std::is_nothrow_copy_constructible<T>::value))
                     {
                         if (that.has_value())
                             this->construct_from(*that);
@@ -347,7 +347,7 @@ namespace ranges
                     optional_move() = default;
                     optional_move(optional_move const &) = default;
                     optional_move(optional_move &&that)
-                        noexcept(std::is_nothrow_move_constructible<T>::value)
+                        RANGES_NOEXCEPT((std::is_nothrow_move_constructible<T>::value))
                     {
                         if (that.has_value())
                             this->construct_from(std::move(*that));
@@ -372,8 +372,8 @@ namespace ranges
                     optional_copy_assign(optional_copy_assign const &) = default;
                     optional_copy_assign(optional_copy_assign &&) = default;
                     optional_copy_assign &operator=(optional_copy_assign const &that)
-                        noexcept(std::is_nothrow_copy_constructible<T>::value &&
-                            std::is_nothrow_copy_assignable<T>::value)
+                        RANGES_NOEXCEPT((std::is_nothrow_copy_constructible<T>::value &&
+                            std::is_nothrow_copy_assignable<T>::value))
                     {
                         this->assign_from(that);
                         return *this;
@@ -415,8 +415,8 @@ namespace ranges
                     optional_move_assign(optional_move_assign &&) = default;
                     optional_move_assign &operator=(optional_move_assign const &) = default;
                     optional_move_assign &operator=(optional_move_assign &&that)
-                        noexcept(std::is_nothrow_move_constructible<T>::value &&
-                            std::is_nothrow_move_assignable<T>::value)
+                        RANGES_NOEXCEPT((std::is_nothrow_move_constructible<T>::value &&
+                            std::is_nothrow_move_assignable<T>::value))
                     {
                         this->assign_from(std::move(that));
                         return *this;
@@ -477,7 +477,7 @@ namespace ranges
             template<typename E, typename... Args,
                 CONCEPT_REQUIRES_(Constructible<T, std::initializer_list<E> &, Args...>())>
             constexpr explicit optional(in_place_t, std::initializer_list<E> il, Args &&... args)
-                noexcept(std::is_nothrow_constructible<T, std::initializer_list<E> &, Args...>::value)
+                RANGES_NOEXCEPT((std::is_nothrow_constructible<T, std::initializer_list<E> &, Args...>::value))
               : base_t(in_place, il, static_cast<Args &&>(args)...)
             {}
 
@@ -571,8 +571,8 @@ namespace ranges
                     Assignable<T &, U>>::value)>
             RANGES_CXX14_CONSTEXPR
             optional &operator=(U &&u)
-                noexcept(std::is_nothrow_constructible<T, U>::value &&
-                    std::is_nothrow_assignable<T &, U>::value)
+                RANGES_NOEXCEPT((std::is_nothrow_constructible<T, U>::value &&
+                    std::is_nothrow_assignable<T &, U>::value))
             {
                 if (has_value())
                     **this = static_cast<U &&>(u);
@@ -617,7 +617,7 @@ namespace ranges
             template<typename... Args,
                 CONCEPT_REQUIRES_(Constructible<T, Args...>())>
             T &emplace(Args &&... args)
-                noexcept(std::is_nothrow_constructible<T, Args...>::value)
+                RANGES_NOEXCEPT((std::is_nothrow_constructible<T, Args...>::value))
             {
                 reset();
                 return base_t::construct_from(static_cast<Args &&>(args)...);
@@ -625,8 +625,8 @@ namespace ranges
             template<typename E, typename... Args,
                 CONCEPT_REQUIRES_(Constructible<T, std::initializer_list<E> &, Args &&...>())>
             T &emplace(std::initializer_list<E> il, Args &&... args)
-                noexcept(std::is_nothrow_constructible<
-                    T, std::initializer_list<E> &, Args...>::value)
+                RANGES_NOEXCEPT((std::is_nothrow_constructible<
+                    T, std::initializer_list<E> &, Args...>::value))
             {
                 reset();
                 return base_t::construct_from(il, static_cast<Args &&>(args)...);
@@ -692,7 +692,7 @@ namespace ranges
                 // Relational operators [optional.relops]
                 template<typename T, typename U>
                 constexpr auto operator==(optional<T> const &x, optional<U> const &y)
-                    noexcept(noexcept(convert_bool(*x == *y))) ->
+                    RANGES_NOEXCEPT(noexcept(convert_bool(*x == *y))) ->
                     decltype(convert_bool(*x == *y))
                 {
                     return x.has_value() == y.has_value() &&
@@ -700,7 +700,7 @@ namespace ranges
                 }
                 template<typename T, typename U>
                 constexpr auto operator!=(optional<T> const &x, optional<U> const &y)
-                    noexcept(noexcept(convert_bool(*x != *y))) ->
+                    RANGES_NOEXCEPT(noexcept(convert_bool(*x != *y))) ->
                     decltype(convert_bool(*x != *y))
                 {
                     return x.has_value() != y.has_value() ||
@@ -708,28 +708,28 @@ namespace ranges
                 }
                 template<typename T, typename U>
                 constexpr auto operator<(optional<T> const &x, optional<U> const &y)
-                    noexcept(noexcept(convert_bool(*x < *y))) ->
+                    RANGES_NOEXCEPT(noexcept(convert_bool(*x < *y))) ->
                     decltype(convert_bool(*x < *y))
                 {
                     return y && (!x || convert_bool(*x < *y));
                 }
                 template<typename T, typename U>
                 constexpr auto operator>(optional<T> const &x, optional<U> const &y)
-                    noexcept(noexcept(convert_bool(*x > *y))) ->
+                    RANGES_NOEXCEPT(noexcept(convert_bool(*x > *y))) ->
                     decltype(convert_bool(*x > *y))
                 {
                     return x && (!y || convert_bool(*x > *y));
                 }
                 template<typename T, typename U>
                 constexpr auto operator<=(optional<T> const &x, optional<U> const &y)
-                    noexcept(noexcept(convert_bool(*x <= *y))) ->
+                    RANGES_NOEXCEPT(noexcept(convert_bool(*x <= *y))) ->
                     decltype(convert_bool(*x <= *y))
                 {
                     return !x || (y && convert_bool(*x <= *y));
                 }
                 template<typename T, typename U>
                 constexpr auto operator>=(optional<T> const &x, optional<U> const &y)
-                    noexcept(noexcept(convert_bool(*x >= *y))) ->
+                    RANGES_NOEXCEPT(noexcept(convert_bool(*x >= *y))) ->
                     decltype(convert_bool(*x >= *y))
                 {
                     return !y || (x && convert_bool(*x >= *y));
@@ -800,84 +800,84 @@ namespace ranges
                 // Comparisons with T [optional.comp_with_t]
                 template<typename T, typename U>
                 constexpr auto operator==(optional<T> const &x, U const &y)
-                    noexcept(noexcept(convert_bool(*x == y))) ->
+                    RANGES_NOEXCEPT(noexcept(convert_bool(*x == y))) ->
                     decltype(convert_bool(*x == y))
                 {
                     return x && convert_bool(*x == y);
                 }
                 template<typename T, typename U>
                 constexpr auto operator==(T const &x, optional<U> const &y)
-                    noexcept(noexcept(convert_bool(x == *y))) ->
+                    RANGES_NOEXCEPT(noexcept(convert_bool(x == *y))) ->
                     decltype(convert_bool(x == *y))
                 {
                     return y && convert_bool(x == *y);
                 }
                 template<typename T, typename U>
                 constexpr auto operator!=(optional<T> const &x, U const &y)
-                    noexcept(noexcept(convert_bool(*x != y))) ->
+                    RANGES_NOEXCEPT(noexcept(convert_bool(*x != y))) ->
                     decltype(convert_bool(*x != y))
                 {
                     return !x || convert_bool(*x != y);
                 }
                 template<typename T, typename U>
                 constexpr auto operator!=(T const &x, optional<U> const &y)
-                    noexcept(noexcept(convert_bool(x != *y))) ->
+                    RANGES_NOEXCEPT(noexcept(convert_bool(x != *y))) ->
                     decltype(convert_bool(x != *y))
                 {
                     return !y || convert_bool(x != *y);
                 }
                 template<typename T, typename U>
                 constexpr auto operator<(optional<T> const &x, U const &y)
-                    noexcept(noexcept(convert_bool(*x < y))) ->
+                    RANGES_NOEXCEPT(noexcept(convert_bool(*x < y))) ->
                     decltype(convert_bool(*x < y))
                 {
                     return !x || convert_bool(*x < y);
                 }
                 template<typename T, typename U>
                 constexpr auto operator<(T const &x, optional<U> const &y)
-                    noexcept(noexcept(convert_bool(x < *y))) ->
+                    RANGES_NOEXCEPT(noexcept(convert_bool(x < *y))) ->
                     decltype(convert_bool(x < *y))
                 {
                     return y && convert_bool(x < *y);
                 }
                 template<typename T, typename U>
                 constexpr auto operator>(optional<T> const &x, U const &y)
-                    noexcept(noexcept(convert_bool(*x > y))) ->
+                    RANGES_NOEXCEPT(noexcept(convert_bool(*x > y))) ->
                     decltype(convert_bool(*x > y))
                 {
                     return x && convert_bool(*x > y);
                 }
                 template<typename T, typename U>
                 constexpr auto operator>(T const &x, optional<U> const &y)
-                    noexcept(noexcept(convert_bool(x > *y))) ->
+                    RANGES_NOEXCEPT(noexcept(convert_bool(x > *y))) ->
                     decltype(convert_bool(x > *y))
                 {
                     return !y || convert_bool(x > *y);
                 }
                 template<typename T, typename U>
                 constexpr auto operator<=(optional<T> const &x, U const &y)
-                    noexcept(noexcept(convert_bool(*x <= y))) ->
+                    RANGES_NOEXCEPT(noexcept(convert_bool(*x <= y))) ->
                     decltype(convert_bool(*x <= y))
                 {
                     return !x || convert_bool(*x <= y);
                 }
                 template<typename T, typename U>
                 constexpr auto operator<=(T const &x, optional<U> const &y)
-                    noexcept(noexcept(convert_bool(x <= *y))) ->
+                    RANGES_NOEXCEPT(noexcept(convert_bool(x <= *y))) ->
                     decltype(convert_bool(x <= *y))
                 {
                     return y && convert_bool(x <= *y);
                 }
                 template<typename T, typename U>
                 constexpr auto operator>=(optional<T> const &x, U const &y)
-                    noexcept(noexcept(convert_bool(*x >= y))) ->
+                    RANGES_NOEXCEPT(noexcept(convert_bool(*x >= y))) ->
                     decltype(convert_bool(*x >= y))
                 {
                     return x && convert_bool(*x >= y);
                 }
                 template<typename T, typename U>
                 constexpr auto operator>=(T const &x, optional<U> const &y)
-                    noexcept(noexcept(convert_bool(x >= *y))) ->
+                    RANGES_NOEXCEPT(noexcept(convert_bool(x >= *y))) ->
                     decltype(convert_bool(x >= *y))
                 {
                     return !y || convert_bool(x >= *y);

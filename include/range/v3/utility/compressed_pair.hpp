@@ -49,14 +49,14 @@ namespace ranges
                 template<typename... Args,
                     meta::if_<meta::strict_and<std::is_constructible<Ts, Args>...>, int> = 0>
                 constexpr compressed_tuple_(Args &&... args)
-                    noexcept(meta::strict_and<std::is_nothrow_constructible<storage<Ts, Is, Ts...>, Args>...>::value)
+                    RANGES_NOEXCEPT((meta::strict_and<std::is_nothrow_constructible<storage<Ts, Is, Ts...>, Args>...>::value))
                   : storage<Ts, Is, Ts...>{static_cast<Args&&>(args)}...
                 {}
 
                 template<typename... Us,
                     meta::if_<meta::strict_and<std::is_constructible<Us, Ts const &>...>, int> = 0>
                 constexpr operator std::tuple<Us...> () const
-                    noexcept(meta::strict_and<std::is_nothrow_constructible<Us, Ts const &>...>::value)
+                    RANGES_NOEXCEPT((meta::strict_and<std::is_nothrow_constructible<Us, Ts const &>...>::value))
                 {
                     return std::tuple<Us...>{get<Is>(*this)...};
                 }
@@ -134,8 +134,8 @@ namespace ranges
                 meta::if_<meta::strict_and<std::is_constructible<F, First const &>,
                                            std::is_constructible<S, Second const &>>, int> = 0>
             constexpr operator std::pair<F, S> () const
-                noexcept(std::is_nothrow_constructible<F, First const&>::value &&
-                    std::is_nothrow_constructible<S, Second const&>::value)
+                RANGES_NOEXCEPT((std::is_nothrow_constructible<F, First const&>::value &&
+                    std::is_nothrow_constructible<S, Second const&>::value))
             {
                 return std::pair<F, S>{first(), second()};
             }

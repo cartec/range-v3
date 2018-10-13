@@ -66,7 +66,7 @@ namespace ranges
             std::is_move_constructible<T>::value &&
             std::is_assignable<T &, U>::value, T>
         exchange(T &t, U &&u)
-            noexcept(
+            RANGES_NOEXCEPT(
                 std::is_nothrow_move_constructible<T>::value &&
                 std::is_nothrow_assignable<T &, U>::value)
         {
@@ -132,7 +132,7 @@ namespace ranges
                     !is_adl_swappable_<T (&)[N], U (&)[N]>::value &&
                     is_swappable_with<T &, U &>::value>
                 operator()(T (&t)[N], U (&u)[N]) const
-                    noexcept(is_nothrow_swappable_with<T &, U &>::value)
+                    RANGES_NOEXCEPT((is_nothrow_swappable_with<T &, U &>::value))
                 {
                     for(std::size_t i = 0; i < N; ++i)
                         (*this)(t[i], u[i]);
@@ -145,9 +145,9 @@ namespace ranges
                 RANGES_CXX14_CONSTEXPR
                 meta::if_c<is_swappable_with<F0, F1>::value && is_swappable_with<S0, S1>::value>
                 operator()(std::pair<F0, S0> &&left, std::pair<F1, S1> &&right) const
-                    noexcept(
+                    RANGES_NOEXCEPT((
                         is_nothrow_swappable_with<F0, F1>::value &&
-                        is_nothrow_swappable_with<S0, S1>::value)
+                        is_nothrow_swappable_with<S0, S1>::value))
                 {
                     swap_fn{}(detail::move(left).first, detail::move(right).first);
                     swap_fn{}(detail::move(left).second, detail::move(right).second);
@@ -157,7 +157,7 @@ namespace ranges
                 RANGES_CXX14_CONSTEXPR
                 meta::if_c<meta::and_c<is_swappable_with<Ts, Us>::value...>::value>
                 operator()(std::tuple<Ts...> &&left, std::tuple<Us...> &&right) const
-                    noexcept(meta::and_c<is_nothrow_swappable_with<Ts, Us>::value...>::value)
+                    RANGES_NOEXCEPT((meta::and_c<is_nothrow_swappable_with<Ts, Us>::value...>::value))
                 {
                     swap_fn::impl(detail::move(left), detail::move(right),
                         meta::make_index_sequence<sizeof...(Ts)>{});
@@ -267,7 +267,7 @@ namespace ranges
                     is_indirectly_movable<I0, I1>::value &&
                     is_indirectly_movable<I1, I0>::value>
                 operator()(I0 &&a, I1 &&b) const
-                    noexcept(
+                    RANGES_NOEXCEPT(
                         is_nothrow_indirectly_movable<I0, I1>::value &&
                         is_nothrow_indirectly_movable<I1, I0>::value)
                 {

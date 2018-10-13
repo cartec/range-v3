@@ -44,7 +44,7 @@ namespace ranges
         {
             adjacent_remove_if_view() = default;
             constexpr adjacent_remove_if_view(Rng rng, Pred pred)
-                noexcept(
+                RANGES_NOEXCEPT(
                     std::is_nothrow_constructible<
                         typename adjacent_remove_if_view::view_adaptor, Rng>::value &&
                     std::is_nothrow_constructible<

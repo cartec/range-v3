@@ -485,7 +485,7 @@ namespace ranges
                     satisfy();
                 }
                 reference_type read() const
-                noexcept(noexcept(*it1_) && noexcept(*it2_))
+                RANGES_NOEXCEPT((noexcept(*it1_) && noexcept(*it2_)))
                 {
                     if(state == state_t::SECOND || state == state_t::ONLY_SECOND)
                         return *it2_;
@@ -523,7 +523,7 @@ namespace ranges
                     return (it1_ == end1_) && (it2_ == end2_);
                 }
                 rvalue_reference_type move() const
-                noexcept(noexcept(iter_move(it1_)) && noexcept(iter_move(it2_)))
+                RANGES_NOEXCEPT((noexcept(iter_move(it1_)) && noexcept(iter_move(it2_))))
                 {
                     if(state == state_t::SECOND || state == state_t::ONLY_SECOND)
                         return iter_move(it2_);
@@ -706,7 +706,7 @@ namespace ranges
                     satisfy();
                 }
                 reference_type read() const
-                noexcept(noexcept(*it1_) && noexcept(*it2_))
+                RANGES_NOEXCEPT((noexcept(*it1_) && noexcept(*it2_)))
                 {
                     if(state == state_t::SECOND || state == state_t::ONLY_SECOND)
                         return *it2_;
@@ -742,7 +742,7 @@ namespace ranges
                     return (it1_ == end1_) && (it2_ == end2_);
                 }
                 rvalue_reference_type move() const
-                noexcept(noexcept(iter_move(it1_)) && noexcept(iter_move(it2_)))
+                RANGES_NOEXCEPT((noexcept(iter_move(it1_)) && noexcept(iter_move(it2_))))
                 {
                     if(state == state_t::SECOND || state == state_t::ONLY_SECOND)
                         return iter_move(it2_);

@@ -243,7 +243,7 @@ namespace ranges
                     invoke(fun_, move_tag{}, std::get<Is>(its_)...)
                 )
                 auto move() const
-                    noexcept(noexcept(std::declval<cursor const&>().move_(
+                    RANGES_NOEXCEPT(noexcept(std::declval<cursor const&>().move_(
                         meta::make_index_sequence<sizeof...(Rngs)>{}))) ->
                     decltype(std::declval<cursor const&>().move_(
                         meta::make_index_sequence<sizeof...(Rngs)>{}))

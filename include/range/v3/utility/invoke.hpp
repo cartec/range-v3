@@ -182,7 +182,7 @@ namespace ranges
                 CONCEPT_REQUIRES_(Constructible<base_, U>() &&
                     !Same<uncvref_t<U>, reference_wrapper>())>
             constexpr reference_wrapper(U &&u)
-                noexcept(std::is_nothrow_constructible<base_, U>::value)
+                RANGES_NOEXCEPT((std::is_nothrow_constructible<base_, U>::value))
               : detail::reference_wrapper_<T>{static_cast<U &&>(u)}
             {}
             constexpr reference get() const noexcept

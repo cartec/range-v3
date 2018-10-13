@@ -128,13 +128,13 @@ namespace ranges
             public:
                 CONCEPT_REQUIRES(DefaultConstructible<T>())
                 constexpr indexed_datum()
-                    noexcept(std::is_nothrow_default_constructible<T>::value)
+                    RANGES_NOEXCEPT((std::is_nothrow_default_constructible<T>::value))
                   : datum_{}
                 {}
                 template<typename... Ts,
                     CONCEPT_REQUIRES_(Constructible<T, Ts...>())>
                 constexpr indexed_datum(Ts &&... ts)
-                    noexcept(std::is_nothrow_constructible<T, Ts...>::value)
+                    RANGES_NOEXCEPT((std::is_nothrow_constructible<T, Ts...>::value))
                   : datum_(static_cast<Ts&&>(ts)...)
                 {}
                 RANGES_CXX14_CONSTEXPR indexed_element<T, Index::value> ref() noexcept
@@ -230,12 +230,12 @@ namespace ranges
                     {}
                     template<typename... Args>
                     constexpr type(meta::size_t<0>, Args &&... args)
-                        noexcept(std::is_nothrow_constructible<head_t, Args...>::value)
+                        RANGES_NOEXCEPT((std::is_nothrow_constructible<head_t, Args...>::value))
                       : head{((Args &&) args)...}
                     {}
                     template<std::size_t N, typename... Args>
                     constexpr type(meta::size_t<N>, Args &&... args)
-                        noexcept(std::is_nothrow_constructible<tail_t, meta::size_t<N - 1>, Args...>::value)
+                        RANGES_NOEXCEPT((std::is_nothrow_constructible<tail_t, meta::size_t<N - 1>, Args...>::value))
                       : tail{meta::size_t<N - 1>{}, ((Args &&) args)...}
                     {}
                 };
@@ -260,12 +260,12 @@ namespace ranges
                     {}
                     template<typename... Args>
                     constexpr type(meta::size_t<0>, Args &&... args)
-                        noexcept(std::is_nothrow_constructible<head_t, Args...>::value)
+                        RANGES_NOEXCEPT((std::is_nothrow_constructible<head_t, Args...>::value))
                       : head{((Args &&) args)...}
                     {}
                     template<std::size_t N, typename... Args>
                     constexpr type(meta::size_t<N>, Args &&... args)
-                        noexcept(std::is_nothrow_constructible<tail_t, meta::size_t<N - 1>, Args...>::value)
+                        RANGES_NOEXCEPT((std::is_nothrow_constructible<tail_t, meta::size_t<N - 1>, Args...>::value))
                       : tail{meta::size_t<N - 1>{}, ((Args &&) args)...}
                     {}
                 };
@@ -375,13 +375,13 @@ namespace ranges
 
                 template<typename U, std::size_t ...Is>
                 void construct_(U &u, meta::index_sequence<Is...>)
-                    noexcept(std::is_nothrow_constructible<U, Ts...>::value)
+                    RANGES_NOEXCEPT((std::is_nothrow_constructible<U, Ts...>::value))
                 {
                     ::new((void*)std::addressof(u)) U(static_cast<Ts&&>(std::get<Is>(args_))...);
                 }
 
                 construct_fn(Ts &&...ts)
-                    noexcept(std::is_nothrow_constructible<std::tuple<Ts...>, Ts...>::value)
+                    RANGES_NOEXCEPT((std::is_nothrow_constructible<std::tuple<Ts...>, Ts...>::value))
                   : args_{static_cast<Ts&&>(ts)...}
                 {}
                 template<typename U, std::size_t M>
@@ -392,14 +392,14 @@ namespace ranges
                 template<typename U>
                 meta::if_<std::is_object<U>>
                 operator()(indexed_datum<U, meta::size_t<N>> &u)
-                    noexcept(std::is_nothrow_constructible<U, Ts...>::value)
+                    RANGES_NOEXCEPT((std::is_nothrow_constructible<U, Ts...>::value))
                 {
                     this->construct_(u.get(), meta::make_index_sequence<sizeof...(Ts)>{});
                 }
                 template<typename U>
                 meta::if_<meta::not_<std::is_object<U>>>
                 operator()(indexed_datum<U, meta::size_t<N>> &u)
-                    noexcept(std::is_nothrow_constructible<detail::decay_t<U>, Ts...>::value)
+                    RANGES_NOEXCEPT((std::is_nothrow_constructible<detail::decay_t<U>, Ts...>::value))
                 {
                     this->construct_(u, meta::make_index_sequence<sizeof...(Ts)>{});
                 }
@@ -458,7 +458,7 @@ namespace ranges
 
             template<typename Variant, typename Fun>
             variant_visitor<Fun, Variant> make_variant_visitor(Variant &var, Fun fun)
-                noexcept(std::is_nothrow_move_constructible<Fun>::value)
+                RANGES_NOEXCEPT((std::is_nothrow_move_constructible<Fun>::value))
             {
                 return {detail::move(fun), &var};
             }
@@ -576,27 +576,27 @@ namespace ranges
         public:
             CONCEPT_REQUIRES(DefaultConstructible<datum_t<0>>())
             constexpr variant()
-                noexcept(std::is_nothrow_default_constructible<datum_t<0>>::value)
+                RANGES_NOEXCEPT((std::is_nothrow_default_constructible<datum_t<0>>::value))
               : variant{emplaced_index<0>}
             {}
             template<std::size_t N, typename...Args,
                 CONCEPT_REQUIRES_(Constructible<datum_t<N>, Args...>())>
             constexpr variant(RANGES_EMPLACED_INDEX_T(N), Args &&...args)
-                noexcept(std::is_nothrow_constructible<datum_t<N>, Args...>::value)
+                RANGES_NOEXCEPT((std::is_nothrow_constructible<datum_t<N>, Args...>::value))
               : detail::variant_data<Ts...>{meta::size_t<N>{}, static_cast<Args&&>(args)...}
               , index_(N)
             {}
             template<std::size_t N, typename T, typename...Args,
                 CONCEPT_REQUIRES_(Constructible<datum_t<N>, std::initializer_list<T> &, Args...>())>
             constexpr variant(RANGES_EMPLACED_INDEX_T(N), std::initializer_list<T> il, Args &&...args)
-                noexcept(std::is_nothrow_constructible<datum_t<N>, std::initializer_list<T> &, Args...>::value)
+                RANGES_NOEXCEPT((std::is_nothrow_constructible<datum_t<N>, std::initializer_list<T> &, Args...>::value))
               : detail::variant_data<Ts...>{meta::size_t<N>{}, il, static_cast<Args &&>(args)...}
               , index_(N)
             {}
             template<std::size_t N,
                 CONCEPT_REQUIRES_(Constructible<datum_t<N>, meta::nil_>())>
             constexpr variant(RANGES_EMPLACED_INDEX_T(N), meta::nil_)
-                noexcept(std::is_nothrow_constructible<datum_t<N>, meta::nil_>::value)
+                RANGES_NOEXCEPT((std::is_nothrow_constructible<datum_t<N>, meta::nil_>::value))
               : detail::variant_data<Ts...>{meta::size_t<N>{}, meta::nil_{}}, index_(N)
             {}
             variant(variant &&that)

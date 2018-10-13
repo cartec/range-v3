@@ -42,7 +42,7 @@ namespace ranges
                 semiregular_move_assign &operator=(semiregular_move_assign const &) = default;
                 RANGES_CXX14_CONSTEXPR
                 semiregular_move_assign &operator=(semiregular_move_assign &&that)
-                    noexcept(std::is_nothrow_move_constructible<T>::value)
+                    RANGES_NOEXCEPT((std::is_nothrow_move_constructible<T>::value))
                 {
                     this->reset();
                     if (that)
@@ -66,7 +66,7 @@ namespace ranges
                 semiregular_copy_assign(semiregular_copy_assign &&) = default;
                 RANGES_CXX14_CONSTEXPR
                 semiregular_copy_assign &operator=(semiregular_copy_assign const &that)
-                    noexcept(std::is_nothrow_copy_constructible<T>::value)
+                    RANGES_NOEXCEPT((std::is_nothrow_copy_constructible<T>::value))
                 {
                     this->reset();
                     if (that)
@@ -89,8 +89,8 @@ namespace ranges
             using detail::semiregular_copy_layer<T>::semiregular_copy_layer;
 
             constexpr semiregular()
-                noexcept(std::is_nothrow_default_constructible<T>::value ||
-                    !std::is_default_constructible<T>::value)
+                RANGES_NOEXCEPT((std::is_nothrow_default_constructible<T>::value ||
+                    !std::is_default_constructible<T>::value))
               : semiregular(tag{}, std::is_default_constructible<T>{})
             {}
             RANGES_CXX14_CONSTEXPR T &get() & noexcept
@@ -154,7 +154,7 @@ namespace ranges
             constexpr semiregular(tag, std::false_type) noexcept
             {}
             constexpr semiregular(tag, std::true_type)
-                noexcept(std::is_nothrow_default_constructible<T>::value)
+                RANGES_NOEXCEPT((std::is_nothrow_default_constructible<T>::value))
               : detail::semiregular_copy_layer<T>{in_place}
             {}
         };

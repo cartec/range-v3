@@ -88,24 +88,28 @@ namespace ranges
 #define RANGES_ENSURE(...) RANGES_ENSURE_MSG((__VA_ARGS__), #__VA_ARGS__)
 #endif
 
+#ifndef RANGES_NOEXCEPT
+#define RANGES_NOEXCEPT(...) noexcept(__VA_ARGS__)
+#endif
+
 #define RANGES_DECLTYPE_AUTO_RETURN(...)                        \
     -> decltype(__VA_ARGS__)                                    \
     { return (__VA_ARGS__); }                                   \
     /**/
 
 #define RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT(...)               \
-    noexcept(noexcept(decltype(__VA_ARGS__)(__VA_ARGS__))) ->   \
+    RANGES_NOEXCEPT(noexcept(decltype(__VA_ARGS__)(__VA_ARGS__))) ->   \
     decltype(__VA_ARGS__)                                       \
     { return (__VA_ARGS__); }                                   \
     /**/
 
 #define RANGES_AUTO_RETURN_NOEXCEPT(...)                        \
-    noexcept(noexcept(decltype(__VA_ARGS__)(__VA_ARGS__)))      \
+    RANGES_NOEXCEPT(noexcept(decltype(__VA_ARGS__)(__VA_ARGS__)))      \
     { return (__VA_ARGS__); }                                   \
     /**/
 
 #define RANGES_DECLTYPE_NOEXCEPT(...)                           \
-    noexcept(noexcept(decltype(__VA_ARGS__)(__VA_ARGS__))) ->   \
+    RANGES_NOEXCEPT(noexcept(decltype(__VA_ARGS__)(__VA_ARGS__))) ->   \
     decltype(__VA_ARGS__)                                       \
     /**/
 

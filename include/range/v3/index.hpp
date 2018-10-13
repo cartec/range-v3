@@ -51,8 +51,8 @@ namespace ranges
                 CONCEPT_REQUIRES_(RandomAccessRange<Rng>())>
             RANGES_CXX14_CONSTEXPR
             auto operator()(Rng &&rng, range_difference_type_t<Rng> n) const
-                noexcept(noexcept(ranges::begin(rng)[n]) &&
-                         noexcept(n < ranges::distance(rng)))
+                RANGES_NOEXCEPT(noexcept(ranges::begin(rng)[n]) &&
+                         RANGES_NOEXCEPT(n < ranges::distance(rng)))
               ->
                 decltype(ranges::begin(rng)[n])
             {

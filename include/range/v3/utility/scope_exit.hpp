@@ -17,6 +17,7 @@
 #include <type_traits>
 #include <utility>
 #include <meta/meta.hpp>
+#include <range/v3/detail/config.hpp>
 
 namespace ranges
 {
@@ -54,19 +55,19 @@ namespace ranges
             {}
         public:
             explicit scope_exit(Fun const &fun)
-                noexcept(noexcept(scope_exit(fun, nothrow_copy_t{})))
+                RANGES_NOEXCEPT(noexcept(scope_exit(fun, nothrow_copy_t{})))
               : scope_exit(fun, nothrow_copy_t{})
             {}
 
             explicit scope_exit(Fun &&fun)
-                noexcept(noexcept(scope_exit(std::move(fun), nothrow_move_t{})))
+                RANGES_NOEXCEPT(noexcept(scope_exit(std::move(fun), nothrow_move_t{})))
               : scope_exit(std::move(fun), nothrow_move_t{})
             {}
 
             scope_exit(scope_exit const &) = delete;
 
             scope_exit(scope_exit &&that)
-                noexcept(std::is_nothrow_move_constructible<Fun>::value)
+                RANGES_NOEXCEPT((std::is_nothrow_move_constructible<Fun>::value))
               : scope_exit(std::move((that.dismiss(), that)).fun_)
             {}
 
@@ -85,7 +86,7 @@ namespace ranges
         template<typename Fun,
             typename ScopeExit = scope_exit<meta::_t<std::decay<Fun>>>>
         ScopeExit make_scope_exit(Fun &&fun)
-            noexcept(noexcept(ScopeExit(ScopeExit((Fun &&) fun))))
+            RANGES_NOEXCEPT(noexcept(ScopeExit(ScopeExit((Fun &&) fun))))
         {
             return ScopeExit((Fun &&) fun);
         }

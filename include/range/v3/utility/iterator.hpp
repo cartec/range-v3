@@ -1031,19 +1031,19 @@ namespace ranges
                 }
                 template<typename T,
                     CONCEPT_REQUIRES_(Writable<I, aux::move_t<T>>())>
-                void write(T &&t) noexcept(noexcept(*it_ = std::move(t)))
+                void write(T &&t) RANGES_NOEXCEPT(noexcept(*it_ = std::move(t)))
                 {
                     *it_ = std::move(t);
                 }
                 template<typename T,
                     CONCEPT_REQUIRES_(Writable<I, aux::move_t<T>>())>
-                void write(T &&t) const noexcept(noexcept(*it_ = std::move(t)))
+                void write(T &&t) const RANGES_NOEXCEPT(noexcept(*it_ = std::move(t)))
                 {
                     *it_ = std::move(t);
                 }
                 CONCEPT_REQUIRES(Readable<I>())
                 reference_t<I> read() const
-                    noexcept(noexcept(*std::declval<I const&>()))
+                    RANGES_NOEXCEPT(noexcept(*std::declval<I const&>()))
                 {
                     return *it_;
                 }
@@ -1071,7 +1071,7 @@ namespace ranges
                     CONCEPT_REQUIRES_(Same<I, II>() && Readable<II>())>
                 RANGES_CXX14_CONSTEXPR
                 rvalue_reference_t<II const> move() const
-                    noexcept(noexcept(iter_move(std::declval<II const&>())))
+                    RANGES_NOEXCEPT(noexcept(iter_move(std::declval<II const&>())))
                 {
                     return iter_move(it_);
                 }

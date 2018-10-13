@@ -95,7 +95,7 @@ namespace ranges
                     Cardinality < 0 && Cardinality != infinite &&
                     ForwardRange<D>())>
             RANGES_CXX14_CONSTEXPR bool empty()
-                noexcept(noexcept(bool(ranges::begin(std::declval<D &>()) ==
+                RANGES_NOEXCEPT(noexcept(bool(ranges::begin(std::declval<D &>()) ==
                     ranges::end(std::declval<D &>()))))
             {
                 return ranges::begin(derived()) == ranges::end(derived());
@@ -105,7 +105,7 @@ namespace ranges
                     Cardinality < 0 && Cardinality != infinite &&
                     ForwardRange<D const>())>
             constexpr bool empty() const
-                noexcept(noexcept(bool(ranges::begin(std::declval<D const &>()) ==
+                RANGES_NOEXCEPT(noexcept(bool(ranges::begin(std::declval<D const &>()) ==
                     ranges::end(std::declval<D const &>()))))
             {
                 return ranges::begin(derived()) == ranges::end(derived());
@@ -119,7 +119,7 @@ namespace ranges
             template<typename D = Derived, CONCEPT_REQUIRES_(Same<D, Derived>()),
                 typename = decltype(ranges::empty(std::declval<D const &>()))>
             constexpr explicit operator bool() const
-                noexcept(noexcept(ranges::empty(std::declval<D const &>())))
+                RANGES_NOEXCEPT(noexcept(ranges::empty(std::declval<D const &>())))
             {
                 return !ranges::empty(derived());
             }

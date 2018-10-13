@@ -157,7 +157,7 @@ namespace ranges
             public:
                 any_view_sentinel_impl() = default;
                 any_view_sentinel_impl(Rng &rng)
-                    noexcept(noexcept(box_t(ranges::end(rng))))
+                    RANGES_NOEXCEPT(noexcept(box_t(ranges::end(rng))))
                   : box_t(ranges::end(rng))
                 {}
                 void init(Rng &rng) noexcept

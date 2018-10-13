@@ -91,7 +91,7 @@ namespace ranges
                 return p;
             }
             template<typename J, typename = detail::arrow_type_<J const>>
-            static J operator_arrow_(J const &j, int) noexcept(noexcept(J(j)))
+            static J operator_arrow_(J const &j, int) RANGES_NOEXCEPT(noexcept(J(j)))
             {
                 return j;
             }
@@ -105,7 +105,7 @@ namespace ranges
             template<typename J, typename V = value_type_t<J>,
                 typename R = reference_t<J>,
                 CONCEPT_REQUIRES_(Constructible<V, R>())>
-            static arrow_proxy_ operator_arrow_(J const &j, ...) noexcept(noexcept(V(V(*j))))
+            static arrow_proxy_ operator_arrow_(J const &j, ...) RANGES_NOEXCEPT(noexcept(V(V(*j))))
             {
                 return arrow_proxy_(*j);
             }

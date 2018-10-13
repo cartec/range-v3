@@ -121,9 +121,9 @@ namespace ranges
         public:
             adjacent_filter_view() = default;
             constexpr adjacent_filter_view(Rng rng, Pred pred)
-                noexcept(std::is_nothrow_constructible<
+                RANGES_NOEXCEPT((std::is_nothrow_constructible<
                     typename adjacent_filter_view::view_adaptor, Rng>::value &&
-                    std::is_nothrow_constructible<semiregular_t<Pred>, Pred>::value)
+                    std::is_nothrow_constructible<semiregular_t<Pred>, Pred>::value))
               : adjacent_filter_view::view_adaptor{detail::move(rng)}
               , adjacent_filter_view::box(detail::move(pred))
             {}
