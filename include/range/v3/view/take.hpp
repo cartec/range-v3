@@ -31,19 +31,19 @@ namespace ranges
 {
     inline namespace v3
     {
-        template<typename Rng>
+        template<typename V, CONCEPT_REQUIRES_(View<V>())>
         struct take_view
-          : view_adaptor<take_view<Rng>, Rng, finite>
+          : view_adaptor<take_view<V>, V, finite>
         {
         private:
             friend range_access;
 
-            range_difference_type_t<Rng> n_ = 0;
+            range_difference_type_t<V> n_ = 0;
 
             template<bool IsConst>
-            using CI = counted_iterator<iterator_t<meta::const_if_c<IsConst, Rng>>>;
+            using CI = counted_iterator<iterator_t<meta::const_if_c<IsConst, V>>>;
             template<bool IsConst>
-            using S = sentinel_t<meta::const_if_c<IsConst, Rng>>;
+            using S = sentinel_t<meta::const_if_c<IsConst, V>>;
 
             template<bool IsConst>
             struct adaptor : adaptor_base
@@ -53,9 +53,9 @@ namespace ranges
                     CONCEPT_REQUIRES_(IsConst && !Other)>
                 adaptor(adaptor<Other>)
                 {}
-                CI<IsConst> begin(meta::const_if_c<IsConst, take_view> &rng) const
+                CI<IsConst> begin(meta::const_if_c<IsConst, take_view> &v) const
                 {
-                    return {ranges::begin(rng.base()), rng.n_};
+                    return {ranges::begin(v.base()), v.n_};
                 }
             };
 
@@ -73,32 +73,43 @@ namespace ranges
                 }
             };
 
-            adaptor<simple_view<Rng>()> begin_adaptor()
+            adaptor<simple_view<V>()> begin_adaptor()
             {
                 return {};
             }
-            sentinel_adaptor<simple_view<Rng>()> end_adaptor()
+            sentinel_adaptor<simple_view<V>()> end_adaptor()
             {
                 return {};
             }
-            CONCEPT_REQUIRES(Range<Rng const>())
+            CONCEPT_REQUIRES(Range<V const>())
             adaptor<true> begin_adaptor() const
             {
                 return {};
             }
-            CONCEPT_REQUIRES(Range<Rng const>())
+            CONCEPT_REQUIRES(Range<V const>())
             sentinel_adaptor<true> end_adaptor() const
             {
                 return {};
             }
         public:
             take_view() = default;
-            take_view(Rng rng, range_difference_type_t<Rng> n)
-              : take_view::view_adaptor(std::move(rng)), n_{n}
+            explicit take_view(V v, range_difference_type_t<V> n)
+              : take_view::view_adaptor(std::move(v)), n_{n}
             {
                 RANGES_EXPECT(n >= 0);
             }
+            template<typename R,
+                CONCEPT_REQUIRES_(ViewableRange<R>() &&
+                    Constructible<V, view::all_t<R>>())>
+            explicit take_view(R &&r, range_difference_type_t<V> n)
+              : take_view{V(view::all(static_cast<R &&>(r))), n}
+            {}
         };
+
+#if RANGES_CXX_DEDUCTION_GUIDES >= RANGES_CXX_DEDUCTION_GUIDES_17
+        template<typename R, CONCEPT_REQUIRES_(ViewableRange<R>())>
+        take_view(R &&, range_difference_type_t<R>) -> take_view<view::all_t<R>>;
+#endif // RANGES_CXX_DEDUCTION_GUIDES >= RANGES_CXX_DEDUCTION_GUIDES_17
 
         namespace view
         {
@@ -106,23 +117,6 @@ namespace ranges
             {
             private:
                 friend view_access;
-
-                template<typename Rng,
-                    CONCEPT_REQUIRES_(!SizedRange<Rng>() && !is_infinite<Rng>())>
-                static take_view<all_t<Rng>> invoke_(Rng &&rng, range_difference_type_t<Rng> n)
-                {
-                    return {all(static_cast<Rng &&>(rng)), n};
-                }
-
-                template<typename Rng,
-                    CONCEPT_REQUIRES_(SizedRange<Rng>() || is_infinite<Rng>())>
-                static auto invoke_(Rng &&rng, range_difference_type_t<Rng> n)
-                RANGES_DECLTYPE_AUTO_RETURN
-                (
-                    take_exactly(
-                        static_cast<Rng &&>(rng),
-                        is_infinite<Rng>() ? n : ranges::min(n, distance(rng)))
-                )
 
                 template<typename Int, CONCEPT_REQUIRES_(Integral<Int>())>
                 static auto bind(take_fn take, Int n)
@@ -141,23 +135,52 @@ namespace ranges
                 }
             #endif
 
+#if RANGES_CXX_IF_CONSTEXPR >= RANGES_CXX_IF_CONSTEXPR_17
             public:
-                template<typename Rng, CONCEPT_REQUIRES_(InputRange<Rng>())>
-                auto operator()(Rng &&rng, range_difference_type_t<Rng> n) const
+                template<typename R, CONCEPT_REQUIRES_(ViewableRange<R>())>
+                auto operator()(R &&r, range_difference_type_t<R> n) const
+                {
+                    if constexpr(is_infinite<R>())
+                        return take_exactly(static_cast<R &&>(r), n);
+                    else if constexpr(SizedRange<R>())
+                        return take_exactly(static_cast<R &&>(r),
+                            ranges::min(n, distance(r)));
+                    else
+                        return take_view<all_t<R>>{all(static_cast<R &&>(r)), n};
+                }
+#else
+                template<typename R>
+                static auto impl_(R &&r, range_difference_type_t<R> n, std::false_type)
                 RANGES_DECLTYPE_AUTO_RETURN
                 (
-                    take_fn::invoke_(static_cast<Rng &&>(rng), n)
+                    take_view<all_t<R>>{all(static_cast<R &&>(r)), n}
                 )
+                template<typename R>
+                static auto impl_(R &&r, range_difference_type_t<R> n, std::true_type)
+                RANGES_DECLTYPE_AUTO_RETURN
+                (
+                    take_exactly(
+                        static_cast<R &&>(r),
+                        is_infinite<R>() ? n : ranges::min(n, distance(r)))
+                )
+            public:
+                template<typename R, CONCEPT_REQUIRES_(ViewableRange<R>())>
+                auto operator()(R &&r, range_difference_type_t<R> n) const
+                RANGES_DECLTYPE_AUTO_RETURN
+                (
+                    impl_(static_cast<R &&>(r), n,
+                        meta::or_<is_infinite<R>, SizedRange<R>>())
+                )
+#endif
 
             #ifndef RANGES_DOXYGEN_INVOKED
-                template<typename Rng, typename T, CONCEPT_REQUIRES_(!InputRange<Rng>())>
-                void operator()(Rng &&, T &&) const
+                template<typename R, typename T, CONCEPT_REQUIRES_(!ViewableRange<R>())>
+                void operator()(R &&, T &&) const
                 {
-                    CONCEPT_ASSERT_MSG(InputRange<Rng>(),
-                        "The object on which view::take operates must be a model of the InputRange "
-                        "concept.");
+                    CONCEPT_ASSERT_MSG(ViewableRange<R>(),
+                        "The object on which view::take operates must model the Range concept.");
                     CONCEPT_ASSERT_MSG(Integral<T>(),
-                        "The second argument to view::take must be a model of the Integral concept.");
+                        "The second argument to view::take must model the Integral concept.");
                 }
             #endif
             };

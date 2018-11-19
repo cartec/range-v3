@@ -641,14 +641,6 @@ namespace ranges
             struct stride_fn;
         }
 
-        template<typename Rng>
-        struct take_view;
-
-        namespace view
-        {
-            struct take_fn;
-        }
-
         /// \cond
         namespace detail
         {
