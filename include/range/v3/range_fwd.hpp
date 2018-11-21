@@ -507,14 +507,6 @@ namespace ranges
         using move_into_iterator =
             basic_iterator<detail::move_into_cursor<I>>;
 
-        template<typename Rng, bool = (bool) is_infinite<Rng>()>
-        struct RANGES_EMPTY_BASES cycled_view;
-
-        namespace view
-        {
-            struct cycle_fn;
-        }
-
         /// \cond
         namespace detail
         {

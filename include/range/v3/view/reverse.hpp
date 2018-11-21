@@ -114,42 +114,92 @@ namespace ranges
             }
         };
 
-#if !defined(__GNUC__) || defined(__clang__) || __GNUC__ >= 5
-        template<typename Rng>
-        struct reverse_view<reverse_view<Rng>>
-          : identity_adaptor<Rng>
+        namespace detail
         {
-            CONCEPT_ASSERT(BidirectionalRange<Rng>());
-
-            reverse_view() = default;
-            explicit constexpr reverse_view(reverse_view<Rng> const &rng)
-              : identity_adaptor<Rng>(rng.base())
-            {}
-        };
-#endif // !GCC4
+            template<class>
+            struct is_reversed_iterator_range
+              : std::false_type
+            {};
+            template<class I>
+            struct is_reversed_iterator_range<iterator_range<reverse_iterator<I>>>
+              : std::true_type
+            {
+                static constexpr bool is_sized = false;
+            };
+            template<class I>
+            struct is_reversed_iterator_range<iterator_range<std::reverse_iterator<I>>>
+              : std::true_type
+            {
+                static constexpr bool is_sized = false;
+            };
+            template<class I>
+            struct is_reversed_iterator_range<sized_iterator_range<reverse_iterator<I>>>
+              : std::true_type
+            {
+                static constexpr bool is_sized = true;
+            };
+            template<class I>
+            struct is_reversed_iterator_range<sized_iterator_range<std::reverse_iterator<I>>>
+              : std::true_type
+            {
+                static constexpr bool is_sized = true;
+            };
+        }
 
         namespace view
         {
             struct reverse_fn
             {
+#if RANGES_CXX_IF_CONSTEXPR >= RANGES_CXX_IF_CONSTEXPR_17
+                template<typename Rng, CONCEPT_REQUIRES_(BidirectionalRange<Rng>())>
+                constexpr auto operator()(Rng &&rng) const
+                {
+                    if constexpr(meta::is<uncvref_t<Rng>, reverse_view>::value)
+                        return all(static_cast<Rng &&>(rng).base());
+                    else if constexpr(detail::is_reversed_iterator_range<uncvref_t<Rng>>::value)
+                    {
+                        if constexpr(detail::is_reversed_iterator_range<uncvref_t<Rng>>::is_sized)
+                            return make_iterator_range(rng.end().base(), rng.begin().base(), rng.size());
+                        else
+                            return make_iterator_range(rng.end().base(), rng.begin().base());
+                    }
+                    else
+                        return reverse_view<all_t<Rng>>{all(static_cast<Rng &&>(rng))};
+                }
+#else // ^^^ have "if constexpr" / no "if constexpr" vvv
+    #if defined(__GNUC__) && !defined(__clang__) && __GNUC__ == 5
+    // Avoid GCC5 C++11 bug that ODR-uses std::declval?!?
+    #define RANGES_GCC5_HACK RANGES_CXX14_CONSTEXPR
+    #else
+    #define RANGES_GCC5_HACK constexpr
+    #endif
+            private:
                 template<typename Rng>
-                using Constraint = BidirectionalRange<Rng>;
-
-                template<typename Rng, CONCEPT_REQUIRES_(Constraint<Rng>())>
-#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ == 5
-                // Avoid GCC5 bug that ODR-uses std::declval?!?
-                RANGES_CXX14_CONSTEXPR
-#else
-                constexpr
-#endif
-                auto operator()(Rng &&rng) const
+                static RANGES_GCC5_HACK auto impl_(Rng &&rng, std::false_type)
                 RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT
                 (
                     reverse_view<all_t<Rng>>{all(static_cast<Rng &&>(rng))}
                 )
+                template<typename Rng>
+                static RANGES_GCC5_HACK auto impl_(Rng &&rng, std::true_type)
+                RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT
+                (
+                    all(static_cast<Rng &&>(rng).base())
+                )
+            public:
+                template<typename Rng, CONCEPT_REQUIRES_(BidirectionalRange<Rng>())>
+                RANGES_GCC5_HACK auto operator()(Rng &&rng) const
+                RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT
+                (
+                    impl_(static_cast<Rng &&>(rng),
+                        meta::bool_<meta::is<uncvref_t<Rng>, reverse_view>::value>{})
+                )
+    #undef RANGES_GCC5_HACK
+#endif // RANGES_CXX_IF_CONSTEXPR >= RANGES_CXX_IF_CONSTEXPR_17
+
             #ifndef RANGES_DOXYGEN_INVOKED
                 // For error reporting
-                template<typename Rng, CONCEPT_REQUIRES_(!Constraint<Rng>())>
+                template<typename Rng, CONCEPT_REQUIRES_(!BidirectionalRange<Rng>())>
                 void operator()(Rng &&) const
                 {
                     CONCEPT_ASSERT_MSG(BidirectionalRange<Rng>(),

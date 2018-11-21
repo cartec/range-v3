@@ -123,22 +123,20 @@ namespace ranges
             }
         };
 
-        template<typename Rng>
-        struct bounded_view<Rng, true>
-          : identity_adaptor<Rng>
-        {
-            CONCEPT_ASSERT(BoundedRange<Rng>());
-            using identity_adaptor<Rng>::identity_adaptor;
-        };
-
         namespace view
         {
             struct bounded_fn
             {
-                template<typename Rng, CONCEPT_REQUIRES_(Range<Rng>())>
+                template<typename Rng, CONCEPT_REQUIRES_(Range<Rng>() && !BoundedRange<Rng>())>
                 bounded_view<all_t<Rng>> operator()(Rng &&rng) const
                 {
                     return bounded_view<all_t<Rng>>{all(static_cast<Rng &&>(rng))};
+                }
+
+                template<typename Rng, CONCEPT_REQUIRES_(BoundedRange<Rng>())>
+                all_t<Rng> operator()(Rng &&rng) const
+                {
+                    return all(static_cast<Rng &&>(rng));
                 }
 
             #ifndef RANGES_DOXYGEN_INVOKED
