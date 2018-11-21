@@ -24,7 +24,7 @@
 #include <range/v3/view_adaptor.hpp>
 #include <range/v3/detail/satisfy_boost_range.hpp>
 #include <range/v3/utility/box.hpp>
-#include <range/v3/utility/optional.hpp>
+#include <range/v3/utility/cached_position.hpp>
 #include <range/v3/utility/semiregular.hpp>
 #include <range/v3/utility/static_const.hpp>
 #include <range/v3/view/view.hpp>
@@ -61,7 +61,7 @@ namespace ranges
                 {}
                 static RANGES_CXX14_CONSTEXPR iterator_t<Rng> begin(remove_if_view &rng)
                 {
-                    return *rng.begin_;
+                    return rng.begin_.get(rng.base());
                 }
                 RANGES_CXX14_CONSTEXPR void next(iterator_t<Rng> &it) const
                 {
@@ -105,7 +105,7 @@ namespace ranges
             RANGES_CXX14_CONSTEXPR void satisfy_reverse(iterator_t<Rng> &it)
             {
                 RANGES_ASSERT(begin_);
-                auto const &first = *begin_;
+                auto const &first = begin_.get(this->base());
                 auto &pred = this->remove_if_view::box::get();
                 do
                 {
@@ -117,12 +117,13 @@ namespace ranges
             RANGES_CXX14_CONSTEXPR void cache_begin()
             {
                 if(begin_) return;
-                auto it = ranges::begin(this->base());
+                auto &base = this->base();
+                auto it = ranges::begin(base);
                 satisfy_forward(it);
-                begin_.emplace(std::move(it));
+                begin_.set(base, std::move(it));
             }
 
-            detail::non_propagating_cache<iterator_t<Rng>> begin_;
+            cached_position<Rng> begin_;
         };
 
         namespace view

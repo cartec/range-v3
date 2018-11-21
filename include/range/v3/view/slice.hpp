@@ -16,16 +16,16 @@
 
 #include <type_traits>
 #include <meta/meta.hpp>
-#include <range/v3/detail/satisfy_boost_range.hpp>
 #include <range/v3/range_fwd.hpp>
 #include <range/v3/range_traits.hpp>
 #include <range/v3/range_concepts.hpp>
 #include <range/v3/view_interface.hpp>
 #include <range/v3/iterator_range.hpp>
+#include <range/v3/detail/satisfy_boost_range.hpp>
+#include <range/v3/utility/cached_position.hpp>
 #include <range/v3/utility/counted_iterator.hpp>
 #include <range/v3/utility/functional.hpp>
 #include <range/v3/utility/iterator_traits.hpp>
-#include <range/v3/utility/optional.hpp>
 #include <range/v3/utility/static_const.hpp>
 #include <range/v3/view/all.hpp>
 #include <range/v3/view/drop_exactly.hpp>
@@ -80,14 +80,16 @@ namespace ranges
                 using difference_type_ = range_difference_type_t<Rng>;
                 Rng rng_;
                 difference_type_ from_, count_;
-                detail::non_propagating_cache<iterator_t<Rng>> begin_;
+                cached_position<Rng> begin_;
 
                 iterator_t<Rng> get_begin_()
                 {
-                    if(!begin_)
-                        begin_ = detail::pos_at_(rng_, from_, range_concept<Rng>{},
+                    if(begin_)
+                        return begin_.get(rng_);
+                    auto it = detail::pos_at_(rng_, from_, range_concept<Rng>{},
                             is_infinite<Rng>{});
-                    return *begin_;
+                    begin_.set(rng_, it);
+                    return it;
                 }
             public:
                 slice_view_() = default;

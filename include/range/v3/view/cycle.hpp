@@ -16,50 +16,67 @@
 #ifndef RANGES_V3_VIEW_CYCLE_HPP
 #define RANGES_V3_VIEW_CYCLE_HPP
 
-#include <utility>
 #include <type_traits>
+#include <utility>
 #include <meta/meta.hpp>
-#include <range/v3/detail/satisfy_boost_range.hpp>
-#include <range/v3/range_fwd.hpp>
-#include <range/v3/size.hpp>
 #include <range/v3/begin_end.hpp>
 #include <range/v3/empty.hpp>
-#include <range/v3/range_traits.hpp>
 #include <range/v3/range_concepts.hpp>
+#include <range/v3/range_fwd.hpp>
+#include <range/v3/range_traits.hpp>
+#include <range/v3/size.hpp>
 #include <range/v3/view_facade.hpp>
-#include <range/v3/view/all.hpp>
-#include <range/v3/view/view.hpp>
+#include <range/v3/detail/satisfy_boost_range.hpp>
 #include <range/v3/utility/box.hpp>
+#include <range/v3/utility/cached_position.hpp>
 #include <range/v3/utility/get.hpp>
 #include <range/v3/utility/iterator.hpp>
-#include <range/v3/utility/optional.hpp>
 #include <range/v3/utility/static_const.hpp>
+#include <range/v3/view/all.hpp>
+#include <range/v3/view/view.hpp>
+
+// TODO:
+// * Implement bespoke caching. cached_position isn't optimal for Forward &&
+//   SizedSentinel, which could cache the (propagatable) size of the base range
+//   instead of the end iterator.
 
 namespace ranges
-{
+ {
     inline namespace v3
     {
+        /// \cond
+        namespace detail
+        {
+            template<class Rng>
+            using CycledNeedsCache = meta::bool_<
+                !BoundedRange<Rng>() &&
+                (BidirectionalRange<Rng>() ||
+                 (SizedSentinel<iterator_t<Rng>, iterator_t<Rng>>() &&
+                  !SizedRange<Rng>()))>;
+        }
+        /// \endcond
+
         /// \addtogroup group-views
         ///@{
         template<typename Rng, bool /* = (bool) is_infinite<Rng>() */>
         struct RANGES_EMPTY_BASES cycled_view
           : view_facade<cycled_view<Rng>, infinite>
-          , private detail::non_propagating_cache<
-                iterator_t<Rng>, cycled_view<Rng>, !BoundedRange<Rng>()>
+          , private cached_position<
+                Rng, cycled_view<Rng>, detail::CycledNeedsCache<Rng>::value>
         {
         private:
             CONCEPT_ASSERT(ForwardRange<Rng>() && !is_infinite<Rng>::value);
             friend range_access;
             Rng rng_;
 
-            using cache_t = detail::non_propagating_cache<
-                iterator_t<Rng>, cycled_view<Rng>, !BoundedRange<Rng>()>;
+            using cache_t = cached_position<
+                Rng, cycled_view<Rng>, detail::CycledNeedsCache<Rng>::value>;
 
             template<bool IsConst>
             struct cursor
             {
             private:
-                friend struct cursor<!IsConst>;
+                friend cursor<true>;
                 template<typename T>
                 using constify_if = meta::const_if_c<IsConst, T>;
                 using cycled_view_t = constify_if<cycled_view>;
@@ -79,9 +96,12 @@ namespace ranges
                 {
                     auto &end_ = static_cast<cache_t &>(*rng_);
                     RANGES_EXPECT(CanBeEmpty || end_);
-                    if(CanBeEmpty && !end_)
-                        end_ = ranges::next(it_, ranges::end(rng_->rng_));
-                    return *end_;
+                    if RANGES_CONSTEXPR_IF(CanBeEmpty)
+                    {
+                        if(!end_)
+                            end_.set(rng_->rng_, ranges::next(it_, ranges::end(rng_->rng_)));
+                    }
+                    return end_.get(rng_->rng_);
                 }
                 void set_end_(std::true_type) const
                 {}
@@ -89,7 +109,16 @@ namespace ranges
                 {
                     auto &end_ = static_cast<cache_t &>(*rng_);
                     if(!end_)
-                        end_ = it_;
+                        end_.set(rng_->rng_, it_);
+                }
+                std::intmax_t get_base_size_(std::true_type) const
+                {
+                    return ranges::distance(rng_->rng_);
+                }
+                std::intmax_t get_base_size_(std::false_type) const
+                {
+                    return this->get_end_(BoundedRange<Rng>()) -
+                        ranges::begin(rng_->rng_);
                 }
             public:
                 cursor() = default;
@@ -142,7 +171,7 @@ namespace ranges
                 void advance(std::intmax_t n)
                 {
                     auto const begin = ranges::begin(rng_->rng_);
-                    auto const end = this->get_end_(BoundedRange<CRng>(), meta::bool_<true>());
+                    auto const end = this->get_end_(BoundedRange<CRng>(), std::true_type{});
                     auto const dist = end - begin;
                     auto const d = it_ - begin;
                     auto const off = (d + n) % dist;
@@ -155,10 +184,16 @@ namespace ranges
                 std::intmax_t distance_to(cursor const &that) const
                 {
                     RANGES_EXPECT(that.rng_ == rng_);
-                    auto const begin = ranges::begin(rng_->rng_);
-                    auto const end = this->get_end_(BoundedRange<Rng>(), meta::bool_<true>());
-                    auto const dist = end - begin;
-                    return (that.n_ - n_) * dist + (that.it_ - it_);
+                    std::intmax_t result = that.it_ - it_;
+                    if (that.n_ != n_)
+                    {
+                        // The existence of two iterators on different cycles
+                        // implies that we've discovered the end iterator in
+                        // either next or advance.
+
+                        result += (that.n_ - n_) * get_base_size_(SizedRange<Rng>());
+                    }
+                    return result;
                 }
             };
 

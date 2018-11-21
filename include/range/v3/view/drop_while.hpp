@@ -17,16 +17,16 @@
 #include <utility>
 #include <functional>
 #include <meta/meta.hpp>
-#include <range/v3/detail/satisfy_boost_range.hpp>
 #include <range/v3/range_fwd.hpp>
 #include <range/v3/range_traits.hpp>
 #include <range/v3/range_concepts.hpp>
 #include <range/v3/view_interface.hpp>
+#include <range/v3/algorithm/find_if_not.hpp>
+#include <range/v3/detail/satisfy_boost_range.hpp>
+#include <range/v3/utility/cached_position.hpp>
 #include <range/v3/utility/functional.hpp>
-#include <range/v3/utility/optional.hpp>
 #include <range/v3/utility/semiregular.hpp>
 #include <range/v3/utility/static_const.hpp>
-#include <range/v3/algorithm/find_if_not.hpp>
 #include <range/v3/view/all.hpp>
 #include <range/v3/view/view.hpp>
 
@@ -44,14 +44,8 @@ namespace ranges
             friend range_access;
             Rng rng_;
             semiregular_t<Pred> pred_;
-            detail::non_propagating_cache<iterator_t<Rng>> begin_;
+            cached_position<Rng> begin_;
 
-            iterator_t<Rng> get_begin_()
-            {
-                if(!begin_)
-                    begin_ = find_if_not(rng_, std::ref(pred_));
-                return *begin_;
-            }
         public:
             drop_while_view() = default;
             drop_while_view(Rng rng, Pred pred)
@@ -59,7 +53,12 @@ namespace ranges
             {}
             iterator_t<Rng> begin()
             {
-                return get_begin_();
+                if(begin_)
+                    return begin_.get(rng_);
+
+                auto it = find_if_not(rng_, std::ref(pred_));
+                begin_.set(rng_, it);
+                return it;
             }
             sentinel_t<Rng> end()
             {

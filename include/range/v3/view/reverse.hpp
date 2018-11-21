@@ -24,9 +24,9 @@
 #include <range/v3/view_adaptor.hpp>
 #include <range/v3/detail/satisfy_boost_range.hpp>
 #include <range/v3/utility/box.hpp>
+#include <range/v3/utility/cached_position.hpp>
 #include <range/v3/utility/get.hpp>
 #include <range/v3/utility/iterator.hpp>
-#include <range/v3/utility/optional.hpp>
 #include <range/v3/utility/static_const.hpp>
 #include <range/v3/view/all.hpp>
 #include <range/v3/view/view.hpp>
@@ -40,8 +40,8 @@ namespace ranges
         template<typename Rng>
         struct RANGES_EMPTY_BASES reverse_view
           : view_interface<reverse_view<Rng>, range_cardinality<Rng>::value>
-          , private detail::non_propagating_cache<
-                iterator_t<Rng>, reverse_view<Rng>, !BoundedRange<Rng>()>
+          , private cached_position<
+                Rng, reverse_view<Rng>, !BoundedRange<Rng>()>
         {
         private:
             CONCEPT_ASSERT(BidirectionalRange<Rng>());
@@ -51,16 +51,21 @@ namespace ranges
             RANGES_CXX14_CONSTEXPR
             reverse_iterator<iterator_t<Rng>> begin_(std::true_type)
             {
+                // CONCEPT_ASSERT(BoundedRange<Rng>());
                 return make_reverse_iterator(ranges::end(rng_));
             }
             RANGES_CXX14_CONSTEXPR
             reverse_iterator<iterator_t<Rng>> begin_(std::false_type)
             {
-                using cache_t = detail::non_propagating_cache<iterator_t<Rng>, reverse_view<Rng>>;
+                // CONCEPT_ASSERT(!BoundedRange<Rng>());
+                using cache_t = cached_position<Rng, reverse_view<Rng>>;
                 auto &end_ = static_cast<cache_t &>(*this);
-                if(!end_)
-                    end_ = ranges::next(ranges::begin(rng_), ranges::end(rng_));
-                return make_reverse_iterator(*end_);
+                if(end_)
+                    return make_reverse_iterator(end_.get(rng_));
+
+                auto it = ranges::next(ranges::begin(rng_), ranges::end(rng_));
+                end_.set(rng_, it);
+                return make_reverse_iterator(std::move(it));
             }
             template<typename T>
             using not_self_ =

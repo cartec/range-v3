@@ -23,11 +23,11 @@
 #include <range/v3/begin_end.hpp>
 #include <range/v3/range_traits.hpp>
 #include <range/v3/range_concepts.hpp>
+#include <range/v3/utility/cached_position.hpp>
 #include <range/v3/view_adaptor.hpp>
 #include <range/v3/view/all.hpp>
 #include <range/v3/view/counted.hpp>
 #include <range/v3/view/view.hpp>
-#include <range/v3/utility/optional.hpp>
 #include <range/v3/utility/static_const.hpp>
 
 namespace ranges
@@ -103,8 +103,8 @@ namespace ranges
                     sliding_view<Rng>,
                     Rng,
                     is_finite<Rng>::value ? finite : range_cardinality<Rng>::value>
-              , private detail::non_propagating_cache<
-                    iterator_t<Rng>,
+              , private cached_position<
+                    Rng,
                     sv_base<Rng>,
                     caching<Rng>::value != cache::none>
             {
@@ -129,18 +129,17 @@ namespace ranges
             protected:
                 range_difference_type_t<Rng> n_;
 
-                optional<iterator_t<Rng>> &cache() &
+                using cache_t = cached_position<Rng, sv_base<Rng>>;
+
+                cache_t &cache() &
                 {
                     return static_cast<cache_t&>(*this);
                 }
-                optional<iterator_t<Rng>> const &cache() const &
+                cache_t const &cache() const &
                 {
                     return static_cast<cache_t const&>(*this);
                 }
             private:
-                using cache_t = detail::non_propagating_cache<
-                    iterator_t<Rng>, sv_base<Rng>>;
-
                 range_size_type_t<Rng> size_(range_size_type_t<Rng> count) const
                 {
                     auto const n = static_cast<range_size_type_t<Rng>>(n_);
@@ -161,14 +160,15 @@ namespace ranges
             iterator_t<Rng> get_first()
             {
                 auto &first = this->cache();
-                if(!first)
-                {
-                    first = ranges::next(
-                        ranges::begin(this->base()),
-                        this->n_ - 1,
-                        ranges::end(this->base()));
-                }
-                return *first;
+                if(first)
+                    return first.get(this->base());
+
+                auto it = ranges::next(
+                    ranges::begin(this->base()),
+                    this->n_ - 1,
+                    ranges::end(this->base()));
+                first.set(this->base(), it);
+                return it;
             }
 
             struct RANGES_EMPTY_BASES adaptor
@@ -233,13 +233,14 @@ namespace ranges
             iterator_t<Rng> get_last()
             {
                 auto &last = this->cache();
-                if(!last)
-                {
-                    last = ranges::prev(
-                                ranges::end(this->base()), this->n_ - 1,
-                                ranges::begin(this->base()));
-                }
-                return *last;
+                if(last)
+                    return last.get(this->base());
+
+                auto it = ranges::prev(
+                    ranges::end(this->base()), this->n_ - 1,
+                    ranges::begin(this->base()));
+                last.set(this->base(), it);
+                return it;
             }
 
             struct adaptor

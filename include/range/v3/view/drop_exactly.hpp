@@ -23,9 +23,9 @@
 #include <range/v3/view_interface.hpp>
 #include <range/v3/iterator_range.hpp>
 #include <range/v3/utility/box.hpp>
+#include <range/v3/utility/cached_position.hpp>
 #include <range/v3/utility/functional.hpp>
 #include <range/v3/utility/iterator_traits.hpp>
-#include <range/v3/utility/optional.hpp>
 #include <range/v3/utility/static_const.hpp>
 #include <range/v3/view/all.hpp>
 #include <range/v3/view/view.hpp>
@@ -41,8 +41,8 @@ namespace ranges
           : view_interface<
                 drop_exactly_view<Rng>,
                 is_finite<Rng>::value ? finite : range_cardinality<Rng>::value>
-          , private detail::non_propagating_cache<
-                iterator_t<Rng>, drop_exactly_view<Rng>, !RandomAccessRange<Rng>()>
+          , private cached_position<
+                Rng, drop_exactly_view<Rng>, !RandomAccessRange<Rng>()>
         {
         private:
             friend range_access;
@@ -50,26 +50,23 @@ namespace ranges
             Rng rng_;
             difference_type_ n_;
 
-            // RandomAccessRange == true
-            template<typename CRng = Rng const,
-                CONCEPT_REQUIRES_(RandomAccessRange<CRng>())>
-            iterator_t<CRng> get_begin_(std::true_type) const
-            {
-                return next(ranges::begin(rng_), n_);
-            }
             iterator_t<Rng> get_begin_(std::true_type)
             {
-                return next(ranges::begin(rng_), n_);
+                CONCEPT_ASSERT(RandomAccessRange<Rng>());
+                return ranges::begin(rng_) + n_;
             }
-            // RandomAccessRange == false
             iterator_t<Rng> get_begin_(std::false_type)
             {
-                using cache_t = detail::non_propagating_cache<
-                    iterator_t<Rng>, drop_exactly_view<Rng>>;
-                auto &begin_ = static_cast<cache_t&>(*this);
-                if(!begin_)
-                    begin_ = next(ranges::begin(rng_), n_);
-                return *begin_;
+                CONCEPT_ASSERT(!RandomAccessRange<Rng>());
+                using cache_t = cached_position<
+                    Rng, drop_exactly_view<Rng>>;
+                auto &begin_ = static_cast<cache_t &>(*this);
+                if(begin_)
+                    return begin_.get(rng_);
+
+                iterator_t<Rng> first = next(ranges::begin(rng_), n_);
+                begin_.set(rng_, first);
+                return first;
             }
         public:
             drop_exactly_view() = default;
@@ -90,7 +87,7 @@ namespace ranges
                 CONCEPT_REQUIRES_(RandomAccessRange<CRng>())>
             iterator_t<CRng> begin() const
             {
-                return this->get_begin_(std::true_type{});
+                return ranges::begin(rng_) + n_;
             }
             template<typename CRng = Rng const,
                 CONCEPT_REQUIRES_(RandomAccessRange<CRng>())>
