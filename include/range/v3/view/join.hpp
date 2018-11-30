@@ -14,24 +14,24 @@
 #ifndef RANGES_V3_VIEW_JOIN_HPP
 #define RANGES_V3_VIEW_JOIN_HPP
 
-#include <utility>
 #include <type_traits>
+#include <utility>
 #include <meta/meta.hpp>
-#include <range/v3/detail/satisfy_boost_range.hpp>
-#include <range/v3/range_fwd.hpp>
-#include <range/v3/size.hpp>
-#include <range/v3/numeric.hpp> // for accumulate
 #include <range/v3/begin_end.hpp>
 #include <range/v3/empty.hpp>
+#include <range/v3/range_fwd.hpp>
+#include <range/v3/numeric.hpp> // for accumulate
 #include <range/v3/range_traits.hpp>
+#include <range/v3/size.hpp>
+#include <range/v3/view_facade.hpp>
+#include <range/v3/detail/variant.hpp>
+#include <range/v3/detail/satisfy_boost_range.hpp>
 #include <range/v3/utility/functional.hpp>
 #include <range/v3/utility/static_const.hpp>
-#include <range/v3/utility/variant.hpp>
-#include <range/v3/view_facade.hpp>
-#include <range/v3/view/transform.hpp>
 #include <range/v3/view/all.hpp>
-#include <range/v3/view/view.hpp>
 #include <range/v3/view/single.hpp>
+#include <range/v3/view/transform.hpp>
+#include <range/v3/view/view.hpp>
 
 namespace ranges
 {
@@ -99,7 +99,7 @@ namespace ranges
             class cursor
             {
             private:
-                join_view* rng_ = nullptr;
+                join_view *rng_ = nullptr;
                 iterator_t<Outer> outer_it_{};
                 iterator_t<Inner> inner_it_{};
 
@@ -199,7 +199,7 @@ namespace ranges
 
             class cursor
             {
-                join_view* rng_ = nullptr;
+                join_view *rng_ = nullptr;
                 iterator_t<Outer> outer_it_{};
                 variant<iterator_t<ValRng>, iterator_t<Inner>> cur_{};
 
@@ -209,14 +209,14 @@ namespace ranges
                     {
                         if(cur_.index() == 0)
                         {
-                            if(ranges::get<0>(cur_) != ranges::end(rng_->val_))
+                            if(ranges::unchecked_get<0>(cur_) != ranges::end(rng_->val_))
                                 break;
                             rng_->inner_ = view::all(*outer_it_);
                             ranges::emplace<1>(cur_, ranges::begin(rng_->inner_));
                         }
                         else
                         {
-                            if(ranges::get<1>(cur_) != ranges::end(rng_->inner_))
+                            if(ranges::unchecked_get<1>(cur_) != ranges::end(rng_->inner_))
                                 break;
                             if(++outer_it_ == ranges::end(rng_->outer_))
                                 break;
@@ -250,16 +250,16 @@ namespace ranges
                 }
                 void next()
                 {
-                    // visit(cur_, [](auto& it){ ++it; });
+                    // visit(cur_, [](auto &it){ ++it; });
                     if(cur_.index() == 0)
                     {
-                        auto& it = ranges::get<0>(cur_);
+                        auto &it = ranges::unchecked_get<0>(cur_);
                         RANGES_ASSERT(it != ranges::end(rng_->val_));
                         ++it;
                     }
                     else
                     {
-                        auto& it = ranges::get<1>(cur_);
+                        auto &it = ranges::unchecked_get<1>(cur_);
                         RANGES_ASSERT(it != ranges::end(rng_->inner_));
                         ++it;
                     }
@@ -267,26 +267,26 @@ namespace ranges
                 }
                 reference read() const
                 {
-                    // return visit(cur_, [](auto& it) -> reference { return *it; });
+                    // return visit(cur_, [](auto &it) -> reference { return *it; });
                     if(cur_.index() == 0)
                     {
-                        return *ranges::get<0>(cur_);
+                        return *ranges::unchecked_get<0>(cur_);
                     }
                     else
                     {
-                        return *ranges::get<1>(cur_);
+                        return *ranges::unchecked_get<1>(cur_);
                     }
                 }
                 rvalue_reference move() const
                 {
-                    // return visit(cur_, [](auto& it) -> rvalue_reference { return iter_move(it); });
+                    // return visit(cur_, [](auto &it) -> rvalue_reference { return iter_move(it); });
                     if(cur_.index() == 0)
                     {
-                        return iter_move(ranges::get<0>(cur_));
+                        return iter_move(ranges::unchecked_get<0>(cur_));
                     }
                     else
                     {
-                        return iter_move(ranges::get<1>(cur_));
+                        return iter_move(ranges::unchecked_get<1>(cur_));
                     }
                 }
             };
@@ -315,23 +315,23 @@ namespace ranges
 
                 template<typename Rng,
                     CONCEPT_REQUIRES_(JoinableRange_<Rng>())>
-                join_view<all_t<Rng>> operator()(Rng && rng) const
+                join_view<all_t<Rng>> operator()(Rng &&rng) const
                 {
-                    return join_view<all_t<Rng>>{all(static_cast<Rng&&>(rng))};
+                    return join_view<all_t<Rng>>{all(static_cast<Rng &&>(rng))};
                 }
                 template<typename Rng, typename Val = range_value_type_t<range_reference_t<Rng>>,
                     CONCEPT_REQUIRES_(JoinableRange_<Rng>())>
-                join_view<all_t<Rng>, single_view<Val>> operator()(Rng && rng, meta::id_t<Val> v) const
+                join_view<all_t<Rng>, single_view<Val>> operator()(Rng &&rng, meta::id_t<Val> v) const
                 {
                     CONCEPT_ASSERT_MSG(SemiRegular<Val>(),
                         "To join a range of ranges with a value, the value type must be a model of "
                         "the SemiRegular concept; that is, it must have a default constructor, "
                         "copy and move constructors, and a destructor.");
-                    return {all(static_cast<Rng&&>(rng)), single(std::move(v))};
+                    return {all(static_cast<Rng &&>(rng)), single(std::move(v))};
                 }
                 template<typename Rng, typename ValRng,
                     CONCEPT_REQUIRES_(JoinableRange_<Rng>() && ForwardRange<ValRng>())>
-                join_view<all_t<Rng>, all_t<ValRng>> operator()(Rng && rng, ValRng && val) const
+                join_view<all_t<Rng>, all_t<ValRng>> operator()(Rng &&rng, ValRng &&val) const
                 {
                     CONCEPT_ASSERT_MSG(Common<range_value_type_t<ValRng>,
                         range_value_type_t<range_reference_t<Rng>>>(),
@@ -343,12 +343,12 @@ namespace ranges
                         "a common value type, and that value type must model the SemiRegular "
                         "concept; that is, it must have a default constructor, copy and move "
                         "constructors, and a destructor.");
-                    return {all(static_cast<Rng&&>(rng)), all(static_cast<ValRng&&>(val))};
+                    return {all(static_cast<Rng &&>(rng)), all(static_cast<ValRng &&>(val))};
                 }
             private:
                friend view_access;
                template<typename T, CONCEPT_REQUIRES_(!JoinableRange_<T>())>
-               static auto bind(join_fn join, T && t)
+               static auto bind(join_fn join, T &&t)
                RANGES_DECLTYPE_AUTO_RETURN
                (
                    make_pipeable(std::bind(join, std::placeholders::_1, bind_forward<T>(t)))

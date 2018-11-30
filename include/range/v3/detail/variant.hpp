@@ -14,6 +14,168 @@
 #ifndef RANGES_V3_DETAIL_VARIANT_HPP
 #define RANGES_V3_DETAIL_VARIANT_HPP
 
+#include <cstddef>
+#include <meta/meta.hpp>
+#include <range/v3/range_fwd.hpp>
+#include <range/v3/utility/concepts.hpp>
+#include <range/v3/utility/invoke.hpp>
+
+namespace ranges
+{
+    inline namespace v3
+    {
+        template<typename T, std::size_t Index>
+        struct indexed_element
+          : reference_wrapper<T>
+        {
+            using reference_wrapper<T>::reference_wrapper;
+        };
+
+        enum class variant_visit { plain, raw, unchecked };
+    }
+}
+
+#if RANGES_CXX_STD >= RANGES_CXX_STD_17
+#include <variant>
+
+namespace ranges
+{
+    inline namespace v3
+    {
+        template<std::size_t I>
+        inline constexpr auto emplaced_index = std::in_place_index<I>;
+
+        using std::variant;
+
+        template<std::size_t I, typename V,
+            CONCEPT_REQUIRES_(meta::is<uncvref_t<V>, std::variant>() &&
+                I < std::variant_size_v<uncvref_t<V>>)>
+        constexpr auto &&unchecked_get(V &&v) noexcept
+        {
+            RANGES_EXPECT(v.index() == I);
+            // HACKHACK: Non-portable access to STL guts
+    #if defined(_MSVC_STL_VERSION)
+            return std::_Variant_raw_get<I>(static_cast<V &&>(v)._Storage());
+    #elif defined(_LIBCPP_VERSION)
+            using access = std::__variant_detail::__access::__variant;
+            return access::__get_alt<I>(static_cast<V &&>(v)).__value;
+    #else
+            return std::get<I>(static_cast<V &&>(v));
+    #endif
+        }
+
+        template<std::size_t I, typename... Ts, typename... Args,
+            CONCEPT_REQUIRES_(Constructible<meta::at_c<meta::list<Ts...>, I>, Args...>())>
+        void emplace(std::variant<Ts...> &var, Args &&...args)
+        {
+            var.template emplace<I>(static_cast<Args&&>(args)...);
+        }
+
+        namespace detail
+        {
+            [[noreturn]] inline void throw_bad_access()
+            {
+                throw std::bad_variant_access();
+            }
+        }
+
+        namespace detail
+        {
+            template<std::size_t> struct variant_dispatch;
+
+        #define RANGES_SPAM4(x, n) x(n) x(n + 1) x(n + 2) x(n + 3)
+        #define RANGES_SPAM16(x, n)                                            \
+            RANGES_SPAM4 (x, n      ) RANGES_SPAM4 (x, n + 4  )                \
+            RANGES_SPAM4 (x, n + 8  ) RANGES_SPAM4 (x, n + 12 )
+        #define RANGES_SPAM64(x, n)                                            \
+            RANGES_SPAM16(x, n      ) RANGES_SPAM16(x, n + 16 )                \
+            RANGES_SPAM16(x, n + 32 ) RANGES_SPAM16(x, n + 48 )
+        #define RANGES_SPAM256(x, n)                                           \
+            RANGES_SPAM64(x, n      ) RANGES_SPAM64(x, n + 64 )                \
+            RANGES_SPAM64(x, n + 128) RANGES_SPAM64(x, n + 192)
+
+        #define RANGES_CASE(i)                                                 \
+            case (i) + 1:                                                      \
+                if constexpr((i) < n)                                          \
+                {                                                              \
+                    auto &&e =                                                 \
+                        ranges::unchecked_get<(i)>(static_cast<V &&>(v));      \
+                    return invoke(static_cast<Fn &&>(fn),                      \
+                        indexed_element<decltype(e), (i)>(                     \
+                            static_cast<decltype(e)>(e)));                     \
+                }                                                              \
+                else                                                           \
+                    RANGES_ASSUME(false);
+
+        #define RANGES_STAMP(count)                                            \
+            template<>                                                         \
+            struct variant_dispatch<count>                                     \
+            {                                                                  \
+                template<variant_visit VisitKind = variant_visit::plain,       \
+                    typename Fn, typename V>                                   \
+                static constexpr decltype(auto) dispatch(Fn &&fn, V &&v)       \
+                {                                                              \
+                    constexpr std::size_t n =                                  \
+                        std::variant_size_v<uncvref_t<V>>;                     \
+                    static_assert(n <= (count));                               \
+                    std::size_t const i = v.index() + 1;                       \
+                    RANGES_ASSUME(i <= n);                                     \
+                    switch(i)                                                  \
+                    {                                                          \
+                    case 0:                                                    \
+                        if constexpr(VisitKind == variant_visit::raw)          \
+                            return invoke(static_cast<Fn &&>(fn),              \
+                                indexed_element<V &, std::variant_npos>(v));   \
+                        if constexpr(VisitKind != variant_visit::unchecked)    \
+                            detail::throw_bad_access();                        \
+                        RANGES_EXPECT(false);                                  \
+                                                                               \
+                    RANGES_PP_CAT(RANGES_SPAM, count)(RANGES_CASE, 0)          \
+                                                                               \
+                    default:                                                   \
+                        RANGES_EXPECT(false);                                  \
+                    }                                                          \
+                    RANGES_EXPECT(false);                                      \
+                }                                                              \
+            }
+
+            RANGES_STAMP(4);
+            RANGES_STAMP(16);
+            RANGES_STAMP(64);
+            RANGES_STAMP(256);
+
+        #undef RANGES_STAMP
+        #undef RANGES_CASE
+        #undef RANGES_SPAM256
+        #undef RANGES_SPAM64
+        #undef RANGES_SPAM16
+        #undef RANGES_SPAM4
+        }
+
+        template<variant_visit VisitKind = variant_visit::plain,
+            typename Fn, typename V,
+            CONCEPT_REQUIRES_(meta::is<uncvref_t<V>, std::variant>())>
+        constexpr auto visit_i(Fn &&fn, V &&v) ->
+            decltype(invoke(static_cast<Fn &&>(fn), // FIXME: alias?
+                indexed_element<decltype(ranges::unchecked_get<0>(static_cast<V &&>(v))), 0>(
+                    ranges::unchecked_get<0>(static_cast<V &&>(v)))))
+        {
+            constexpr std::size_t n = std::variant_size_v<uncvref_t<V>>;
+            static_assert(n <= 256,
+                "ranges::visit_i only supports variants with at most 256 alternatives.");
+            constexpr std::size_t select =
+                n <= 4 ? 4 :
+                n <= 16 ? 16 :
+                n <= 64 ? 64 :
+                256;
+            return detail::variant_dispatch<select>::dispatch(
+                static_cast<Fn &&>(fn), static_cast<V &&>(v));
+        }
+    }
+}
+
+#else // ^^^ C++ >= 17 / C++ < 17 vvv
+
 #include <new>
 #include <tuple>
 #include <memory>
@@ -21,9 +183,6 @@
 #include <iterator>
 #include <stdexcept>
 #include <type_traits>
-#include <meta/meta.hpp>
-#include <range/v3/range_fwd.hpp>
-#include <range/v3/utility/concepts.hpp>
 #include <range/v3/utility/iterator_concepts.hpp>
 #include <range/v3/utility/iterator_traits.hpp>
 #include <range/v3/utility/functional.hpp>
@@ -57,7 +216,7 @@ namespace ranges
         inline namespace
         {
             template<std::size_t I>
-            constexpr auto& emplaced_index = static_const<emplaced_index_t<I>>::value;
+            constexpr auto &emplaced_index = static_const<emplaced_index_t<I>>::value;
         }
     #else // RANGES_CXX_INLINE_VARIABLES >= RANGES_CXX_INLINE_VARIABLES_17
         template<std::size_t I>
@@ -80,45 +239,15 @@ namespace ranges
             {}
         };
 
-        template<typename T, std::size_t Index>
-        struct indexed_element
-          : reference_wrapper<T>
-        {
-            using reference_wrapper<T>::reference_wrapper;
-        };
-        template<std::size_t Index>
-        struct indexed_element<void, Index>
-        {
-            void get() const noexcept
-            {}
-        };
-
         /// \cond
         namespace detail
         {
+            [[noreturn]] inline void throw_bad_access()
+            {
+                throw bad_variant_access("bad variant access");
+            }
+
             struct indexed_element_fn;
-
-            template<typename I, typename S, typename O,
-                CONCEPT_REQUIRES_(!SizedSentinel<S, I>())>
-            O uninitialized_copy(I first, S last, O out)
-            {
-                for(; first != last; ++first, ++out)
-                    ::new((void *) std::addressof(*out)) value_type_t<O>(*first);
-                return out;
-            }
-
-            template<typename I, typename S, typename O,
-                CONCEPT_REQUIRES_(SizedSentinel<S, I>())>
-            O uninitialized_copy(I first, S last, O out)
-            {
-                return std::uninitialized_copy_n(first, (last - first), out);
-            }
-
-            template<typename I, typename O>
-            O uninitialized_copy(I first, I last, O out)
-            {
-                return std::uninitialized_copy(first, last, out);
-            }
 
             template<typename T, typename Index>
             struct indexed_datum
@@ -137,11 +266,11 @@ namespace ranges
                     noexcept(std::is_nothrow_constructible<T, Ts...>::value)
                   : datum_(static_cast<Ts&&>(ts)...)
                 {}
-                RANGES_CXX14_CONSTEXPR indexed_element<T, Index::value> ref() noexcept
+                RANGES_CXX14_CONSTEXPR indexed_element<T &, Index::value> ref() noexcept
                 {
                     return {datum_};
                 }
-                constexpr indexed_element<T const, Index::value> ref() const noexcept
+                constexpr indexed_element<T const &, Index::value> ref() const noexcept
                 {
                     return {datum_};
                 }
@@ -155,62 +284,27 @@ namespace ranges
                 }
             };
 
-            template<typename T, std::size_t N, typename Index>
-            struct indexed_datum<T[N], Index>;
-
-            template<typename T, typename Index>
-            struct indexed_datum<T &, Index>
-              : reference_wrapper<T &>
-            {
-                indexed_datum() = delete;
-                using reference_wrapper<T &>::reference_wrapper;
-                constexpr indexed_element<T &, Index::value> ref() const noexcept
-                {
-                    return {this->get()};
-                }
-            };
-            template<typename T, typename Index>
-            struct indexed_datum<T &&, Index>
-              : reference_wrapper<T &&>
-            {
-                indexed_datum() = delete;
-                using reference_wrapper<T &&>::reference_wrapper;
-                constexpr indexed_element<T &&, Index::value> ref() const noexcept
-                {
-                    return {this->get()};
-                }
-            };
-            template<typename Index>
-            struct indexed_datum<void, Index>
-            {
-                void get() const noexcept
-                {}
-                constexpr indexed_element<void, Index::value> ref() const noexcept
-                {
-                    return {};
-                }
-            };
-
             template<std::size_t Index, typename... Ts>
             using variant_datum_t =
                 detail::indexed_datum<meta::at_c<meta::list<Ts...>, Index>, meta::size_t<Index>>;
         } // namespace detail
 
+        template<typename...>
+        struct variant;
+
         template<std::size_t N, typename... Ts, typename... Args,
-            meta::if_c<Constructible<detail::variant_datum_t<N, Ts...>, Args...>::value, int> = 42>
+            meta::if_c<Constructible<meta::at_c<meta::list<Ts...>, N>, Args...>::value, int> = 42>
         void emplace(variant<Ts...>&, Args &&...);
 
         namespace detail
         {
-            using variant_nil = indexed_datum<void, meta::npos>;
-
             template<typename Ts, bool Trivial =
                 meta::apply<
                     meta::quote<meta::and_>,
                     meta::transform<Ts, meta::quote<std::is_trivially_destructible>>>::type::value>
             struct variant_data_
             {
-                using type = indexed_datum<void, meta::npos>;
+                using type = meta::nil_;
             };
 
             template<typename T, typename... Ts>
@@ -279,7 +373,7 @@ namespace ranges
                         meta::as_list<meta::make_index_sequence<sizeof...(Ts)>>,
                         meta::quote<indexed_datum>>>>;
 
-            inline std::size_t variant_move_copy_(std::size_t, variant_nil, variant_nil)
+            inline std::size_t variant_move_copy_(std::size_t, meta::nil_, meta::nil_)
             {
                 return 0;
             }
@@ -290,7 +384,7 @@ namespace ranges
                 return 0 == n ? ((void)::new((void*)&self.head) Head(((Data1 &&) that).head), 0) :
                     variant_move_copy_(n - 1, self.tail, ((Data1 &&) that).tail) + 1;
             }
-            constexpr bool variant_equal_(std::size_t, variant_nil, variant_nil)
+            constexpr bool variant_equal_(std::size_t, meta::nil_, meta::nil_)
             {
                 return true;
             }
@@ -301,7 +395,7 @@ namespace ranges
                     variant_equal_(n - 1, self.tail, that.tail);
             }
             template<typename Fun, typename Proj = indexed_element_fn>
-            constexpr int variant_visit_(std::size_t, variant_nil, Fun, Proj = {})
+            constexpr int variant_visit_(std::size_t, meta::nil_, Fun, Proj = {})
             {
                 return (RANGES_EXPECT(false), 0);
             }
@@ -318,7 +412,7 @@ namespace ranges
                 auto operator()(T &&t) const noexcept
                 RANGES_DECLTYPE_AUTO_RETURN
                 (
-                    t.get()
+                    static_cast<T &&>(t).get()
                 )
             };
 
@@ -328,7 +422,7 @@ namespace ranges
                 auto operator()(T &&t) const noexcept
                 RANGES_DECLTYPE_AUTO_RETURN
                 (
-                    t.ref()
+                    static_cast<T &&>(t).ref()
                 )
             };
 
@@ -351,11 +445,6 @@ namespace ranges
                 static constexpr variant_data<Ts...> &&data(variant<Ts...> &&var) noexcept
                 {
                     return detail::move(var.data_());
-                }
-                template<typename...Ts>
-                static variant<Ts...> make_empty(meta::id<variant<Ts...>> = {}) noexcept
-                {
-                    return variant<Ts...>{empty_variant_tag{}};
                 }
             };
 
@@ -413,7 +502,7 @@ namespace ranges
                 template<typename U, std::size_t M>
                 [[noreturn]] meta::if_c<M != N> operator()(indexed_element<U, M>) const
                 {
-                    throw bad_variant_access("bad variant access");
+                    detail::throw_bad_access();
                 }
                 template<typename U>
                 void operator()(indexed_element<U, N> t) const noexcept
@@ -426,8 +515,6 @@ namespace ranges
                     U &&u = t.get();
                     *t_ = std::addressof(u);
                 }
-                void operator()(indexed_element<void, N>) const noexcept
-                {}
             };
 
             template<typename Variant, std::size_t N>
@@ -626,7 +713,7 @@ namespace ranges
                 return sizeof...(Ts);
             }
             template<std::size_t N, typename ...Args,
-                CONCEPT_REQUIRES_(Constructible<datum_t<N>, Args...>())>
+                CONCEPT_REQUIRES_(Constructible<meta::at_c<meta::list<Ts...>, N>, Args...>())>
             void emplace(Args &&...args)
             {
                 this->clear_();
@@ -699,10 +786,10 @@ namespace ranges
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////
-        // get
+        // unchecked_get
         template<std::size_t N, typename...Ts>
         meta::_t<std::add_lvalue_reference<meta::at_c<meta::list<Ts...>, N>>>
-        get(variant<Ts...> &var)
+        unchecked_get(variant<Ts...> &var)
         {
             using elem_t = meta::_t<std::remove_reference<meta::at_c<meta::list<Ts...>, N>>>;
             elem_t *elem = nullptr;
@@ -713,7 +800,7 @@ namespace ranges
 
         template<std::size_t N, typename...Ts>
         meta::_t<std::add_lvalue_reference<meta::at_c<meta::list<Ts...>, N> const>>
-        get(variant<Ts...> const &var)
+        unchecked_get(variant<Ts...> const &var)
         {
             using elem_t = meta::_t<std::remove_reference<meta::at_c<meta::list<Ts...>, N> const>>;
             elem_t *elem = nullptr;
@@ -724,7 +811,7 @@ namespace ranges
 
         template<std::size_t N, typename...Ts>
         meta::_t<std::add_rvalue_reference<meta::at_c<meta::list<Ts...>, N>>>
-        get(variant<Ts...> &&var)
+        unchecked_get(variant<Ts...> &&var)
         {
             using elem_t = meta::_t<std::remove_reference<meta::at_c<meta::list<Ts...>, N>>>;
             elem_t *elem = nullptr;
@@ -737,39 +824,21 @@ namespace ranges
         ////////////////////////////////////////////////////////////////////////////////////////////
         // emplace
         template<std::size_t N, typename... Ts, typename... Args,
-            meta::if_c<Constructible<detail::variant_datum_t<N, Ts...>, Args...>::value, int>>
+            meta::if_c<Constructible<meta::at_c<meta::list<Ts...>, N>, Args...>::value, int>>
         void emplace(variant<Ts...> &var, Args &&...args)
         {
             var.template emplace<N>(static_cast<Args&&>(args)...);
         }
 
-        ////////////////////////////////////////////////////////////////////////////////////////////
-        // variant_unique
-        template<typename Var>
-        struct variant_unique
-        {};
-
-        template<typename ...Ts>
-        struct variant_unique<variant<Ts...>>
+        template<variant_visit VisitKind = variant_visit::plain,
+            typename Fn, typename V,
+            CONCEPT_REQUIRES_(meta::is<uncvref_t<V>, variant>())>
+        RANGES_CXX14_CONSTEXPR auto visit_i(Fn &&fn, V &&v) ->
+            decltype(invoke(static_cast<Fn &&>(fn),
+                indexed_element<decltype(ranges::unchecked_get<0>(static_cast<V &&>(v))), 0>(
+                    ranges::unchecked_get<0>(static_cast<V &&>(v)))))
         {
-            using type = meta::apply<meta::quote<variant>, meta::unique<meta::list<Ts...>>>;
-        };
-
-        template<typename Var>
-        using variant_unique_t = meta::_t<variant_unique<Var>>;
-
-        ////////////////////////////////////////////////////////////////////////////////////////////
-        // unique_variant
-        template<typename...Ts>
-        variant_unique_t<variant<Ts...>>
-        unique_variant(variant<Ts...> const &var)
-        {
-            using From = variant<Ts...>;
-            using To = variant_unique_t<From>;
-            auto res = detail::variant_core_access::make_empty(meta::id<To>{});
-            var.visit_i(detail::unique_visitor<To, From>{&res});
-            RANGES_EXPECT(res.valid());
-            return res;
+            return static_cast<V &&>(v).visit_i(static_cast<Fn &&>(fn));
         }
         /// @}
     }
@@ -793,4 +862,5 @@ namespace std
 
 RANGES_DIAGNOSTIC_POP
 
-#endif
+#endif // C++ version switch
+#endif // RANGES_V3_DETAIL_VARIANT_HPP

@@ -55,22 +55,15 @@ namespace ranges
 #endif
         {
         private:
+            friend variant<I, S> &detail::cidata<>(common_iterator<I, S> &);
+            friend variant<I, S> const &detail::cidata<>(common_iterator<I, S> const &);
+
             CONCEPT_ASSERT(Iterator<I>());
             CONCEPT_ASSERT(Sentinel<S, I>());
             CONCEPT_ASSERT(!Same<I, S>());
+
             variant<I, S> data_;
 
-            friend variant<I, S> &detail::cidata<>(common_iterator<I, S> &);
-            friend variant<I, S> const &detail::cidata<>(common_iterator<I, S> const &);
-            struct emplace_fn
-            {
-                variant<I, S> *data_;
-                template<typename T, std::size_t N>
-                void operator()(indexed_element<T, N> t) const
-                {
-                    ranges::emplace<N>(*data_, t.get());
-                }
-            };
             struct arrow_proxy_
             {
             private:
@@ -122,37 +115,35 @@ namespace ranges
             template<typename I2, typename S2,
                 CONCEPT_REQUIRES_(ConvertibleTo<I2, I>() && ConvertibleTo<S2, S>())>
             common_iterator(common_iterator<I2, S2> const &that)
-              : data_(detail::variant_core_access::make_empty<I, S>())
-            {
-                detail::cidata(that).visit_i(emplace_fn{&data_});
-            }
+              : data_(detail::cidata(that))
+            {}
             template<typename I2, typename S2,
                 CONCEPT_REQUIRES_(ConvertibleTo<I2, I>() && ConvertibleTo<S2, S>())>
             common_iterator& operator=(common_iterator<I2, S2> const &that)
             {
-                detail::cidata(that).visit_i(emplace_fn{&data_});
+                data_ = detail::cidata(that);
                 return *this;
             }
             reference_t<I> operator*()
             RANGES_AUTO_RETURN_NOEXCEPT
             (
-                *ranges::get<0>(data_)
+                *ranges::unchecked_get<0>(data_)
             )
             template<typename I2 = I, CONCEPT_REQUIRES_(Readable<I2 const>())>
             reference_t<I> operator*() const
             RANGES_AUTO_RETURN_NOEXCEPT
             (
-                *static_cast<I2 const &>(ranges::get<0>(data_))
+                *static_cast<I2 const &>(ranges::unchecked_get<0>(data_))
             )
             template<typename J = I, CONCEPT_REQUIRES_(Readable<J>())>
             auto operator->() const
             RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT
             (
-                common_iterator::operator_arrow_((J const &) ranges::get<0>(data_), 42)
+                common_iterator::operator_arrow_((J const &) ranges::unchecked_get<0>(data_), 42)
             )
             common_iterator& operator++()
             {
-                ++ranges::get<0>(data_);
+                ++ranges::unchecked_get<0>(data_);
                 return *this;
             }
 #ifdef RANGES_WORKAROUND_MSVC_677925
@@ -160,20 +151,20 @@ namespace ranges
             auto operator++(int)
             RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT
             (
-                ((I2 &) ranges::get<0>(data_))++
+                ((I2 &) ranges::unchecked_get<0>(data_))++
             )
 #else // ^^^ workaround ^^^ / vvv no workaround vvv
             CONCEPT_REQUIRES(!ForwardIterator<I>())
             auto operator++(int)
             RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT
             (
-                ranges::get<0>(data_)++
+                ranges::unchecked_get<0>(data_)++
             )
 #endif // RANGES_WORKAROUND_MSVC_677925
             CONCEPT_REQUIRES(ForwardIterator<I>())
             common_iterator operator++(int)
             {
-                return common_iterator(ranges::get<0>(data_)++);
+                return common_iterator(ranges::unchecked_get<0>(data_)++);
             }
 
 #if !RANGES_BROKEN_CPO_LOOKUP
@@ -182,7 +173,7 @@ namespace ranges
             auto iter_move(const common_iterator& i)
             RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT
             (
-                ranges::iter_move(ranges::get<0>(detail::cidata(i)))
+                ranges::iter_move(ranges::unchecked_get<0>(detail::cidata(i)))
             )
             template<typename I2, typename S2,
                 CONCEPT_REQUIRES_(IndirectlySwappable<I2, I>())>
@@ -191,8 +182,8 @@ namespace ranges
             RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT
             (
                 ranges::iter_swap(
-                    ranges::get<0>(detail::cidata(x)),
-                    ranges::get<0>(detail::cidata(y)))
+                    ranges::unchecked_get<0>(detail::cidata(x)),
+                    ranges::unchecked_get<0>(detail::cidata(y)))
             )
 #endif
         };
@@ -206,7 +197,7 @@ namespace ranges
             auto iter_move(common_iterator<I, S> const &i)
             RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT
             (
-                ranges::iter_move(ranges::get<0>(detail::cidata(i)))
+                ranges::iter_move(ranges::unchecked_get<0>(detail::cidata(i)))
             )
             template<typename I1, typename S1, typename I2, typename S2,
                 CONCEPT_REQUIRES_(IndirectlySwappable<I2, I1>())>
@@ -214,8 +205,8 @@ namespace ranges
             RANGES_DECLTYPE_AUTO_RETURN_NOEXCEPT
             (
                 ranges::iter_swap(
-                    ranges::get<0>(detail::cidata(x)),
-                    ranges::get<0>(detail::cidata(y)))
+                    ranges::unchecked_get<0>(detail::cidata(x)),
+                    ranges::unchecked_get<0>(detail::cidata(y)))
             )
         }
 #endif
@@ -226,8 +217,8 @@ namespace ranges
         bool operator==(common_iterator<I1, S1> const &x, common_iterator<I2, S2> const &y)
         {
             return detail::cidata(x).index() == 1u ?
-                (detail::cidata(y).index() == 1u || ranges::get<0>(detail::cidata(y)) == ranges::get<1>(detail::cidata(x))) :
-                (detail::cidata(y).index() != 1u || ranges::get<0>(detail::cidata(x)) == ranges::get<1>(detail::cidata(y)));
+                (detail::cidata(y).index() == 1u || ranges::unchecked_get<0>(detail::cidata(y)) == ranges::unchecked_get<1>(detail::cidata(x))) :
+                (detail::cidata(y).index() != 1u || ranges::unchecked_get<0>(detail::cidata(x)) == ranges::unchecked_get<1>(detail::cidata(y)));
         }
 
         template<typename I1, typename I2, typename S1, typename S2,
@@ -236,10 +227,10 @@ namespace ranges
         bool operator==(common_iterator<I1, S1> const &x, common_iterator<I2, S2> const &y)
         {
             return detail::cidata(x).index() == 1u ?
-                (detail::cidata(y).index() == 1u || ranges::get<0>(detail::cidata(y)) == ranges::get<1>(detail::cidata(x))) :
+                (detail::cidata(y).index() == 1u || ranges::unchecked_get<0>(detail::cidata(y)) == ranges::unchecked_get<1>(detail::cidata(x))) :
                 (detail::cidata(y).index() == 1u ?
-                    ranges::get<0>(detail::cidata(x)) == ranges::get<1>(detail::cidata(y)) :
-                    ranges::get<0>(detail::cidata(x)) == ranges::get<0>(detail::cidata(y)));
+                    ranges::unchecked_get<0>(detail::cidata(x)) == ranges::unchecked_get<1>(detail::cidata(y)) :
+                    ranges::unchecked_get<0>(detail::cidata(x)) == ranges::unchecked_get<0>(detail::cidata(y)));
         }
 
         template<typename I1, typename I2, typename S1, typename S2,
@@ -256,10 +247,10 @@ namespace ranges
             common_iterator<I1, S1> const &x, common_iterator<I2, S2> const &y)
         {
             return detail::cidata(x).index() == 1u ?
-                (detail::cidata(y).index() == 1u ? 0 : ranges::get<1>(detail::cidata(x)) - ranges::get<0>(detail::cidata(y))) :
+                (detail::cidata(y).index() == 1u ? 0 : ranges::unchecked_get<1>(detail::cidata(x)) - ranges::unchecked_get<0>(detail::cidata(y))) :
                 (detail::cidata(y).index() == 1u ?
-                    ranges::get<0>(detail::cidata(x)) - ranges::get<1>(detail::cidata(y)) :
-                    ranges::get<0>(detail::cidata(x)) - ranges::get<0>(detail::cidata(y)));
+                    ranges::unchecked_get<0>(detail::cidata(x)) - ranges::unchecked_get<1>(detail::cidata(y)) :
+                    ranges::unchecked_get<0>(detail::cidata(x)) - ranges::unchecked_get<0>(detail::cidata(y)));
         }
 
         template<typename I, typename S>

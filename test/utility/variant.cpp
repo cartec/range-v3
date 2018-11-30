@@ -12,7 +12,7 @@
 #include <vector>
 #include <sstream>
 #include <iostream>
-#include <range/v3/utility/variant.hpp>
+#include <range/v3/detail/variant.hpp>
 #include "../simple_test.hpp"
 #include "../test_utils.hpp"
 

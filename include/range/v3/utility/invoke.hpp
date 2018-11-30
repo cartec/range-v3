@@ -183,7 +183,7 @@ namespace ranges
                     !Same<uncvref_t<U>, reference_wrapper>())>
             constexpr reference_wrapper(U &&u)
                 noexcept(std::is_nothrow_constructible<base_, U>::value)
-              : detail::reference_wrapper_<T>{static_cast<U &&>(u)}
+              : base_{static_cast<U &&>(u)}
             {}
             constexpr reference get() const noexcept
             {

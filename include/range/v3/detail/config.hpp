@@ -295,8 +295,9 @@ namespace ranges
 #define RANGES_CXX_VER __cplusplus
 #endif
 
-#define RANGES_CXX_FEATURE_CONCAT2(y, z) RANGES_CXX_ ## y ## _ ## z
-#define RANGES_CXX_FEATURE_CONCAT(y, z) RANGES_CXX_FEATURE_CONCAT2(y, z)
+#define RANGES_PP_CAT_(x, y) x ## y
+#define RANGES_PP_CAT(x, y) RANGES_PP_CAT_(x, y)
+#define RANGES_CXX_FEATURE_CONCAT(y, z) RANGES_PP_CAT(RANGES_CXX_, RANGES_PP_CAT(y, RANGES_PP_CAT(_, z)))
 
 #if RANGES_CXX_VER >= RANGES_CXX_STD_17
 #define RANGES_CXX_STD RANGES_CXX_STD_17
