@@ -42,6 +42,19 @@ namespace ranges
             {
                 return that.data_;
             }
+
+            template<typename IFrom, typename SFrom, typename ITo, typename STo>
+            struct ci_convert
+            {
+                variant<ITo, STo> operator()(indexed_element<IFrom const &, 0> e)
+                {
+                    return variant<ITo, STo>{emplaced_index<0>, e.get()};
+                }
+                variant<ITo, STo> operator()(indexed_element<SFrom const &, 1> e)
+                {
+                    return variant<ITo, STo>{emplaced_index<1>, e.get()};
+                }
+            };
         }
 
 #if RANGES_BROKEN_CPO_LOOKUP
@@ -115,13 +128,13 @@ namespace ranges
             template<typename I2, typename S2,
                 CONCEPT_REQUIRES_(ConvertibleTo<I2, I>() && ConvertibleTo<S2, S>())>
             common_iterator(common_iterator<I2, S2> const &that)
-              : data_(detail::cidata(that))
+              : data_(ranges::visit_i(detail::ci_convert<I2, S2, I, S>{}, detail::cidata(that)))
             {}
             template<typename I2, typename S2,
                 CONCEPT_REQUIRES_(ConvertibleTo<I2, I>() && ConvertibleTo<S2, S>())>
             common_iterator& operator=(common_iterator<I2, S2> const &that)
             {
-                data_ = detail::cidata(that);
+                data_ = ranges::visit_i(detail::ci_convert<I2, S2, I, S>{}, detail::cidata(that));
                 return *this;
             }
             reference_t<I> operator*()
