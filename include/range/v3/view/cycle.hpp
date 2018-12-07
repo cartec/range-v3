@@ -158,6 +158,7 @@ namespace ranges
                 }
             };
 
+            RANGES_CXX14_CONSTEXPR
             cached_position<V, cycled_view<V>,
                 detail::CycledNeedsCache<V>::value> &
             cache_() noexcept
@@ -166,6 +167,7 @@ namespace ranges
             }
 
             CONCEPT_REQUIRES(!simple_view<V>() || !BoundedRange<V const>())
+            RANGES_CXX14_CONSTEXPR
             void set_end_(iterator_t<V> const &it)
             {
                 if(cache_())
@@ -174,12 +176,14 @@ namespace ranges
                     cache_().set(v_, it);
             }
             CONCEPT_REQUIRES(!simple_view<V>() || !BoundedRange<V const>())
+            RANGES_CXX14_CONSTEXPR
             void cache_end_(iterator_t<V> const &hint)
             {
                 if(!cache_())
                     cache_().set(v_, ranges::next(hint, ranges::end(v_)));
             }
             CONCEPT_REQUIRES(!simple_view<V>() || !BoundedRange<V const>())
+            RANGES_CXX14_CONSTEXPR
             iterator_t<V> get_end_()
             {
                 RANGES_EXPECT(cache_());
@@ -192,16 +196,20 @@ namespace ranges
             }
 
             CONCEPT_REQUIRES(BoundedRange<V const>())
-            constexpr void set_end_(iterator_t<V const> const &) const
+            RANGES_CXX14_CONSTEXPR
+            void set_end_(iterator_t<V const> const &) const
             {}
             CONCEPT_REQUIRES(BoundedRange<V const>())
-            constexpr void cache_end_(iterator_t<V const> const &) const
+            RANGES_CXX14_CONSTEXPR
+            void cache_end_(iterator_t<V const> const &) const
             {}
             CONCEPT_REQUIRES(BoundedRange<V const>())
-            constexpr iterator_t<V const> get_end_() const
+            RANGES_CXX14_CONSTEXPR
+            iterator_t<V const> get_end_() const
             {
                 return ranges::end(v_);
             }
+
             CONCEPT_REQUIRES(BoundedRange<V const>())
             constexpr cursor<true> begin_cursor() const
             {
