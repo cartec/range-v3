@@ -151,12 +151,12 @@ public:
     explicit test_range_algo_1(Algo algo)
       : algo_(algo)
     {}
-#if !defined(__clang__) && __GNUC__ == 4 && __GNUC_MINOR__ <= 8
+#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ == 4 && __GNUC_MINOR__ <= 8
     template<typename R, typename I, typename Eval1, typename Eval2>
     static checker<R> impl(I begin, I end, Eval1 e1, Eval2 e2)
     {
         using S = meta::_t<sentinel_type<I>>;
-        return checker<R>{[=](function_ref<void(R)> const & check)
+        return checker<R>{[=,this](function_ref<void(R)> const & check)
         {
             check(e1(begin, end));
             check(e1(begin, S{base(end)}));
@@ -181,7 +181,7 @@ public:
     {
         using S = meta::_t<sentinel_type<I>>;
         using R = decltype(algo_(begin, end, rest...));
-        return checker<R>{[=](function_ref<void(R)> const & check)
+        return checker<R>{[=,this](function_ref<void(R)> const & check)
         {
             check(algo_(begin, end, rest...));
             check(algo_(begin, S{base(end)}, rest...));
@@ -207,13 +207,13 @@ public:
     explicit test_range_algo_2(Algo algo)
       : algo_(algo)
     {}
-#if !defined(__clang__) && __GNUC__ == 4 && __GNUC_MINOR__ <= 8
+#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ == 4 && __GNUC_MINOR__ <= 8
     template<typename R, typename I1, typename I2, typename Eval1, typename Eval2>
     static checker<R> impl(I1 begin1, I1 end1, I2 begin2, I2 end2, Eval1 e1, Eval2 e2)
     {
         using S1 = meta::_t<sentinel_type<I1>>;
         using S2 = meta::_t<sentinel_type<I2>>;
-        return checker<R>{[=](function_ref<void(R)> const & check)
+        return checker<R>{[=,this](function_ref<void(R)> const & check)
         {
             check(e1(begin1, end1, begin2, end2));
             check(e1(begin1, S1{base(end1)}, begin2, S2{base(end2)}));
@@ -241,7 +241,7 @@ public:
         using S1 = meta::_t<sentinel_type<I1>>;
         using S2 = meta::_t<sentinel_type<I2>>;
         using R = decltype(algo_(begin1, end1, begin2, end2, rest...));
-        return checker<R>{[=](function_ref<void(R)> const & check)
+        return checker<R>{[=,this](function_ref<void(R)> const & check)
         {
             check(algo_(begin1, end1, begin2, end2, rest...));
             check(algo_(begin1, S1{base(end1)}, begin2, S2{base(end2)}, rest...));
