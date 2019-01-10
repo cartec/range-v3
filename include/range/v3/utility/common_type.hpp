@@ -173,7 +173,7 @@ namespace ranges
 
         template<typename T>
         struct common_type<T>
-          : std::decay<T>
+          : common_type<T, T>
         {};
 
         template<typename T, typename U>
@@ -181,7 +181,8 @@ namespace ranges
           : meta::if_c<
                 ( std::is_same<detail::decay_t<T>, T>::value &&
                   std::is_same<detail::decay_t<U>, U>::value ),
-                meta::defer<detail::_builtin_common_t, T, U>,
+                meta::lazy::let<meta::defer<detail::decay_t,
+                    meta::defer<detail::_cond_res, T, U>>>,
                 common_type<detail::decay_t<T>, detail::decay_t<U>>>
         {};
 

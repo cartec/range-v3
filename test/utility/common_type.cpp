@@ -134,4 +134,13 @@ int main()
         using CP = common_pair<int, int>;
         CONCEPT_ASSERT(Same<common_type_t<CP, CP>, CP>());
     }
+
+    static_assert(std::is_same<
+        common_type_t<ranges::reference_wrapper<int>, int>,
+        int
+    >::value, "");
+    static_assert(std::is_same<
+        common_type_t<std::reference_wrapper<int>, int>,
+        int
+    >::value, "");
 }
