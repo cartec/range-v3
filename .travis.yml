@@ -64,7 +64,6 @@ matrix:
             - valgrind
           sources:
             - ubuntu-toolchain-r-test
-            - llvm-toolchain-xenial-3.7
             - sourceline: 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-3.7 main'
               key_url: 'https://apt.llvm.org/llvm-snapshot.gpg.key'
 
@@ -78,7 +77,6 @@ matrix:
       addons: &clang38
         apt:
           packages:
-            - util-linux
             - clang-3.8
             - libstdc++-5-dev
             - valgrind
@@ -95,7 +93,6 @@ matrix:
       addons: &clang39
         apt:
           packages:
-            - util-linux
             - clang-3.9
             - libstdc++-6-dev
             - valgrind
@@ -117,7 +114,6 @@ matrix:
             - valgrind
           sources:
             - ubuntu-toolchain-r-test
-            - llvm-toolchain-xenial-5.0
             - sourceline: 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-5.0 main'
               key_url: 'https://apt.llvm.org/llvm-snapshot.gpg.key'
 
