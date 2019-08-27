@@ -233,6 +233,19 @@ namespace ranges
     );
     /// \endcond
 
+#if 1 // Implement PR of LWG 3264
+    CPP_def
+    (
+        template(typename T)
+        concept sized_range,
+            requires (T &t)
+            (
+                ranges::size(t)
+            ) &&
+            range<T> &&
+            detail::integer_like_<range_size_t<T>>
+    );
+#else // ^^^ LWG 3264 / working draft vvv
     CPP_def
     (
         template(typename T)
@@ -245,6 +258,7 @@ namespace ranges
             detail::integer_like_<range_size_t<T>> &&
             !disable_sized_range<uncvref_t<T>>
     );
+#endif
     // clang-format on
 
     /// \cond
