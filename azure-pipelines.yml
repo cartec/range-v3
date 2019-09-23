@@ -1,0 +1,69 @@
+# Range v3 library
+#
+#  Copyright Casey Carter
+#
+# SPDX-License-Identifier: BSL-1.0
+#
+# Project home: https://github.com/ericniebler/range-v3
+
+# TODO:
+# * clang-cl support
+
+jobs:
+- job: BuildAndTest
+  pool:
+    vmImage: 'windows-2019'
+  timeoutInMinutes: 45
+  strategy:
+    matrix:
+      x64_Debug_17:
+        BuildPlatform: x64
+        BuildConfiguration: Debug
+        CPP: 17
+        HEADER_CHECK: Off
+      x64_Debug_latest:
+        BuildPlatform: x64
+        BuildConfiguration: Debug
+        CPP: latest
+        HEADER_CHECK: On
+      x64_Release_17:
+        BuildPlatform: x64
+        BuildConfiguration: Release
+        CPP: 17
+        HEADER_CHECK: Off
+      x64_Release_latest:
+        BuildPlatform: x64
+        BuildConfiguration: Release
+        CPP: latest
+        HEADER_CHECK: Off
+      x86_Release_17:
+        BuildPlatform: x64_x86
+        BuildConfiguration: Release
+        CPP: 17
+        HEADER_CHECK: On
+      x86_Release_latest:
+        BuildPlatform: x64_x86
+        BuildConfiguration: Release
+        CPP: latest
+        HEADER_CHECK: Off
+  steps:
+  - script: |
+      for /f "tokens=1* delims=" %%i in ('"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath') do call "%%i\VC\Auxiliary\Build\vcvarsall.bat" $(BuildPlatform)
+      cmake --version
+      ninja --version
+      cl /Bv
+      mkdir build
+      cmake -S . -B build -G Ninja -Wdev -DRANGE_V3_HEADER_CHECKS=$(HEADER_CHECK) -DCMAKE_BUILD_TYPE=$(BuildConfiguration) -DRANGES_CXX_STD=$(CPP) -DCMAKE_CXX_COMPILER=cl -DRANGES_VERBOSE_BUILD=On -DRANGES_PREFER_REAL_CONCEPTS=Yes
+      ninja -C build
+    displayName: 'Build'
+  - script: |
+      cd build
+      ctest -j2 --output-on-failure
+    displayName: 'Test'
+  - task: PublishTestResults@2
+    inputs:
+      testResultsFormat: cTest
+      testResultsFiles: Testing/*/Test.xml
+      testRunTitle: $(Agent.JobName)
+    condition: succeededOrFailed()
+    displayName: Publish test results

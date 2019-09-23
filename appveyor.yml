@@ -28,7 +28,7 @@ cache:
 
 install:
   - ps: |
-      if (![IO.File]::Exists("C:\ninja-1.8.2\ninja.exe")) {
+      if (![IO.File]::Exists('C:\ninja-1.8.2\ninja.exe')) {
         Start-FileDownload 'https://github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-win.zip'
         7z x -y ninja-win.zip -oC:\ninja-1.8.2
       }
