@@ -58,7 +58,7 @@ jobs:
     displayName: 'Build'
   - script: |
       cd build
-      ctest -j2 --output-on-failure
+      ctest -T Test -j2 --output-on-failure
     displayName: 'Test'
   - task: PublishTestResults@2
     inputs:
