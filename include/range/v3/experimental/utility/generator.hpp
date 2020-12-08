@@ -38,14 +38,8 @@
 #if defined(_MSC_VER) && !defined(RANGES_SILENCE_COROUTINE_WARNING)
 #ifdef __clang__
 #pragma message(                                                 \
-    "DANGER: clang doesn't (yet?) grok the MSVC coroutine ABI. " \
+    "DANGER: clang doesn't yet grok the MSVC coroutine ABI. "    \
     "Use at your own risk. "                                     \
-    "(RANGES_SILENCE_COROUTINE_WARNING will silence this message.)")
-#elif defined RANGES_WORKAROUND_MSVC_835948
-#pragma message(                                                                 \
-    "DANGER: ranges::experimental::generator is fine, but this "                 \
-    "version of MSVC likely miscompiles ranges::experimental::sized_generator. " \
-    "Use the latter at your own risk. "                                          \
     "(RANGES_SILENCE_COROUTINE_WARNING will silence this message.)")
 #endif
 #endif // RANGES_SILENCE_COROUTINE_WARNINGS
@@ -274,10 +268,13 @@ namespace ranges
         template<typename Reference, typename Value = uncvref_t<Reference>>
         struct sized_generator;
 
-        template<typename Reference, typename Value = uncvref_t<Reference>>
+        template<typename Reference, typename Value = uncvref_t<Reference>,
+            typename Promise = detail::generator_promise<Reference>>
         struct generator : view_facade<generator<Reference, Value>>
         {
-            using promise_type = detail::generator_promise<Reference>;
+            using promise_type = Promise;
+            static_assert(std::is_base_of<detail::generator_promise<Reference>, Promise>::value,
+                "Actual promise type must derive from generator_promise<Reference>");
 
             constexpr generator() noexcept = default;
             generator(promise_type * p)
@@ -286,11 +283,12 @@ namespace ranges
                 RANGES_EXPECT(coro_);
             }
 
+        protected:
+            coroutine_owner<promise_type> coro_;
+
         private:
             friend range_access;
-            friend struct sized_generator<Reference, Value>;
             using handle = RANGES_COROUTINES_NS::coroutine_handle<promise_type>;
-            coroutine_owner<promise_type> coro_;
 
             struct cursor
             {
@@ -334,27 +332,19 @@ namespace ranges
         };
 
         template<typename Reference, typename Value /* = uncvref_t<Reference>*/>
-        struct sized_generator : generator<Reference, Value>
+        struct sized_generator
+          : generator<Reference, Value, detail::sized_generator_promise<Reference>>
         {
             using promise_type = detail::sized_generator_promise<Reference>;
             using handle = RANGES_COROUTINES_NS::coroutine_handle<promise_type>;
 
             constexpr sized_generator() noexcept = default;
             sized_generator(promise_type * p)
-              : generator<Reference, Value>{p}
+              : sized_generator::generator{p}
             {}
             generator_size_t size() const noexcept
             {
-                return promise().size();
-            }
-
-        private:
-            using generator<Reference, Value>::coro_;
-
-            promise_type const & promise() const noexcept
-            {
-                RANGES_EXPECT(coro_);
-                return static_cast<promise_type const &>(coro_.promise());
+                return this->coro_.promise().size();
             }
         };
     } // namespace experimental

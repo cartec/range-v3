@@ -272,8 +272,6 @@ namespace ranges
 #define RANGES_WORKAROUND_MSVC_786312 // Yet another mixed-pack-expansion failure
 #define RANGES_WORKAROUND_MSVC_792338 // Failure to match specialization enabled via call
                                       // to constexpr function
-#define RANGES_WORKAROUND_MSVC_835948 // Silent bad codegen destroying sized_generator [No
-                                      // workaround]
 #define RANGES_WORKAROUND_MSVC_934264 // Explicitly-defaulted inherited default
                                       // constructor is not correctly implicitly constexpr
 #if _MSVC_LANG <= 201703L
@@ -530,12 +528,12 @@ namespace ranges
 // #endif
 
 #ifndef RANGES_CXX_COROUTINES
-#if defined(__cpp_coroutines) && defined(__has_include)
-#if __has_include(<coroutine>)
-#define RANGES_CXX_COROUTINES __cpp_coroutines
+#ifdef __has_include
+#if defined(__cpp_impl_coroutine) && __has_include(<coroutine>)
+#define RANGES_CXX_COROUTINES __cpp_impl_coroutine
 #define RANGES_COROUTINES_HEADER <coroutine>
 #define RANGES_COROUTINES_NS std
-#elif __has_include(<experimental/coroutine>)
+#elif defined(__cpp_coroutines) && __has_include(<experimental/coroutine>)
 #define RANGES_CXX_COROUTINES __cpp_coroutines
 #define RANGES_COROUTINES_HEADER <experimental/coroutine>
 #define RANGES_COROUTINES_NS std::experimental

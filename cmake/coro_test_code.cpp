@@ -1,13 +1,13 @@
-#if defined(__cpp_coroutines) && defined(__has_include)
-#if __has_include(<coroutine>)
+#ifndef __has_include
+#error No compiler support for __has_include; we assume lack of coroutines.
+#endif
+
+#if defined(__cpp_impl_coroutine) && __has_include(<coroutine>)
 #include <coroutine>
 namespace std_coro = std;
-#elif __has_include(<experimental/coroutine>)
+#elif defined(__cpp_coroutines) && __has_include(<experimental/coroutine>)
 #include <experimental/coroutine>
 namespace std_coro = std::experimental;
-#else
-#error Either the compiler or the library lacks support for coroutines
-#endif
 #else
 #error Either the compiler or the library lacks support for coroutines
 #endif

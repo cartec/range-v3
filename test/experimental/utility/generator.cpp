@@ -207,7 +207,6 @@ int main()
 
     auto even = [](int i){ return i % 2 == 0; };
 
-#ifndef RANGES_WORKAROUND_MSVC_835948
     {
         auto rng = ::iota_generator(0, 10);
         CPP_assert(sized_range<decltype(rng)>);
@@ -258,6 +257,7 @@ int main()
         ++i;
         CHECK(i == e);
     }
+#ifndef __GNUC__ // Unreduced GCC bug
     {
         std::vector<bool> vec(3, false);
         auto rng = ::coro(vec);
@@ -265,6 +265,7 @@ int main()
         CHECK(size(rng) == 3u);
         ::check_equal(rng, {false,false,false});
     }
+#endif // Unreduced GCC bug
 
     ::check_equal(f(42), g(42));
     ::check_equal(f(42), h(42));
@@ -278,7 +279,6 @@ int main()
         auto rng = f(20) | views::filter(even);
         ::check_equal(rng, {0,2,4,6,8,10,12,14,16,18});
     }
-#endif // RANGES_WORKAROUND_MSVC_835948
 
     {
         auto square = [](int i) { return i * i; };
