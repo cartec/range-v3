@@ -158,9 +158,9 @@ jobs:
 
         if ("${{ runner.os }}" STREQUAL "Windows" AND NOT "x${{ matrix.config.environment_script }}" STREQUAL "x")
           message(TRACE "At 2")
-          message(TRACE "x${{ matrix.config.environment_script }}x")
+          message(TRACE "\"${{ matrix.config.environment_script }}\"")
           execute_process(
-            COMMAND cmd /c "'${{ matrix.config.environment_script }}'" && set
+            COMMAND cmd /c "${{ matrix.config.environment_script }}" && set
             OUTPUT_FILE environment_script_output.txt
             RESULT_VARIABLE result
           )
